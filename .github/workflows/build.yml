@@ -1,0 +1,29 @@
+name: Build Omega APK
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-17-jdk zip unzip python3-pip libffi-dev libssl-dev
+          pip install --upgrade pip
+          pip install buildozer cython==0.29.36
+      - name: Build APK
+        run: |
+          buildozer -v android debug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: omega-apk
+          path: bin/*.apk
