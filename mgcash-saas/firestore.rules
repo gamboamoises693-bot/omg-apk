@@ -1,0 +1,248 @@
+rules_version = '2';
+
+// =============================================================================
+// MG-CASH SaaS - Multi-tenant Firestore rules
+//
+// Tenancy model:
+//   stores/{storeId}            storeId == Store Owner's Firebase Auth uid
+//   stores/{storeId}/...        all tenant data lives under the store doc
+//   stores/{storeId}/tinderas/{uid}   membership record for a Tindera
+//
+// Roles:
+//   superadmin  -> custom claim `superadmin: true` (set via scripts/set-superadmin.mjs)
+//   store_owner -> request.auth.uid == storeId
+//   tindera     -> stores/{storeId}/tinderas/{request.auth.uid} exists && active
+//   public      -> customer QR page may lock a number on one waiting transaction
+// =============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() { return request.auth != null; }
+    function isSuper() { return signedIn() && request.auth.token.superadmin == true; }
+    function isOwner(storeId) { return signedIn() && request.auth.uid == storeId; }
+
+    function storePath(storeId) { return /databases/$(database)/documents/stores/$(storeId); }
+    function tinderaPath(storeId, uid) {
+      return /databases/$(database)/documents/stores/$(storeId)/tinderas/$(uid);
+    }
+
+    function isTindera(storeId) {
+      return signedIn()
+        && exists(tinderaPath(storeId, request.auth.uid))
+        && get(tinderaPath(storeId, request.auth.uid)).data.active == true;
+    }
+
+    function isMember(storeId) { return isOwner(storeId) || isTindera(storeId); }
+
+    // Store can transact only while not deactivated and trial / paid period (+3 day grace) is running.
+    function storeActive(storeId) {
+      let s = get(storePath(storeId)).data;
+      return s.deactivated != true
+        && (s.trial_end > request.time
+            || (s.subscription_end != null
+                && s.subscription_end + duration.value(3, 'd') > request.time));
+    }
+
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function isPhone(v) { return v is string && v.matches('^09[0-9]{9}$'); }
+
+    // Fields only Super Admin may touch on a store doc.
+    function subscriptionKeys() {
+      return ['owner_uid', 'store_code', 'subscription_plan', 'subscription_status',
+              'subscription_start', 'subscription_end', 'trial_end', 'deactivated',
+              'referred_by', 'referral_rewarded', 'created_at'];
+    }
+
+    // ---------- app config (admin GCash number, price) ----------
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isSuper();
+    }
+
+    // ---------- users (role directory) ----------
+    match /users/{uid} {
+      allow get: if isSuper() || (signedIn() && request.auth.uid == uid);
+      allow list: if isSuper();
+      // Owner self sign-up: store id must be own uid -> cannot claim another tenant.
+      allow create: if signedIn() && (
+          (request.auth.uid == uid
+            && request.resource.data.role == 'store_owner'
+            && request.resource.data.store_id == uid)
+          // Owner registering a tindera account that belongs to the owner's store.
+          || (request.auth.uid != uid
+            && request.resource.data.role == 'tindera'
+            && request.resource.data.store_id == request.auth.uid
+            && exists(storePath(request.auth.uid)))
+        );
+      allow update: if isSuper()
+        || (signedIn() && resource.data.role == 'tindera'
+            && resource.data.store_id == request.auth.uid
+            && changed().hasOnly(['name', 'active']));
+      allow delete: if isSuper();
+    }
+
+    // ---------- store code -> store id lookup (unique, for tindera login) ----------
+    match /store_codes/{code} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.store_id == request.auth.uid;
+      allow update, delete: if isSuper();
+    }
+
+    // ---------- subscription payments (top-level, Super Admin billing) ----------
+    match /payments/{paymentId} {
+      allow read: if isSuper() || (signedIn() && resource.data.store_id == request.auth.uid);
+      allow create: if isSuper()
+        || (isOwner(request.resource.data.store_id)
+            && request.resource.data.status == 'pending'
+            && request.resource.data.amount is number
+            && request.resource.data.amount > 0);
+      allow update, delete: if isSuper();
+    }
+
+    match /payment_proofs/{paymentId} {
+      allow read: if isSuper() || (signedIn() && resource.data.store_id == request.auth.uid);
+      allow create: if isSuper()
+        || (isOwner(request.resource.data.store_id)
+            && request.resource.data.data_url is string
+            && request.resource.data.data_url.size() < 600000);
+      allow update, delete: if isSuper();
+    }
+
+    // ---------- stores (tenant root) ----------
+    match /stores/{storeId} {
+      allow read: if isSuper() || isMember(storeId);
+
+      allow create: if isOwner(storeId)
+        && request.resource.data.owner_uid == request.auth.uid
+        && request.resource.data.subscription_status == 'trial'
+        && request.resource.data.deactivated == false
+        && request.resource.data.subscription_end == null
+        && request.resource.data.referral_rewarded == false
+        && request.resource.data.trial_end is timestamp
+        && request.resource.data.trial_end <= request.time + duration.value(8, 'd');
+
+      // Owner edits store info / balances / stats but never subscription fields.
+      allow update: if isSuper()
+        || (isOwner(storeId) && !changed().hasAny(subscriptionKeys()));
+
+      allow delete: if isSuper();
+
+      // ----- tinderas (membership + payroll settings) -----
+      match /tinderas/{tinderaId} {
+        allow read: if isSuper() || isOwner(storeId)
+          || (signedIn() && request.auth.uid == tinderaId);
+        allow write: if isOwner(storeId);
+      }
+
+      // ----- transactions -----
+      match /transactions/{txnId} {
+        // Members read; tindera only her own. Public may read a txn still waiting for a number.
+        allow get: if isSuper() || isOwner(storeId)
+          || (isTindera(storeId) && resource.data.tindera_id == request.auth.uid)
+          || (resource.data.number_status == 'waiting' && resource.data.store_id == storeId);
+        allow list: if isSuper() || isOwner(storeId)
+          || (isTindera(storeId) && resource.data.tindera_id == request.auth.uid);
+
+        allow create: if isTindera(storeId)
+          && storeActive(storeId)
+          && request.resource.data.store_id == storeId
+          && request.resource.data.tindera_id == request.auth.uid
+          && request.resource.data.type in ['cash_in', 'cash_out', 'load']
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0
+          && request.resource.data.fee is number
+          && request.resource.data.fee >= 0
+          && request.resource.data.created_at == request.time
+          // Commission must match the rate the owner set (tindera can't inflate it).
+          && request.resource.data.commission == (request.resource.data.type == 'load'
+               ? get(tinderaPath(storeId, request.auth.uid)).data.commission_load
+               : get(tinderaPath(storeId, request.auth.uid)).data.commission_cash)
+          && (
+            // QR mode: customer types the number on own phone later.
+            (request.resource.data.number_source == 'qr'
+              && request.resource.data.number_status == 'waiting'
+              && request.resource.data.customer_number == ''
+              && request.resource.data.status == 'awaiting_number')
+            ||
+            // Bluetooth keypad mode: number typed on external keypad, locked at create.
+            (request.resource.data.number_source == 'keypad'
+              && request.resource.data.number_status == 'locked'
+              && isPhone(request.resource.data.customer_number)
+              && request.resource.data.status == 'pending')
+          );
+
+        allow update: if
+          // Owner approves / rejects. Number + amounts are immutable.
+          (isOwner(storeId)
+            && storeActive(storeId)
+            && resource.data.status == 'pending'
+            && request.resource.data.status in ['approved', 'rejected']
+            && changed().hasOnly(['status', 'decided_at', 'decided_by', 'reject_reason']))
+          // Tindera cancels her own unfinished txn.
+          || (isTindera(storeId)
+            && resource.data.tindera_id == request.auth.uid
+            && resource.data.status in ['awaiting_number', 'pending']
+            && request.resource.data.status == 'cancelled'
+            && changed().hasOnly(['status', 'decided_at']))
+          // Public customer page: lock number once, within 15 minutes of creation.
+          || (resource.data.number_status == 'waiting'
+            && resource.data.status == 'awaiting_number'
+            && request.time < resource.data.created_at + duration.value(15, 'm')
+            && changed().hasOnly(['customer_number', 'number_status', 'number_locked_at', 'status'])
+            && isPhone(request.resource.data.customer_number)
+            && request.resource.data.number_status == 'locked'
+            && request.resource.data.number_locked_at == request.time
+            && request.resource.data.status == 'pending');
+
+        allow delete: if false;
+      }
+
+      // ----- shifts (start/end with photo + audit) -----
+      match /shifts/{shiftId} {
+        allow read: if isSuper() || isOwner(storeId)
+          || (isTindera(storeId) && resource.data.tindera_id == request.auth.uid);
+
+        allow create: if isTindera(storeId)
+          && storeActive(storeId)
+          && request.resource.data.tindera_id == request.auth.uid
+          && request.resource.data.status == 'open'
+          && request.resource.data.start_cash is number;
+
+        allow update: if
+          (isTindera(storeId)
+            && resource.data.tindera_id == request.auth.uid
+            && resource.data.status == 'open'
+            && request.resource.data.status == 'closed'
+            && request.resource.data.audit_status == 'pending'
+            && changed().hasOnly(['status', 'end_at', 'end_photo_id', 'end_cash',
+                                  'expected_cash', 'shortage', 'audit_status', 'end_note',
+                                  'txn_count', 'commission_total']))
+          || (isOwner(storeId)
+            && resource.data.status == 'closed'
+            && request.resource.data.audit_status in ['approved', 'deducted']
+            && changed().hasOnly(['audit_status', 'deduction', 'audit_note', 'audited_at']));
+
+        allow delete: if false;
+      }
+
+      // ----- photos (compressed JPEG data URLs, Spark-plan friendly) -----
+      match /photos/{photoId} {
+        allow read: if isSuper() || isOwner(storeId)
+          || (isTindera(storeId) && resource.data.created_by == request.auth.uid);
+        allow create: if isMember(storeId)
+          && request.resource.data.created_by == request.auth.uid
+          && request.resource.data.data_url is string
+          && request.resource.data.data_url.size() < 600000;
+        allow update, delete: if false;
+      }
+
+      // ----- payroll records -----
+      match /payrolls/{payrollId} {
+        allow read: if isSuper() || isOwner(storeId)
+          || (signedIn() && resource.data.tindera_id == request.auth.uid);
+        allow write: if isOwner(storeId);
+      }
+    }
+  }
+}
