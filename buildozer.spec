@@ -4,6 +4,8 @@ package.name = omegaicecombined
 package.domain = com.isesmo.omega
 source.dir =.
 source.include_exts = py,png,jpg,kv,atlas,db
+# Keep the MG-CASH web app (PWA) out of the Kivy APK
+source.exclude_dirs = mgcash-saas
 version = 1.0
 requirements = python3,kivy==2.3.0,kivymd==1.1.1
 orientation = portrait
