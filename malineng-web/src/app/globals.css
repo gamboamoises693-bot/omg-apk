@@ -2,17 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Compact "app" scale: 14px root. All Tailwind sizes are rem-based,
+ * so the "Aa" setting (lib/textSize.ts) scales the whole UI by changing this one value.
+ */
 html {
+  font-size: 14px;
   -webkit-tap-highlight-color: transparent;
+}
+html[data-text-size="malaki"] {
+  font-size: 16px;
+}
+html[data-text-size="pinakamalaki"] {
+  font-size: 18px;
 }
 
 body {
   @apply bg-surface text-gray-900 antialiased;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Avoid iOS zoom on input focus: inputs must be >= 16px. */
+/* Avoid iOS zoom on input focus: inputs must stay >= 16px whatever the text size. */
 input,
 select,
 textarea {
-  font-size: 16px;
+  font-size: max(16px, 1rem);
+}
+
+/* Hide scrollbars on horizontal chip/carousel rows (still scrollable). */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

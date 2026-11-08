@@ -30,7 +30,7 @@ export function AmbulanceTracker({ req }: { req: AmbulanceRequest }) {
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-lg font-bold leading-tight">{req.type === "emergency" ? "🚨 Emergency" : req.reason}</p>
+          <p className="text-base font-bold leading-tight">{req.type === "emergency" ? "🚨 Emergency" : req.reason}</p>
           <p className="text-gray-600">
             {formatDate(req.date)} · {formatTime12(req.time)}
             {req.status !== "pending" && !stopped && ` – ${formatTime12(endTime(req.time, hours))}`}

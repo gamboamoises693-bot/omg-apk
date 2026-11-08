@@ -129,7 +129,7 @@ export default function LostFoundPage() {
               )}
               <div className="p-4">
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="text-lg font-bold">{i.item}</p>
+                  <p className="text-base font-bold">{i.item}</p>
                   {i.status === "nakabalik" ? <Badge color="green">Nakabalik na</Badge> : <Badge color={i.type === "nawawala" ? "red" : "blue"}>{i.type === "nawawala" ? "Nawawala" : "Nakita"}</Badge>}
                 </div>
                 <p className="flex items-center gap-1 text-gray-600"><MapPin className="h-4 w-4" /> {i.location}</p>

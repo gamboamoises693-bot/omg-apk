@@ -122,7 +122,7 @@ function MyAppointments() {
             <Card key={a.id} className={a.status === "ready" ? "ring-2 ring-gold" : ""}>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-lg font-bold">{a.service}</p>
+                  <p className="text-base font-bold">{a.service}</p>
                   <p className="text-gray-600">{formatDate(a.date)}</p>
                   <p className="text-sm text-gray-400">Ref: {a.id.slice(0, 8).toUpperCase()}</p>
                 </div>

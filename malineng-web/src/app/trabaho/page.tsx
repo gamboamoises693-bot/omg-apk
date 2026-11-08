@@ -100,7 +100,7 @@ export default function TrabahoPage() {
           {jobs.map((j) => (
             <Card key={j.id}>
               <div className="mb-1 flex items-start justify-between gap-2">
-                <p className="text-lg font-bold leading-tight">{j.title}</p>
+                <p className="text-base font-bold leading-tight">{j.title}</p>
                 <Badge color="green">{j.category}</Badge>
               </div>
               <p className="flex items-center gap-2 text-gray-600"><MapPin className="h-4 w-4" /> {j.purok}</p>
@@ -123,8 +123,8 @@ export default function TrabahoPage() {
           <div className="text-center">
             <CheckCircle2 className="mx-auto mb-2 h-14 w-14 text-brand" />
             <p className="text-gray-700">Kontakin si <b>{interested.posterName}</b> para sa trabahong:</p>
-            <p className="mt-1 text-lg font-bold">{interested.title}</p>
-            <p className="my-4 text-2xl font-extrabold text-brand">{interested.contact}</p>
+            <p className="mt-1 text-base font-bold">{interested.title}</p>
+            <p className="my-3 text-xl font-extrabold text-brand">{interested.contact}</p>
             <a href={telHref(interested.contact)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3 font-bold text-white">
               <Phone className="h-5 w-5" /> Tawagan Ngayon
             </a>

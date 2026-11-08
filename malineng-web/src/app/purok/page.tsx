@@ -36,12 +36,12 @@ export default function PurokPage() {
           {ranking.map((r, i) => (
             <Card key={r.purok} className={i === 0 && r.points > 0 ? "ring-2 ring-gold" : ""}>
               <div className="flex items-center gap-3">
-                <span className="w-8 text-center text-2xl font-black text-gray-400">{i + 1}</span>
+                <span className="w-8 text-center text-xl font-black text-gray-400">{i + 1}</span>
                 {i < 3 && r.points > 0 ? <Medal className={`h-8 w-8 ${MEDAL_COLORS[i]}`} /> : <Trophy className="h-8 w-8 text-gray-200" />}
                 <div className="flex-1">
                   <div className="flex justify-between">
-                    <p className="text-lg font-bold">{r.purok}</p>
-                    <p className="text-lg font-black text-brand">{r.points} pts</p>
+                    <p className="text-base font-bold">{r.purok}</p>
+                    <p className="text-base font-black text-brand">{r.points} pts</p>
                   </div>
                   <div className="mt-1 h-3 overflow-hidden rounded-full bg-gray-200">
                     <div className="h-full rounded-full bg-gradient-to-r from-brand to-gold" style={{ width: `${(r.points / max) * 100}%` }} />

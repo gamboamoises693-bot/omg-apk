@@ -61,7 +61,7 @@ export function AdminAppointments() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <Badge color="gold">{a.service}</Badge>
-                  <p className="mt-1 text-lg font-bold">{a.fullName}</p>
+                  <p className="mt-1 text-base font-bold">{a.fullName}</p>
                   <p className="text-gray-600">{formatDate(a.date)} · Ref {a.id.slice(0, 8).toUpperCase()}</p>
                   {a.notes && <p className="mt-1 whitespace-pre-line text-gray-700">{a.notes}</p>}
                 </div>

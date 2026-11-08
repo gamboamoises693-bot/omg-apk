@@ -52,7 +52,7 @@ function RegistrationForm() {
     return (
       <Card className="text-center">
         <CheckCircle2 className="mx-auto mb-2 h-20 w-20 text-brand" />
-        <p className="text-2xl font-extrabold text-brand">Naka-register ka na!</p>
+        <p className="text-xl font-extrabold text-brand">Naka-register ka na!</p>
         <p className="mt-1 text-gray-700">Para sa: <b>{done}</b></p>
         <p className="mt-1 text-gray-600">Aabisuhan ka ng Barangay sa contact number mo.</p>
         <Button variant="outline" full className="mt-4" onClick={() => { setDone(null); setForm((f) => ({ ...f, purpose: "" })); }}>

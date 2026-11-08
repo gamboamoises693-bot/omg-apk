@@ -35,7 +35,7 @@ export function AdminPurok() {
         return (
           <Card key={purok}>
             <div className="mb-2 flex justify-between">
-              <p className="text-lg font-bold">{purok}</p>
+              <p className="text-base font-bold">{purok}</p>
               <p className="font-black text-brand">{row?.points ?? 0} pts · {row?.cleanupCount ?? 0} clean-up</p>
             </div>
             <div className="grid grid-cols-3 gap-2">

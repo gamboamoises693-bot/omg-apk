@@ -67,8 +67,8 @@ function ListingDetail() {
           {listing.status !== "approved" && <Badge color="gray">Naghihintay ng approval</Badge>}
           {expired && <Badge color="red">Expired na</Badge>}
         </div>
-        <h1 className="text-2xl font-bold">{listing.title}</h1>
-        <p className="mt-1 text-3xl font-extrabold text-brand">{formatPeso(listing.price)}</p>
+        <h1 className="text-lg font-bold">{listing.title}</h1>
+        <p className="mt-1 text-2xl font-extrabold text-brand">{formatPeso(listing.price)}</p>
         <p className="mt-4 whitespace-pre-line text-gray-700">{listing.description || "Walang description."}</p>
         <div className="mt-4 space-y-1 text-gray-600">
           <p className="flex items-center gap-2"><UserRound className="h-5 w-5" /> {listing.sellerName}</p>
@@ -81,7 +81,7 @@ function ListingDetail() {
 
       <Card className="mt-4">
         <p className="mb-2 font-bold">Kontakin ang Seller</p>
-        <p className="mb-3 text-lg">{listing.contact}</p>
+        <p className="mb-3 text-base">{listing.contact}</p>
         <ContactButtons contact={listing.contact} messengerLink={listing.messengerLink} />
         <p className="mt-3 text-sm text-gray-500">Paalala: Makipagkita sa ligtas na lugar. Huwag magbayad nang buo bago makita ang item.</p>
       </Card>

@@ -8,18 +8,20 @@ const config: Config = {
         brand: {
           DEFAULT: "#0B5C3F",
           dark: "#07402C",
-          light: "#E7F2EC",
+          deep: "#073B29",
+          light: "#E8F3EE",
         },
         gold: {
           DEFAULT: "#F2B705",
           dark: "#C99600",
           light: "#FFF6D6",
         },
-        surface: "#F3F4F6",
+        surface: "#F4F6F5",
       },
-      fontSize: {
-        // Slightly bigger base text for senior-friendly reading.
-        base: ["1.0625rem", "1.6rem"],
+      // Everything is rem-based; the root font size (14/16/18px) is set by the "Aa" text-size setting.
+      boxShadow: {
+        card: "0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06)",
+        float: "0 12px 28px -14px rgba(7, 59, 41, 0.45)",
       },
     },
   },
