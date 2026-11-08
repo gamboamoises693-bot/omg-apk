@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { collection, deleteDoc, doc, query, updateDoc, where } from "firebase/firestore";
-import { BadgeCheck, Ban, CalendarCheck, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
+import { BadgeCheck, Ban, Camera, CalendarCheck, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
 import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup } from "firebase/auth";
 import { db, googleProvider } from "@/lib/firebase";
 import { logActivity, roleLabel } from "@/lib/activity";
@@ -18,6 +18,8 @@ import { Badge, Button, Card, ErrorText, Input, LinkButton, Modal, PageHeader, S
 import { LoginGate } from "@/components/LoginGate";
 import { TextSizeSetting } from "@/components/TextSizeSetting";
 import { useToast } from "@/components/Toast";
+import { Avatar } from "@/components/Avatar";
+import { compressToDataUrl } from "@/lib/upload";
 
 const STATUS_BADGE = {
   pending: { label: "Naghihintay", color: "gold" },
@@ -273,6 +275,50 @@ function DeleteAccount() {
   );
 }
 
+/** Admin-only profile photo: tap the circle to change, small "Alisin" link to remove. */
+function AdminPhoto({ uid, name, photo }: { uid: string; name: string; photo?: string }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+
+  const save = async (photoURL: string) => {
+    setBusy(true);
+    try {
+      await updateDoc(doc(db, "users", uid), { photoURL });
+      logActivity("Account", photoURL ? "Nagpalit ng profile picture" : "Nag-alis ng profile picture");
+      toast(photoURL ? "Napalitan ang profile picture." : "Inalis ang profile picture.");
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onPick = async (file?: File) => {
+    if (!file) return;
+    try {
+      // 200px square JPEG ≈ 10–25KB, safely under the 60KB rule limit.
+      await save(await compressToDataUrl(file, 200, 0.75, 55_000, true));
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    }
+  };
+
+  return (
+    <div className="flex shrink-0 flex-col items-center gap-1">
+      <label className={`relative cursor-pointer ${busy ? "opacity-60" : ""}`} aria-label="Palitan ang profile picture">
+        <Avatar name={name} photo={photo} size="h-16 w-16" textClass="text-xl" ring="ring-2 ring-gold" />
+        <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-gold p-1 text-brand-deep shadow"><Camera className="h-3.5 w-3.5" /></span>
+        <input type="file" accept="image/*" className="hidden" disabled={busy} onChange={(e) => { onPick(e.target.files?.[0]); e.target.value = ""; }} />
+      </label>
+      {photo && (
+        <button onClick={() => confirm("Alisin ang profile picture?") && save("")} disabled={busy} className="text-[0.7rem] text-white/80 underline">
+          Alisin
+        </button>
+      )}
+    </div>
+  );
+}
+
 function AccountContent() {
   const { user, profile, isAdmin, isVerified, isSuspended, logout, loading } = useAuth();
   const toast = useToast();
@@ -289,7 +335,11 @@ function AccountContent() {
   return (
     <>
       <Card className="mb-4 flex items-center gap-4 bg-brand text-white">
-        <span className="rounded-full bg-gold p-3 text-brand-dark"><UserRound className="h-8 w-8" /></span>
+        {isAdmin && user ? (
+          <AdminPhoto uid={user.uid} name={profile.fullName} photo={profile.photoURL} />
+        ) : (
+          <span className="rounded-full bg-gold p-3 text-brand-dark"><UserRound className="h-8 w-8" /></span>
+        )}
         <div className="min-w-0">
           <p className="truncate text-lg font-bold">{profile.fullName} <VerifiedBadge show={isVerified && !isAdmin} className="text-white" /></p>
           <p className="truncate text-white/80">{user?.email}</p>

@@ -95,7 +95,11 @@ service cloud.firestore {
         && isNonEmptyString(incoming().fullName, 120);
       // A user edits their own profile but never role, position or suspension.
       // Only the Super Admin manages roles, and cannot demote themself (avoids lock-out).
-      allow update: if (isSelf(uid) && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended']))
+      // Profile photo (photoURL) is for admins only.
+      allow update: if (isSelf(uid)
+          && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended'])
+          && (!incoming().diff(existing()).affectedKeys().hasAny(['photoURL'])
+              || (isAdmin() && incoming().photoURL is string && incoming().photoURL.size() < 60000)))
         || (isSuperAdmin() && !(isSelf(uid) && incoming().role != 'superadmin'));
       allow delete: if isSelf(uid) || isSuperAdmin();
     }
