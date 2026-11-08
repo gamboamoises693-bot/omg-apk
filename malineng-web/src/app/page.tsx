@@ -5,6 +5,7 @@ import Link from "next/link";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import {
   Pill,
+  Package,
   Ambulance,
   Briefcase,
   CalendarCheck,
@@ -65,6 +66,7 @@ const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[
   { href: "/appointment", label: "Appointment", icon: CalendarCheck, tint: "purple" },
   { href: "/ambulansya", label: "Ambulansya", icon: Ambulance, tint: "red" },
   { href: "/botika", label: "Botika", icon: Pill, tint: "green" },
+  { href: "/hiraman", label: "Hiraman", icon: Package, tint: "blue" },
   { href: "/lost-found", label: "Lost & Found", icon: Search, tint: "pink" },
   { href: "/skills", label: "Skills", icon: Wrench, tint: "orange" },
   { href: "/proyekto", label: "Proyekto", icon: HardHat, tint: "gold" },

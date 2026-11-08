@@ -1,11 +1,12 @@
 "use client";
 
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { collection, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "./AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { formatTime12 } from "@/lib/ambulance";
+import { isLate, linesText, type BorrowRequest } from "@/lib/hiraman";
 import type { AmbulanceRequest, Appointment, Job, Listing, Post, Verification } from "@/lib/types";
 
 /** Admin tab that handles each kind of pending item (see app/admin/page.tsx). */
@@ -16,6 +17,8 @@ export const PENDING_TAB = {
   job: "approve",
   verification: "verification",
   appointment: "appointments",
+  borrow: "hiraman",
+  borrowLate: "hiraman",
 } as const;
 
 export type PendingKind = keyof typeof PENDING_TAB;
@@ -43,7 +46,18 @@ const Ctx = createContext<Value>(EMPTY);
  * Used by the shield badge, the admin tab badges and the phone alerts.
  */
 export function AdminPendingProvider({ children }: { children: ReactNode }) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, canBorrowAdmin } = useAuth();
+  // Hiraman: only the approvers listen. Waiting requests + borrowed items past their return time.
+  const borrowQ = useMemo(
+    () => (canBorrowAdmin ? query(collection(db, "borrowRequests"), where("status", "in", ["pending", "approved", "borrowed"])) : null),
+    [canBorrowAdmin],
+  );
+  const borrow = useCollection<BorrowRequest>(borrowQ);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
   const q = useMemo(() => {
     if (!isAdmin) return null;
     return {
@@ -78,6 +92,12 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       ...jobs.data.map((j) => ({ key: `job:${j.id}`, kind: "job" as const, emergency: false, title: "💼 Bagong trabaho", body: `${j.posterName}: ${j.title}` })),
       ...ver.data.map((v) => ({ key: `verification:${v.id}`, kind: "verification" as const, emergency: false, title: "✓ Bagong selfie para i-verify", body: `${v.fullName} · ${v.purok || "walang purok"}` })),
       ...appts.data.map((a) => ({ key: `appointment:${a.id}`, kind: "appointment" as const, emergency: false, title: `📅 Bagong ${a.service}`, body: `${a.fullName} · ${a.date}` })),
+      ...borrow.data
+        .filter((r) => r.status === "pending")
+        .map((r) => ({ key: `borrow:${r.id}`, kind: "borrow" as const, emergency: false, title: "📦 Bagong request sa Hiraman", body: `${r.userName}: ${linesText(r.items)}` })),
+      ...borrow.data
+        .filter((r) => isLate(r, now))
+        .map((r) => ({ key: `borrowLate:${r.id}`, kind: "borrowLate" as const, emergency: false, title: "⏰ Hindi pa naibabalik", body: `${r.userName}: ${linesText(r.items)}` })),
     ];
     const byTab: Record<string, number> = {};
     items.forEach((i) => {
@@ -88,9 +108,9 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       items,
       total: items.length,
       byTab,
-      loading: amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
+      loading: borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
     };
-  }, [isAdmin, amb, listings, posts, jobs, ver, appts]);
+  }, [isAdmin, amb, listings, posts, jobs, ver, appts, borrow, now]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

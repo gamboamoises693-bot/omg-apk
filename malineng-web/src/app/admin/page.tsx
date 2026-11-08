@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import {
   Pill,
+  Package,
   Ambulance,
   ArrowLeft,
   BadgeCheck,
@@ -47,12 +48,15 @@ import { AdminReport } from "@/components/admin/AdminReport";
 import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminActivity } from "@/components/admin/AdminActivity";
 import { AdminProjects } from "@/components/admin/AdminProjects";
+import { AdminHiraman } from "@/components/admin/AdminHiraman";
 
 interface Section {
   key: string;
   label: string;
   icon: LucideIcon;
   Component: ComponentType;
+  /** Kapitan, Secretary and Super Admin only (Hiraman approvals). */
+  borrowOnly?: boolean;
 }
 
 interface Group {
@@ -70,6 +74,7 @@ const GROUPS: Group[] = [
       { key: "verification", label: "Verification", icon: BadgeCheck, Component: AdminVerification },
       { key: "ambulansya", label: "Ambulansya", icon: Ambulance, Component: AdminAmbulance },
       { key: "appointments", label: "Appointments", icon: CalendarCheck, Component: AdminAppointments },
+      { key: "hiraman", label: "Hiraman", icon: Package, Component: AdminHiraman, borrowOnly: true },
     ],
   },
   {
@@ -107,9 +112,13 @@ function Badge({ n }: { n?: number }) {
 }
 
 export default function AdminPage() {
-  const { isSuperAdmin, canBotika, profile } = useAuth();
+  const { isSuperAdmin, canBotika, canBorrowAdmin, profile } = useAuth();
   const { byTab, total } = useAdminPending();
-  const groups = useMemo(() => GROUPS.filter((g) => !g.superOnly || isSuperAdmin), [isSuperAdmin]);
+  const groups = useMemo(
+    () =>
+      GROUPS.filter((g) => !g.superOnly || isSuperAdmin).map((g) => ({ ...g, sections: g.sections.filter((s) => !s.borrowOnly || canBorrowAdmin) })),
+    [isSuperAdmin, canBorrowAdmin],
+  );
   const sections = useMemo(() => groups.flatMap((g) => g.sections), [groups]);
   const [current, setCurrent] = useState("approve");
   const [open, setOpen] = useState(false);
