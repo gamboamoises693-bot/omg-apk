@@ -11,6 +11,7 @@ import {
   Briefcase,
   Wrench,
   Siren,
+  Ambulance,
   Search,
   HandCoins,
   CalendarCheck,
@@ -47,6 +48,7 @@ const ALL_FEATURES = [
   { href: "/events", label: "Events", icon: CalendarDays, color: "bg-indigo-50 text-indigo-700" },
   { href: "/botohan", label: "Botohan", icon: Vote, color: "bg-cyan-50 text-cyan-700" },
   { href: "/purok", label: "Purok Points", icon: Trophy, color: "bg-amber-50 text-amber-700" },
+  { href: "/ambulansya", label: "Ambulansya", icon: Ambulance, color: "bg-red-50 text-red-700" },
   { href: "/emergency", label: "Emergency", icon: Siren, color: "bg-red-50 text-red-700" },
 ] as const;
 

@@ -7,6 +7,12 @@ import { DEFAULT_PUROKS } from "./constants";
  */
 export const DEFAULT_SETTINGS: Settings = {
   puroks: DEFAULT_PUROKS,
+  ambulance: {
+    phone: "",
+    drivers: [],
+    status: "available",
+    fee: "",
+  },
   alertBanner: "",
   alertType: "wala",
   emergencyNumbers: {

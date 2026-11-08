@@ -187,7 +187,50 @@ export interface EmergencyNumbers {
   bfp: string;
 }
 
+export type AmbulanceAvailability = "available" | "busy" | "maintenance";
+
+export interface AmbulanceSettings {
+  phone: string;
+  drivers: string[];
+  status: AmbulanceAvailability;
+  /** Blank = Libre. Otherwise shown as-is, e.g. "₱200 para sa gas". */
+  fee: string;
+}
+
+export type AmbulanceRequestStatus = "pending" | "approved" | "enroute" | "done" | "rejected" | "cancelled";
+
+export interface AmbulanceRequest {
+  id: string;
+  userId: string;
+  type: "emergency" | "schedule";
+  patientName: string;
+  purok: string;
+  reason: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm (24h)
+  pickup: string;
+  destination: string;
+  notes: string;
+  contact: string;
+  status: AmbulanceRequestStatus;
+  driver?: string;
+  durationHours?: number;
+  adminNote?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+/** Public, anonymous busy window (no patient data) so residents can see availability. */
+export interface AmbulanceSlot {
+  id: string; // = request id
+  date: string;
+  start: string; // HH:mm
+  end: string; // HH:mm
+  status: "approved" | "enroute";
+}
+
 export interface Settings {
+  ambulance: AmbulanceSettings;
   puroks: string[];
   alertBanner: string;
   alertType: AlertType;

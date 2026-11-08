@@ -58,6 +58,13 @@ export function AdminSettings() {
       await setDoc(doc(db, "settings", "main"), {
         ...draft,
         puroks,
+        ambulance: {
+          phone: draft.ambulance.phone.trim(),
+          drivers: draft.ambulance.drivers.map((d) => d.trim()).filter(Boolean).slice(0, 20),
+          fee: draft.ambulance.fee.trim().slice(0, 80),
+          // Status is changed live in the Ambulansya tab; keep the latest value, not the stale draft.
+          status: settings.ambulance.status,
+        },
         hotlines: draft.hotlines
           .map((h) => ({ name: h.name.trim().slice(0, 80), numbers: h.numbers.map((n) => n.trim()).filter(Boolean).slice(0, 5) }))
           .filter((h) => h.name && h.numbers.length),
@@ -120,6 +127,18 @@ export function AdminSettings() {
         <Input label="Tanod" type="tel" value={draft.emergencyNumbers.tanod} onChange={(e) => set("emergencyNumbers", { ...draft.emergencyNumbers, tanod: e.target.value })} />
         <Input label="Health Center" type="tel" value={draft.emergencyNumbers.healthCenter} onChange={(e) => set("emergencyNumbers", { ...draft.emergencyNumbers, healthCenter: e.target.value })} />
         <Input label="BFP (Bumbero)" type="tel" value={draft.emergencyNumbers.bfp} onChange={(e) => set("emergencyNumbers", { ...draft.emergencyNumbers, bfp: e.target.value })} />
+      </Card>
+
+      <SectionTitle>Ambulansya</SectionTitle>
+      <Card className="space-y-3">
+        <Input label="Numero ng ambulansya / driver on duty" type="tel" placeholder="09171234567" value={draft.ambulance.phone} onChange={(e) => set("ambulance", { ...draft.ambulance, phone: e.target.value })} />
+        <Input
+          label="Mga driver"
+          hint="Paghiwalayin ng kuwit. Hal. Mang Ben, Mang Tonyo"
+          value={draft.ambulance.drivers.join(", ")}
+          onChange={(e) => set("ambulance", { ...draft.ambulance, drivers: e.target.value.split(",").map((d) => d.trimStart()) })}
+        />
+        <Input label="Bayad o donasyon" hint="Iwanang blangko para “Libre” ang lumabas." placeholder="Hal. ₱200 para sa gas" value={draft.ambulance.fee} onChange={(e) => set("ambulance", { ...draft.ambulance, fee: e.target.value })} />
       </Card>
 
       <SectionTitle>Cuyapo Hotlines</SectionTitle>

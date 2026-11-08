@@ -26,6 +26,7 @@ export function useSettings() {
             bfp: data.emergencyNumbers?.bfp || DEFAULT_SETTINGS.emergencyNumbers.bfp,
           },
           hotlines: Array.isArray(data.hotlines) ? data.hotlines : DEFAULT_SETTINGS.hotlines,
+          ambulance: { ...DEFAULT_SETTINGS.ambulance, ...(data.ambulance ?? {}) },
           // An empty array is a valid admin choice (all projects removed); only fall back when never saved.
           projects: Array.isArray(data.projects) ? data.projects : DEFAULT_SETTINGS.projects,
           puroks: data.puroks?.length ? data.puroks : DEFAULT_SETTINGS.puroks,

@@ -11,9 +11,11 @@ import { AdminEvents } from "@/components/admin/AdminEvents";
 import { AdminPolls } from "@/components/admin/AdminPolls";
 import { AdminPurok } from "@/components/admin/AdminPurok";
 import { AdminRegistrations } from "@/components/admin/AdminRegistrations";
+import { AdminAmbulance } from "@/components/admin/AdminAmbulance";
 
 const TABS = [
   { key: "approve", label: "I-approve", Component: AdminModeration },
+  { key: "ambulansya", label: "🚑 Ambulansya", Component: AdminAmbulance },
   { key: "appointments", label: "Appointments", Component: AdminAppointments },
   { key: "ayuda", label: "Ayuda", Component: AdminAyuda },
   { key: "registrations", label: "Registrations", Component: AdminRegistrations },
