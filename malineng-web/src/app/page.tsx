@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { collection, query, where } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import {
   Ambulance,
   Briefcase,
@@ -39,6 +39,7 @@ import { ProgressBar, ProjectStatusPill, projectSortKey } from "@/components/Pro
 import { LinkButton, SectionTitle, Spinner } from "@/components/ui";
 import { AdminShieldLink } from "@/components/AdminShieldLink";
 import { LogoButton, LogoMark } from "@/components/BarangayLogo";
+import type { PublicStats } from "@/lib/stats";
 
 type Tint = "green" | "gold" | "red" | "blue" | "purple" | "orange" | "teal" | "pink";
 const TINT: Record<Tint, string> = {
@@ -159,6 +160,11 @@ export default function HomePage() {
   const { settings, loading } = useSettings();
   const [hello, setHello] = useState("Magandang araw");
   const [showAll, setShowAll] = useState(false);
+  const [stats, setStats] = useState<PublicStats | null>(null);
+  useEffect(
+    () => onSnapshot(doc(db, "stats", "public"), (snap) => setStats(snap.exists() ? (snap.data() as PublicStats) : null), () => setStats(null)),
+    [],
+  );
   // Computed on the client: the static build would otherwise freeze the build-time hour.
   useEffect(() => setHello(greeting()), []);
 
@@ -201,6 +207,13 @@ export default function HomePage() {
           <LogoMark size="h-6 w-6" textClass="text-[0.65rem]" />
           <span>Barangay Malineng · {BARANGAY_CITY}</span>
         </LogoButton>
+        {stats && stats.members > 0 && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5 text-xs font-semibold">
+            <span className="rounded-full bg-white/15 px-2.5 py-1">👥 {stats.members.toLocaleString("en-PH")} miyembro</span>
+            {stats.verified > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">✓ {stats.verified.toLocaleString("en-PH")} verified</span>}
+            {stats.households > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">🏠 {stats.households.toLocaleString("en-PH")} household</span>}
+          </div>
+        )}
       </section>
 
       {/* Summary card */}

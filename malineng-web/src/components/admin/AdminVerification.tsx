@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { logActivity } from "@/lib/activity";
+import { refreshPublicStatsQuietly } from "@/lib/stats";
 import { REJECT_REASONS } from "@/lib/constants";
 import { formatDate, friendlyError, telHref, timeAgo, tsToMillis } from "@/lib/format";
 import type { Verification, VerificationStatus } from "@/lib/types";
@@ -53,6 +54,7 @@ function Review({ v, onClose }: { v: Verification; onClose: () => void }) {
       if (status === "verified") batch.set(flag, { name: v.fullName, verifiedAt: serverTimestamp(), verifiedBy: profile.fullName });
       else batch.delete(flag);
       await batch.commit();
+      refreshPublicStatsQuietly();
       logActivity("Verification", status === "verified" ? `Nag-verify ng account ni ${v.fullName} (${v.purok})` : `Nag-reject ng selfie ni ${v.fullName}: ${reason}`, v.uid);
       toast(status === "verified" ? `Na-verify si ${v.fullName}.` : `Na-reject. Makikita ni ${v.fullName} ang dahilan.`);
       onClose();
