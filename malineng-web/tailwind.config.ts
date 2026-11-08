@@ -5,18 +5,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Bank-app style blue theme.
         brand: {
-          DEFAULT: "#0B5C3F",
-          dark: "#07402C",
-          deep: "#073B29",
-          light: "#E8F3EE",
+          DEFAULT: "#1F5FAE",
+          dark: "#174C8E",
+          deep: "#0F3A70",
+          light: "#E1EDFB",
         },
         gold: {
           DEFAULT: "#F2B705",
           dark: "#C99600",
           light: "#FFF6D6",
         },
-        surface: "#F4F6F5",
+        surface: "#F5F8FC",
       },
       // Everything is rem-based; the root font size (14/16/18px) is set by the "Aa" text-size setting.
       keyframes: {
@@ -27,7 +28,7 @@ const config: Config = {
       },
       boxShadow: {
         card: "0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06)",
-        float: "0 12px 28px -14px rgba(7, 59, 41, 0.45)",
+        float: "0 12px 28px -14px rgba(15, 58, 112, 0.45)",
       },
     },
   },

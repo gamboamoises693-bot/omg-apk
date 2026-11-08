@@ -411,6 +411,17 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ---------- presence ("online now" counter) ----------
+    // Any visitor (even a guest) marks their device as seen. Only a server
+    // timestamp is stored, so there is nothing private to read.
+    match /presence/{deviceId} {
+      allow read: if true;
+      allow create, update: if deviceId.matches('^[a-z0-9]{20}$')
+        && incoming().keys().hasOnly(['lastSeen'])
+        && incoming().lastSeen == request.time;
+      allow delete: if isSuperAdmin();
+    }
+
     // ---------- stats (public counts only; written by admins) ----------
     match /stats/{docId} {
       allow read: if true;
