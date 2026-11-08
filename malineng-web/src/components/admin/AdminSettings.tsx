@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { doc, setDoc } from "firebase/firestore";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useSettings } from "@/lib/useSettings";
 import { ALERT_TYPES } from "@/lib/constants";
@@ -26,11 +26,38 @@ export function AdminSettings() {
 
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setDraft((d) => (d ? { ...d, [key]: value } : d));
 
+  /** Trim, drop blanks/duplicates, cap length. Keeps the admin's order. */
+  const cleanPuroks = (list: string[]): string[] => {
+    const seen = new Set<string>();
+    return list
+      .map((p) => p.trim().replace(/\s+/g, " ").slice(0, 40))
+      .filter((p) => {
+        const key = p.toLowerCase();
+        if (!p || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  };
+
+  const movePurok = (index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= draft.puroks.length) return;
+    const next = [...draft.puroks];
+    [next[index], next[target]] = [next[target], next[index]];
+    set("puroks", next);
+  };
+
   const save = async () => {
+    const puroks = cleanPuroks(draft.puroks);
+    if (puroks.length === 0) {
+      toast("Kailangan ng kahit isang Purok.", "error");
+      return;
+    }
     setSaving(true);
     try {
       await setDoc(doc(db, "settings", "main"), {
         ...draft,
+        puroks,
         officials: draft.officials.filter((o) => o.name.trim()),
         announcements: draft.announcements.filter((a) => a.title.trim()),
         projects: draft.projects.map((p) => ({ name: p.name, progress: Math.min(100, Math.max(0, Number(p.progress) || 0)) })),
@@ -45,6 +72,38 @@ export function AdminSettings() {
 
   return (
     <div className="space-y-2">
+      <SectionTitle>Mga Purok</SectionTitle>
+      <Card className="space-y-3">
+        <p className="text-sm text-gray-500">
+          Lalabas ang listahang ito sa lahat ng dropdown (Register, Trabaho, Skills, Magparehistro) at sa Purok Points.
+          Paalala: kapag pinalitan ang pangalan ng purok, hindi kusang nagbabago ang lumang records.
+        </p>
+        {draft.puroks.map((p, i) => (
+          <div key={i} className="flex items-end gap-1">
+            <div className="flex-1">
+              <Input
+                label={`Purok #${i + 1}`}
+                value={p}
+                maxLength={40}
+                onChange={(e) => set("puroks", draft.puroks.map((x, j) => (j === i ? e.target.value : x)))}
+              />
+            </div>
+            <button type="button" onClick={() => movePurok(i, -1)} disabled={i === 0} className="mb-2 rounded-full p-2 text-gray-500 disabled:opacity-30" aria-label="Itaas">
+              <ArrowUp className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={() => movePurok(i, 1)} disabled={i === draft.puroks.length - 1} className="mb-2 rounded-full p-2 text-gray-500 disabled:opacity-30" aria-label="Ibaba">
+              <ArrowDown className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={() => set("puroks", draft.puroks.filter((_, j) => j !== i))} className="mb-2 rounded-full p-2 text-red-600" aria-label="Tanggalin">
+              <Trash2 className="h-5 w-5" />
+            </button>
+          </div>
+        ))}
+        <Button variant="outline" full onClick={() => set("puroks", [...draft.puroks, `Purok ${draft.puroks.length + 1}`])}>
+          <Plus className="h-5 w-5" /> Magdagdag ng Purok
+        </Button>
+      </Card>
+
       <SectionTitle>Alert Banner</SectionTitle>
       <Card className="space-y-3">
         <Select label="Uri ng Alert" options={ALERT_TYPES} value={draft.alertType} onChange={(e) => set("alertType", e.target.value as Settings["alertType"])} />

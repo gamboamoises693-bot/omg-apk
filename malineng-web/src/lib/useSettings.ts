@@ -21,6 +21,7 @@ export function useSettings() {
           ...data,
           emergencyNumbers: { ...DEFAULT_SETTINGS.emergencyNumbers, ...(data.emergencyNumbers ?? {}) },
           projects: data.projects?.length ? data.projects : DEFAULT_SETTINGS.projects,
+          puroks: data.puroks?.length ? data.puroks : DEFAULT_SETTINGS.puroks,
         });
         setLoading(false);
       },
@@ -33,4 +34,9 @@ export function useSettings() {
   }, []);
 
   return { settings, loading };
+}
+
+/** Purok list managed by the admin in /admin > Settings. */
+export function usePuroks(): string[] {
+  return useSettings().settings.puroks;
 }

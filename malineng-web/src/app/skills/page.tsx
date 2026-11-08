@@ -6,7 +6,8 @@ import { Phone, Plus, Search, Trash2, Wrench, UserRound } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
-import { PUROKS, SKILL_TYPES } from "@/lib/constants";
+import { SKILL_TYPES } from "@/lib/constants";
+import { usePuroks } from "@/lib/useSettings";
 import { friendlyError, sortNewest, telHref } from "@/lib/format";
 import type { Skill } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, ErrorText, Input, Modal, PageHeader, Select, Spinner } from "@/components/ui";
@@ -17,6 +18,7 @@ const skillsCollection = collection(db, "skills");
 
 function SkillForm({ onDone }: { onDone: () => void }) {
   const { user, profile } = useAuth();
+  const puroks = usePuroks();
   const toast = useToast();
   const [form, setForm] = useState({ name: "", skill: "", purok: "", contact: "" });
   const [loading, setLoading] = useState(false);
@@ -56,7 +58,7 @@ function SkillForm({ onDone }: { onDone: () => void }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input label="Pangalan" required value={form.name} onChange={update("name")} />
       <Select label="Skill" required options={SKILL_TYPES} placeholder="-- Pumili --" value={form.skill} onChange={update("skill")} />
-      <Select label="Purok" required options={PUROKS} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} />
+      <Select label="Purok" required options={puroks} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} />
       <Input label="Contact Number" type="tel" required value={form.contact} onChange={update("contact")} />
       <ErrorText>{error}</ErrorText>
       <Button type="submit" full loading={loading}>Ilista ang Skill</Button>

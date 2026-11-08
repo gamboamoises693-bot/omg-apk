@@ -3,18 +3,20 @@
 import { collection, doc, increment, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useCollection } from "@/lib/useCollection";
-import { PUROKS } from "@/lib/constants";
+import { usePuroks } from "@/lib/useSettings";
 import { friendlyError } from "@/lib/format";
 import type { PurokPoints } from "@/lib/types";
 import { Button, Card } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
 const purokCollection = collection(db, "purokPoints");
-const purokDocId = (purok: string) => purok.toLowerCase().replace(/\s+/g, "-"); // "Purok 1" -> "purok-1"
+// "Purok 1" -> "purok-1", "Purok 6-A" -> "purok-6-a" (safe Firestore doc id)
+const purokDocId = (purok: string) => purok.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 export function AdminPurok() {
   const toast = useToast();
   const { data } = useCollection<PurokPoints>(purokCollection);
+  const puroks = usePuroks();
 
   const add = async (purok: string, points: number, cleanup = 0) => {
     try {
@@ -28,7 +30,7 @@ export function AdminPurok() {
 
   return (
     <div className="space-y-3">
-      {PUROKS.map((purok) => {
+      {puroks.map((purok) => {
         const row = data.find((d) => d.purok === purok);
         return (
           <Card key={purok}>

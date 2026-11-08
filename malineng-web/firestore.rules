@@ -40,8 +40,9 @@ service cloud.firestore {
       return value is string && value.size() > 0 && value.size() <= maxLen;
     }
 
+    // Purok list is managed by the admin in Settings, so only check shape here.
     function validPurok(p) {
-      return p in ['Purok 1', 'Purok 2', 'Purok 3', 'Purok 4', 'Purok 5'];
+      return isNonEmptyString(p, 40);
     }
 
     function optionalPhoto() {

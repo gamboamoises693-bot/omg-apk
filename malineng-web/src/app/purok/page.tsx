@@ -5,7 +5,7 @@ import { collection } from "firebase/firestore";
 import { Trophy, Medal } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useCollection } from "@/lib/useCollection";
-import { PUROKS } from "@/lib/constants";
+import { usePuroks } from "@/lib/useSettings";
 import type { PurokPoints } from "@/lib/types";
 import { Card, PageHeader, Spinner } from "@/components/ui";
 
@@ -14,14 +14,15 @@ const MEDAL_COLORS = ["text-yellow-500", "text-gray-400", "text-amber-700"];
 
 export default function PurokPage() {
   const { data, loading } = useCollection<PurokPoints>(purokCollection);
+  const puroks = usePuroks();
 
-  // Always show all 5 puroks, even those without a doc yet.
+  // Always show every purok from Settings, even those without points yet.
   const ranking = useMemo(() => {
-    return PUROKS.map((purok) => {
+    return puroks.map((purok) => {
       const found = data.find((d) => d.purok === purok);
       return { purok, points: found?.points ?? 0, cleanupCount: found?.cleanupCount ?? 0 };
     }).sort((a, b) => b.points - a.points);
-  }, [data]);
+  }, [data, puroks]);
 
   const max = Math.max(1, ...ranking.map((r) => r.points));
 

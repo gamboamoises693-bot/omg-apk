@@ -183,6 +183,7 @@ export interface EmergencyNumbers {
 }
 
 export interface Settings {
+  puroks: string[];
   alertBanner: string;
   alertType: AlertType;
   emergencyNumbers: EmergencyNumbers;

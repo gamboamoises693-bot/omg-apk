@@ -7,7 +7,7 @@ import { CalendarCheck, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase
 import { db } from "@/lib/firebase";
 import { ensureUserDoc, useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
-import { PUROKS } from "@/lib/constants";
+import { usePuroks } from "@/lib/useSettings";
 import { formatPeso, friendlyError, sortNewest } from "@/lib/format";
 import type { Job, Listing } from "@/lib/types";
 import { Badge, Button, Card, ErrorText, Input, LinkButton, PageHeader, SectionTitle, Select, Spinner } from "@/components/ui";
@@ -22,6 +22,7 @@ const STATUS_BADGE = {
 
 function ProfileForm() {
   const { user, profile, needsProfile } = useAuth();
+  const puroks = usePuroks();
   const toast = useToast();
   const [form, setForm] = useState({ fullName: "", purok: "", contact: "", birthday: "" });
   const [saving, setSaving] = useState(false);
@@ -60,7 +61,7 @@ function ProfileForm() {
       {needsProfile && <p className="mb-3 rounded-xl bg-gold-light p-3 font-semibold text-yellow-900">Pakikumpleto ang profile mo (Purok at Contact) para magamit ang lahat ng features.</p>}
       <form onSubmit={handleSave} className="space-y-4">
         <Input label="Buong Pangalan" value={form.fullName} onChange={update("fullName")} required />
-        <Select label="Purok" options={PUROKS} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} required />
+        <Select label="Purok" options={puroks} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} required />
         <Input label="Contact Number" type="tel" value={form.contact} onChange={update("contact")} required />
         <Input label="Birthday" type="date" value={form.birthday} onChange={update("birthday")} />
         <ErrorText>{error}</ErrorText>
