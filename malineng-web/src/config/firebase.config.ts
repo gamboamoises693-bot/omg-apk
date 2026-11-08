@@ -18,8 +18,10 @@ export const firebaseConfig = {
 };
 
 /**
- * true  = i-upload ang photos sa Firebase Storage (kailangan naka-enable ang Storage).
- * false = i-save ang compressed photo diretso sa Firestore (100% libre, walang Storage).
- * Kahit true ito, automatic na babalik sa Firestore mode kapag pumalya ang Storage.
+ * false (default) = i-save ang compressed photo diretso sa Firestore.
+ *                   100% libre, hindi kailangan ng Blaze plan o credit card.
+ * true            = i-upload sa Firebase Storage. Sa mga bagong project, kailangan
+ *                   ng Blaze plan para ma-enable ang Storage.
+ *                   Kapag pumalya ang Storage, babalik pa rin ito sa Firestore mode.
  */
-export const USE_FIREBASE_STORAGE = true;
+export const USE_FIREBASE_STORAGE = false;

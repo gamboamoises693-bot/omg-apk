@@ -35,8 +35,7 @@ Next.js + Tailwind + Firebase (Auth, Firestore, Storage, Hosting). Mobile-first,
    - I-enable ang **Email/Password**
    - I-enable ang **Google** (pumili ng support email)
 4. **Build → Firestore Database → Create database** → Production mode → location `asia-southeast1`.
-5. *(Optional)* **Build → Storage → Get started**. Sa mga bagong project, maaaring hingin ang Blaze plan dito.
-   **Kung ayaw mo mag-Blaze, laktawan ito.** Kusang magse-save ang app ng compressed na photo sa Firestore.
+5. **Huwag nang i-enable ang Storage.** Naka-`USE_FIREBASE_STORAGE = false` na ang app, kaya ise-save ang compressed na photo diretso sa Firestore (libre, walang Blaze plan).
 
 ### Step 2: Kunin ang web config
 1. Project settings (gear icon) → **Your apps** → pindutin ang `</>` (Web) → i-register ang app.
@@ -47,7 +46,7 @@ Next.js + Tailwind + Firebase (Auth, Firestore, Storage, Hosting). Mobile-first,
 ### Step 3: Gumawa ng service account (para sa auto-deploy)
 1. Firebase Console → Project settings → **Service accounts** → **Manage service account permissions** (bubukas ang Google Cloud).
 2. **+ Create service account** → pangalan: `github-deploy`.
-3. Ibigay ang roles na ito: **Firebase Admin** at **Service Account User**.
+3. Ibigay ang roles na ito: **Firebase Admin**, **Service Account User** at **API Keys Viewer**.
 4. Buksan ang ginawang account → **Keys → Add key → JSON**. Mada-download ang `.json` file.
 
 ### Step 4: Ilagay ang GitHub Secrets
