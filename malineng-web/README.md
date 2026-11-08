@@ -82,10 +82,25 @@ Authentication → **Settings → Authorized domains**: dapat nakalista ang `PRO
 
 ---
 
+## Roles at verification
+
+| Role | Paano itakda | Kaya |
+|---|---|---|
+| **Super Admin** (`role: "superadmin"`) | **Isang beses sa Firebase Console**: Firestore → `users` → doc mo → `role` = `superadmin` | Lahat, kasama ang 👑 Users at Roles at 👑 Activity Log |
+| **Admin** (`role: "admin"` + `position`) | Ng Super Admin sa Admin → 👑 Users at Roles | Pamamahala. Ang `position: "Kapitan"` lang ang makaka-approve ng ambulansya |
+| **Residente** | Default pagka-register | Normal na gamit |
+
+- **Selfie verification**: pagka-register → `/verify`. Susuriin ito ng Admin sa tab na ✓ Verification. Itatago ang selfie hanggang burahin ng residente ang account (Account → Burahin ang account ko).
+- **Verified lang**: Tindahan, Trabaho, Appointment/Clearance, schedule ng ambulansya, at Botohan. **Laging bukas ang emergency request.**
+- **Suspend**: Ng Super Admin. Hindi makakapag-post o makakapag-book ang naka-suspend, pero bukas pa rin sa kanya ang emergency.
+- **Clearance na may QR**: Admin → Appointments → (Ready) → Gumawa ng dokumento. Ang QR ay papunta sa `/verify-doc/?id=...`.
+
 ## Data model (Firestore)
 
 `users`, `posts`, `comments`, `listings`, `jobs`, `skills`, `lostFound`, `ayuda`, `appointments`,
-`polls`, `events`, `purokPoints`, `settings` (single doc: `settings/main`), at `registrations` (para sa `/register-event`).
+`polls`, `events`, `purokPoints`, `settings` (single doc: `settings/main`), `registrations` (para sa `/register-event`),
+`ambulanceRequests` + `ambulanceSchedule`, `verifications` (selfie, private) + `verifiedUsers` (public flag),
+`activityLogs` (append-only), `issuedDocuments` (QR check), at `households`.
 
 Mga tala:
 - **ayuda**: ang document ID ay ang **control number** (UPPERCASE). May `nameLower` field para sa pag-search ng pangalan.

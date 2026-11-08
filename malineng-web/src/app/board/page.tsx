@@ -14,6 +14,7 @@ import { ImagePicker } from "@/components/ImagePicker";
 import { LoginGate } from "@/components/LoginGate";
 import { PostCard } from "@/components/PostCard";
 import { useToast } from "@/components/Toast";
+import { logActivity } from "@/lib/activity";
 
 function CreatePost() {
   const { user, profile } = useAuth();
@@ -41,6 +42,7 @@ function CreatePost() {
         likes: [],
         createdAt: serverTimestamp(),
       });
+      logActivity("Board", `Nag-post sa Community Board: “${content.trim().slice(0, 60)}”`);
       setContent("");
       setFile(null);
       toast("Naipadala! Lalabas ang post kapag na-approve ng admin.");

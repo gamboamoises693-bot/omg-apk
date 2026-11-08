@@ -43,6 +43,15 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
+/** Compress an image to a small JPEG data URL (stored directly in Firestore). */
+export async function compressToDataUrl(file: File, maxSize = 600, quality = 0.7): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("Larawan lang ang pwedeng i-upload.");
+  if (file.size > MAX_FILE_BYTES) throw new Error("Masyadong malaki ang larawan (max 10MB).");
+  const dataUrl = await blobToDataUrl(await compressImage(file, maxSize, quality));
+  if (dataUrl.length > 380_000) throw new Error("Masyadong malaki pa rin ang larawan. Kumuha ulit.");
+  return dataUrl;
+}
+
 /**
  * Upload a photo and return a URL to save in Firestore (photoURL).
  * 1) Tries Firebase Storage (uploads/{uid}/...).

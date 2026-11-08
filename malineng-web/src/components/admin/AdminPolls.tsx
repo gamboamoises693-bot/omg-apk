@@ -10,6 +10,7 @@ import { friendlyError, sortNewest } from "@/lib/format";
 import type { Poll } from "@/lib/types";
 import { Badge, Button, Card, Input, SectionTitle, Textarea } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { logActivity } from "@/lib/activity";
 
 const pollsCollection = collection(db, "polls");
 
@@ -31,6 +32,7 @@ export function AdminPolls() {
       await addDoc(pollsCollection, { question: question.trim(), options, votes: [], voters: [], createdBy: user.uid, isActive: true, createdAt: serverTimestamp() });
       setQuestion("");
       setOptionsText("");
+      logActivity("Botohan", `Gumawa ng botohan: “${question.trim()}”`);
       toast("Na-create ang botohan.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -62,14 +64,18 @@ export function AdminPolls() {
               ))}
             </ul>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={() => updateDoc(doc(db, "polls", p.id), { isActive: !p.isActive }).catch((err) => toast(friendlyError(err), "error"))}>
+              <Button variant="outline" onClick={() =>
+                  updateDoc(doc(db, "polls", p.id), { isActive: !p.isActive })
+                    .then(() => logActivity("Botohan", `${p.isActive ? "Isinara" : "Binuksan"} ang botohan: “${p.question}”`, p.id))
+                    .catch((err) => toast(friendlyError(err), "error"))
+                }>
                 {p.isActive ? "Isara" : "Buksan"}
               </Button>
               <Button
                 variant="danger"
                 onClick={async () => {
                   if (!confirm("Burahin ang botohan?")) return;
-                  try { await deleteDoc(doc(db, "polls", p.id)); } catch (err) { toast(friendlyError(err), "error"); }
+                  try { await deleteDoc(doc(db, "polls", p.id)); logActivity("Botohan", `Nagbura ng botohan: “${p.question}”`, p.id); } catch (err) { toast(friendlyError(err), "error"); }
                 }}
               >
                 <Trash2 className="h-5 w-5" /> Burahin

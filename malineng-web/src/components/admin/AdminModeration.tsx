@@ -10,14 +10,16 @@ import type { Job, Listing, Post } from "@/lib/types";
 import { Button, Card, EmptyState, SectionTitle, Spinner } from "@/components/ui";
 import { PostCard } from "@/components/PostCard";
 import { useToast } from "@/components/Toast";
+import { logActivity } from "@/lib/activity";
 
 function useModerate(collectionName: "listings" | "jobs") {
   const toast = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
-  const setStatus = async (id: string, status: "approved" | "rejected") => {
+  const setStatus = async (id: string, status: "approved" | "rejected", label = "") => {
     setBusyId(id);
     try {
       await updateDoc(doc(db, collectionName, id), { status });
+      logActivity(collectionName === "listings" ? "Tindahan" : "Trabaho", `${status === "approved" ? "Nag-approve" : "Nag-reject"} ng ${collectionName === "listings" ? "paninda" : "trabaho"}${label ? `: “${label}”` : ""}`, id);
       toast(status === "approved" ? "Na-approve!" : "Na-reject.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -57,6 +59,7 @@ export function AdminModeration() {
     if (!confirm(`Burahin ang ${expired.length} expired na paninda?`)) return;
     try {
       await Promise.all(expired.map((l) => deleteDoc(doc(db, "listings", l.id))));
+      logActivity("Tindahan", `Nagbura ng ${expired.length} expired na paninda`);
       toast("Nalinis na ang expired listings.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -87,7 +90,7 @@ export function AdminModeration() {
                 </div>
               </div>
               {l.description && <p className="mt-2 whitespace-pre-line text-gray-700">{l.description}</p>}
-              <ApproveButtons busy={listingMod.busyId === l.id} onApprove={() => listingMod.setStatus(l.id, "approved")} onReject={() => listingMod.setStatus(l.id, "rejected")} />
+              <ApproveButtons busy={listingMod.busyId === l.id} onApprove={() => listingMod.setStatus(l.id, "approved", l.title)} onReject={() => listingMod.setStatus(l.id, "rejected", l.title)} />
             </Card>
           ))}
         </div>
@@ -115,7 +118,7 @@ export function AdminModeration() {
               <p className="font-bold">{j.title}</p>
               <p className="text-gray-600">{j.category} · {j.purok} · {j.salary}</p>
               <p className="text-sm text-gray-500">{j.posterName} · {j.contact} · {timeAgo(j.createdAt)}</p>
-              <ApproveButtons busy={jobMod.busyId === j.id} onApprove={() => jobMod.setStatus(j.id, "approved")} onReject={() => jobMod.setStatus(j.id, "rejected")} />
+              <ApproveButtons busy={jobMod.busyId === j.id} onApprove={() => jobMod.setStatus(j.id, "approved", j.title)} onReject={() => jobMod.setStatus(j.id, "rejected", j.title)} />
             </Card>
           ))}
         </div>

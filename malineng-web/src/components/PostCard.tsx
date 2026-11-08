@@ -11,6 +11,9 @@ import { friendlyError, sortNewest, timeAgo } from "@/lib/format";
 import type { Comment, Post } from "@/lib/types";
 import { Badge, Button } from "./ui";
 import { useToast } from "./Toast";
+import { VerifiedBadge } from "./VerifiedBadge";
+import { useVerifiedSet } from "@/lib/useVerifiedSet";
+import { logActivity } from "@/lib/activity";
 
 function Comments({ postId }: { postId: string }) {
   const { user, profile } = useAuth();
@@ -20,6 +23,7 @@ function Comments({ postId }: { postId: string }) {
   const q = useMemo(() => query(collection(db, "comments"), where("postId", "==", postId)), [postId]);
   const { data, loading } = useCollection<Comment>(q);
   const comments = useMemo(() => sortNewest(data).reverse(), [data]); // oldest first like FB
+  const verified = useVerifiedSet();
 
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
@@ -51,7 +55,7 @@ function Comments({ postId }: { postId: string }) {
         <ul className="space-y-2">
           {comments.map((c) => (
             <li key={c.id} className="rounded-2xl bg-surface px-3 py-2">
-              <p className="text-sm font-bold">{c.authorName}</p>
+              <p className="text-sm font-bold">{c.authorName}<VerifiedBadge show={verified.has(c.authorId)} className="ml-0.5 align-[-2px]" /></p>
               <p className="whitespace-pre-line text-gray-800">{c.text}</p>
               <p className="text-xs text-gray-400">{timeAgo(c.createdAt)}</p>
             </li>
@@ -87,6 +91,7 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
   const [showComments, setShowComments] = useState(false);
   const [busy, setBusy] = useState(false);
   const liked = !!user && post.likes.includes(user.uid);
+  const verified = useVerifiedSet();
 
   const toggleLike = async () => {
     if (!user) {
@@ -104,6 +109,7 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
     setBusy(true);
     try {
       await updateDoc(doc(db, "posts", post.id), { status });
+      logActivity("Board", `${status === "approved" ? "Nag-approve" : "Nag-reject"} ng post ni ${post.authorName}`, post.id);
       toast(status === "approved" ? "Na-approve ang post." : "Na-reject ang post.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -131,7 +137,7 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
           <UserRound className="h-6 w-6" aria-hidden />
         </span>
         <div className="flex-1">
-          <p className="font-bold leading-tight">{post.authorName}</p>
+          <p className="font-bold leading-tight">{post.authorName}<VerifiedBadge show={verified.has(post.authorId)} className="ml-0.5 align-[-2px]" /></p>
           <p className="text-sm text-gray-500">
             {post.purok} · {timeAgo(post.createdAt)}
           </p>

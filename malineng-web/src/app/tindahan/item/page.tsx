@@ -10,6 +10,8 @@ import { formatDate, formatPeso, timeAgo } from "@/lib/format";
 import type { Listing } from "@/lib/types";
 import { Badge, Card, EmptyState, Spinner } from "@/components/ui";
 import { ContactButtons } from "@/components/ContactButtons";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { useVerifiedSet } from "@/lib/useVerifiedSet";
 
 /**
  * Listing detail. Uses ?id= query param (instead of /tindahan/[id])
@@ -20,6 +22,7 @@ function ListingDetail() {
   const id = params.get("id");
   const [listing, setListing] = useState<Listing | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "missing">("loading");
+  const verified = useVerifiedSet();
 
   useEffect(() => {
     if (!id) {
@@ -71,7 +74,7 @@ function ListingDetail() {
         <p className="mt-1 text-2xl font-extrabold text-brand">{formatPeso(listing.price)}</p>
         <p className="mt-4 whitespace-pre-line text-gray-700">{listing.description || "Walang description."}</p>
         <div className="mt-4 space-y-1 text-gray-600">
-          <p className="flex items-center gap-2"><UserRound className="h-5 w-5" /> {listing.sellerName}</p>
+          <p className="flex items-center gap-2"><UserRound className="h-5 w-5" /> {listing.sellerName}<VerifiedBadge show={verified.has(listing.sellerId)} />{verified.has(listing.sellerId) && <span className="text-xs font-semibold text-blue-600">Verified</span>}</p>
           <p className="flex items-center gap-2"><MapPin className="h-5 w-5" /> {listing.purok}, Malineng</p>
           <p className="flex items-center gap-2"><CalendarClock className="h-5 w-5" /> Na-post {timeAgo(listing.createdAt)}
             {listing.expiresAt && ` · Hanggang ${formatDate(listing.expiresAt.toDate())}`}

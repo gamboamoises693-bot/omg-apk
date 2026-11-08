@@ -11,7 +11,8 @@ import { usePuroks } from "@/lib/useSettings";
 import { friendlyError, sortNewest, telHref, timeAgo } from "@/lib/format";
 import type { Job } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, ErrorText, Input, Modal, PageHeader, Select, Spinner } from "@/components/ui";
-import { LoginGate } from "@/components/LoginGate";
+import { RequireVerified } from "@/components/RequireVerified";
+import { logActivity } from "@/lib/activity";
 import { useToast } from "@/components/Toast";
 
 function JobForm({ onDone }: { onDone: () => void }) {
@@ -46,6 +47,7 @@ function JobForm({ onDone }: { onDone: () => void }) {
         status: "pending",
         createdAt: serverTimestamp(),
       });
+      logActivity("Trabaho", `Nag-post ng trabaho: “${form.title.trim()}” (${form.purok})`);
       toast("Naipadala! Lalabas ito kapag na-approve ng admin.");
       onDone();
     } catch (err) {
@@ -113,9 +115,9 @@ export default function TrabahoPage() {
       )}
 
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title="Mag-post ng Trabaho">
-        <LoginGate message="Mag-login para makapag-post ng trabaho.">
+        <RequireVerified feature="makapag-post ng trabaho">
           <JobForm onDone={() => setFormOpen(false)} />
-        </LoginGate>
+        </RequireVerified>
       </Modal>
 
       <Modal open={!!interested} onClose={() => setInterested(null)} title="Salamat sa interes!">

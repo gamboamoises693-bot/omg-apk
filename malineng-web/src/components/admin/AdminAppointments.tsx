@@ -1,22 +1,75 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { collection, deleteDoc, doc, updateDoc } from "firebase/firestore";
-import { Phone, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { addDoc, collection, deleteDoc, doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { FileText, Phone, Printer, Trash2 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useSettings } from "@/lib/useSettings";
+import { logActivity } from "@/lib/activity";
 import { db } from "@/lib/firebase";
 import { useCollection } from "@/lib/useCollection";
 import { APPOINTMENT_STATUSES, APPOINTMENT_STATUS_LABEL, type AppointmentStatus } from "@/lib/constants";
 import { formatDate, friendlyError, telHref } from "@/lib/format";
 import type { Appointment } from "@/lib/types";
-import { Badge, Card, EmptyState, Spinner } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, Input, Modal, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
 const appointmentsCollection = collection(db, "appointments");
+const PRINTABLE = ["Barangay Clearance", "Indigency"] as const;
+
+/** Creates issuedDocuments/{id} (public QR check) and links it to the appointment. */
+function IssueDocument({ a, onClose }: { a: Appointment; onClose: () => void }) {
+  const { profile } = useAuth();
+  const { settings } = useSettings();
+  const toast = useToast();
+  const [purpose, setPurpose] = useState(a.notes?.trim() || "");
+  const [busy, setBusy] = useState(false);
+  const punong = settings.officials.find((o) => /punong/i.test(o.position))?.name ?? "";
+
+  const issue = async () => {
+    setBusy(true);
+    try {
+      const userSnap = await getDoc(doc(db, "users", a.userId));
+      const purok = (userSnap.exists() && (userSnap.data().purok as string)) || "Barangay Malineng";
+      const ref = await addDoc(collection(db, "issuedDocuments"), {
+        type: a.service === "Indigency" ? "Indigency" : "Barangay Clearance",
+        fullName: a.fullName,
+        purok,
+        purpose: purpose.trim().slice(0, 200),
+        appointmentId: a.id,
+        issuedByName: profile?.fullName ?? "",
+        signatory: punong,
+        valid: true,
+        issuedAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, "appointments", a.id), { documentId: ref.id });
+      logActivity("Dokumento", `Gumawa ng ${a.service} para kay ${a.fullName}`, ref.id);
+      // Same-tab navigation: a popup opened after an await is often blocked on phones.
+      window.location.assign(`/dokumento/?id=${ref.id}`);
+      onClose();
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-gray-600">Gagawa ng {a.service} para kay <b>{a.fullName}</b>, na may QR code na pwedeng i-scan para makumpirmang totoo ito.</p>
+      <Input label="Layunin (purpose)" placeholder="Hal. employment, scholarship, bank requirement" value={purpose} onChange={(e) => setPurpose(e.target.value)} maxLength={200} />
+      {!punong && <p className="rounded-xl bg-gold-light p-2.5 text-xs text-yellow-900">Wala pang “Punong Barangay” sa Settings → Mga Opisyal. Blangko ang pirma.</p>}
+      <Button full loading={busy} onClick={issue}><FileText className="h-4 w-4" /> Gumawa at i-print</Button>
+    </div>
+  );
+}
 
 export function AdminAppointments() {
   const toast = useToast();
   const [filter, setFilter] = useState<AppointmentStatus | "lahat">("natanggap");
   const { data, loading } = useCollection<Appointment>(appointmentsCollection);
+  const [issuing, setIssuing] = useState<Appointment | null>(null);
 
   const items = useMemo(
     () => data.filter((a) => filter === "lahat" || a.status === filter).sort((a, b) => a.date.localeCompare(b.date)),
@@ -26,6 +79,8 @@ export function AdminAppointments() {
   const setStatus = async (id: string, status: AppointmentStatus) => {
     try {
       await updateDoc(doc(db, "appointments", id), { status });
+      const a = data.find((x) => x.id === id);
+      logActivity("Appointments", `${a?.service ?? "Appointment"} ni ${a?.fullName ?? ""}: ${APPOINTMENT_STATUS_LABEL[status].split(" —")[0]}`, id);
       toast(`Status: ${APPOINTMENT_STATUS_LABEL[status]}`);
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -36,6 +91,7 @@ export function AdminAppointments() {
     if (!confirm("Burahin ang appointment record na ito?")) return;
     try {
       await deleteDoc(doc(db, "appointments", id));
+      logActivity("Appointments", "Nagbura ng appointment record", id);
     } catch (err) {
       toast(friendlyError(err), "error");
     }
@@ -80,10 +136,22 @@ export function AdminAppointments() {
                   <option key={s} value={s}>{APPOINTMENT_STATUS_LABEL[s]}</option>
                 ))}
               </select>
+              {a.status === "ready" && (PRINTABLE as readonly string[]).includes(a.service) && (
+                a.documentId ? (
+                  <Link href={`/dokumento/?id=${a.documentId}`} target="_blank" className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-brand-light py-2.5 text-sm font-bold text-brand">
+                    <Printer className="h-4 w-4" /> I-print ulit ang dokumento
+                  </Link>
+                ) : (
+                  <Button variant="soft" full className="mt-2" onClick={() => setIssuing(a)}><FileText className="h-4 w-4" /> Gumawa ng dokumento (may QR)</Button>
+                )
+              )}
             </Card>
           ))}
         </div>
       )}
+      <Modal open={!!issuing} onClose={() => setIssuing(null)} title="Gumawa ng dokumento">
+        {issuing && <IssueDocument a={issuing} onClose={() => setIssuing(null)} />}
+      </Modal>
     </div>
   );
 }

@@ -4,7 +4,10 @@ rules_version = '2';
 // Barangay Malineng - Firestore Security Rules
 // - Guests (not logged in): read-only on public content
 // - Residents: can create posts/listings/etc. (status always "pending")
-// - Admins: users/{uid}.role == "admin" (set manually in Firebase Console)
+// - Admins: users/{uid}.role == "admin" (+ position, e.g. "Kapitan", "Secretary")
+// - Super Admin: users/{uid}.role == "superadmin" (sees everything, manages roles,
+//   reads the activity log). Set the FIRST super admin manually in Firebase Console.
+// - Verified residents: verifiedUsers/{uid} exists (selfie approved by an admin).
 // =====================================================================
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -18,10 +21,43 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function myDocPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function me() {
+      return get(myDocPath()).data;
+    }
+
+    function hasProfile() {
+      return signedIn() && exists(myDocPath());
+    }
+
     function isAdmin() {
+      return hasProfile() && me().role in ['admin', 'superadmin'];
+    }
+
+    function isSuperAdmin() {
+      return hasProfile() && me().role == 'superadmin';
+    }
+
+    // Ambulance approvals: Kapitan (and the Super Admin) only.
+    function isKapitan() {
+      return isSuperAdmin() || (isAdmin() && me().get('position', '') == 'Kapitan');
+    }
+
+    function notSuspended() {
+      return hasProfile() && me().get('suspended', false) != true;
+    }
+
+    // Admins count as verified.
+    function isVerified() {
       return signedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        && (exists(/databases/$(database)/documents/verifiedUsers/$(request.auth.uid)) || isAdmin());
+    }
+
+    function verifiedPoster() {
+      return isVerified() && notSuspended();
     }
 
     function incoming() {
@@ -55,10 +91,67 @@ service cloud.firestore {
       allow read: if isSelf(uid) || isAdmin();
       allow create: if isSelf(uid)
         && incoming().role == 'resident'
+        && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'createdAt'])
         && isNonEmptyString(incoming().fullName, 120);
-      // Residents can edit their profile but NEVER their own role.
-      allow update: if (isSelf(uid) && incoming().role == existing().role) || isAdmin();
-      allow delete: if isAdmin();
+      // A user edits their own profile but never role, position or suspension.
+      // Only the Super Admin manages roles, and cannot demote themself (avoids lock-out).
+      allow update: if (isSelf(uid) && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended']))
+        || (isSuperAdmin() && !(isSelf(uid) && incoming().role != 'superadmin'));
+      allow delete: if isSelf(uid) || isSuperAdmin();
+    }
+
+    // ---------- verifications (selfie; private to owner + admins) ----------
+    match /verifications/{uid} {
+      allow read: if isSelf(uid) || isAdmin();
+      // Owner submits / re-submits (not after being verified). Kept until the account is deleted.
+      allow create, update: if isSelf(uid)
+        && notSuspended()
+        && (resource == null || existing().status != 'verified')
+        && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'birthday', 'contact', 'email', 'selfie', 'status', 'submittedAt'])
+        && incoming().uid == uid
+        && incoming().status == 'pending'
+        && incoming().selfie is string && incoming().selfie.size() < 400000
+        && incoming().submittedAt == request.time;
+      // Admin review.
+      allow update: if isAdmin()
+        && changedOnly(['status', 'reason', 'reviewedBy', 'reviewedByName', 'reviewedAt'])
+        && incoming().status in ['pending', 'verified', 'rejected'];
+      allow delete: if isSelf(uid) || isSuperAdmin();
+    }
+
+    // ---------- verifiedUsers (public flag: doc exists = verified; for badges) ----------
+    match /verifiedUsers/{uid} {
+      allow read: if true;
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin() || isSelf(uid);
+    }
+
+    // ---------- activityLogs (append-only; Super Admin reads) ----------
+    match /activityLogs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create: if signedIn()
+        && incoming().actorId == request.auth.uid
+        && incoming().createdAt == request.time
+        && isNonEmptyString(incoming().type, 40)
+        && isNonEmptyString(incoming().text, 500);
+      allow update, delete: if false;
+    }
+
+    // ---------- issuedDocuments (printable clearance; public QR check) ----------
+    match /issuedDocuments/{docId} {
+      allow read: if true;
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ---------- households (census; owner + admins) ----------
+    match /households/{uid} {
+      allow read: if isSelf(uid) || isAdmin();
+      allow create, update: if isSelf(uid)
+        && notSuspended()
+        && incoming().members is list && incoming().members.size() <= 20
+        && validPurok(incoming().purok);
+      allow delete: if isSelf(uid) || isSuperAdmin();
     }
 
     // ---------- posts (Community Board) ----------
@@ -67,7 +160,7 @@ service cloud.firestore {
         || isAdmin()
         || (signedIn() && existing().authorId == request.auth.uid);
 
-      allow create: if signedIn()
+      allow create: if notSuspended()
         && incoming().authorId == request.auth.uid
         && incoming().status == 'pending'
         && incoming().likes.size() == 0
@@ -89,7 +182,7 @@ service cloud.firestore {
     // ---------- comments ----------
     match /comments/{commentId} {
       allow read: if true;
-      allow create: if signedIn()
+      allow create: if notSuspended()
         && incoming().authorId == request.auth.uid
         && isNonEmptyString(incoming().text, 1000)
         && get(/databases/$(database)/documents/posts/$(incoming().postId)).data.status == 'approved';
@@ -103,7 +196,7 @@ service cloud.firestore {
         || isAdmin()
         || (signedIn() && existing().sellerId == request.auth.uid);
 
-      allow create: if signedIn()
+      allow create: if verifiedPoster()
         && incoming().sellerId == request.auth.uid
         && incoming().status == 'pending'
         && isNonEmptyString(incoming().title, 120)
@@ -121,7 +214,7 @@ service cloud.firestore {
       allow read: if existing().status == 'approved'
         || isAdmin()
         || (signedIn() && existing().posterId == request.auth.uid);
-      allow create: if signedIn()
+      allow create: if verifiedPoster()
         && incoming().posterId == request.auth.uid
         && incoming().status == 'pending'
         && isNonEmptyString(incoming().title, 120);
@@ -132,7 +225,7 @@ service cloud.firestore {
     // ---------- skills (Skills Directory) ----------
     match /skills/{skillId} {
       allow read: if true;
-      allow create: if signedIn()
+      allow create: if notSuspended()
         && incoming().userId == request.auth.uid
         && isNonEmptyString(incoming().name, 120)
         && validPurok(incoming().purok);
@@ -143,7 +236,7 @@ service cloud.firestore {
     // ---------- lostFound ----------
     match /lostFound/{itemId} {
       allow read: if true;
-      allow create: if signedIn()
+      allow create: if notSuspended()
         && incoming().userId == request.auth.uid
         && incoming().type in ['nawawala', 'nakita']
         && incoming().status == 'open'
@@ -169,7 +262,7 @@ service cloud.firestore {
     // ---------- appointments ----------
     match /appointments/{apptId} {
       allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
-      allow create: if signedIn()
+      allow create: if verifiedPoster()
         && incoming().userId == request.auth.uid
         && incoming().status == 'natanggap'
         && incoming()['service'] in ['Barangay Clearance', 'Indigency', 'Cedula', 'Blotter', 'Iba pa']
@@ -182,7 +275,7 @@ service cloud.firestore {
     // ---------- registrations (Magparehistro: Ayuda/Clean-up/Fiesta/Event) ----------
     match /registrations/{regId} {
       allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
-      allow create: if signedIn()
+      allow create: if notSuspended()
         && incoming().userId == request.auth.uid
         && incoming().purpose in ['Ayuda', 'Clean-up', 'Fiesta', 'Event']
         && validPurok(incoming().purok);
@@ -192,7 +285,9 @@ service cloud.firestore {
     // ---------- ambulanceRequests (private: owner + admin) ----------
     match /ambulanceRequests/{reqId} {
       allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+      // Emergency is never blocked (even unverified/suspended). Scheduling needs verification.
       allow create: if signedIn()
+        && (incoming().type == 'emergency' || verifiedPoster())
         && incoming().userId == request.auth.uid
         && incoming().status == 'pending'
         && incoming().type in ['emergency', 'schedule']
@@ -201,20 +296,20 @@ service cloud.firestore {
         && isNonEmptyString(incoming().pickup, 200)
         && incoming().date is string && incoming().date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && incoming().time is string && incoming().time.matches('^[0-9]{2}:[0-9]{2}$');
-      // Admin (Kapitan) manages everything; a resident may only cancel their own pending request.
-      allow update: if isAdmin()
+      // Kapitan / Super Admin decide; a resident may only cancel their own pending request.
+      allow update: if isKapitan()
         || (signedIn()
           && existing().userId == request.auth.uid
           && existing().status == 'pending'
           && incoming().status == 'cancelled'
           && changedOnly(['status', 'updatedAt']));
-      allow delete: if isAdmin();
+      allow delete: if isKapitan();
     }
 
     // ---------- ambulanceSchedule (public busy windows, no patient data) ----------
     match /ambulanceSchedule/{slotId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isKapitan();
     }
 
     // ---------- polls (Botohan) ----------
@@ -223,7 +318,7 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
       // One vote per resident: uid is appended to "voters" exactly once.
       allow update: if isAdmin()
-        || (signedIn()
+        || (verifiedPoster()
           && existing().isActive == true
           && changedOnly(['votes', 'voters'])
           && !(request.auth.uid in existing().voters)

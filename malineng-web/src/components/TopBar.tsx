@@ -11,7 +11,7 @@ export function TopBar() {
   if (pathname === "/") return null;
 
   return (
-    <header className="sticky top-0 z-40 bg-brand text-white">
+    <header className="no-print sticky top-0 z-40 bg-brand text-white">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-2.5">
         <Link href="/" className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gold text-sm font-black text-brand-deep">M</span>

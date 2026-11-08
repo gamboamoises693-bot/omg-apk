@@ -11,6 +11,8 @@ import { formatPeso, sortNewest } from "@/lib/format";
 import type { Listing } from "@/lib/types";
 import { EmptyState, ErrorText, LinkButton, Spinner } from "@/components/ui";
 import { ContactButtons } from "@/components/ContactButtons";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { useVerifiedSet } from "@/lib/useVerifiedSet";
 
 export default function TindahanPage() {
   const [search, setSearch] = useState("");
@@ -18,6 +20,7 @@ export default function TindahanPage() {
 
   const q = useMemo(() => query(collection(db, "listings"), where("status", "==", "approved")), []);
   const { data, loading, error } = useCollection<Listing>(q);
+  const verified = useVerifiedSet();
 
   const listings = useMemo(() => {
     const now = Date.now();
@@ -95,7 +98,7 @@ export default function TindahanPage() {
                 <div className="p-3 pb-2">
                   <p className="line-clamp-2 font-semibold leading-tight text-gray-800">{l.title}</p>
                   <p className="mt-1 text-base font-extrabold text-brand">{formatPeso(l.price)}</p>
-                  <p className="truncate text-sm text-gray-500">{l.sellerName} · {l.purok}</p>
+                  <p className="truncate text-sm text-gray-500">{l.sellerName}<VerifiedBadge show={verified.has(l.sellerId)} className="ml-0.5 align-[-2px]" /> · {l.purok}</p>
                 </div>
               </Link>
               <div className="mt-auto p-3 pt-0">

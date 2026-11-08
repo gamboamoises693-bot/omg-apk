@@ -11,6 +11,7 @@ import { friendlyError } from "@/lib/format";
 import { Button, Card, ErrorText, Input, Select } from "@/components/ui";
 import { GoogleButton } from "@/components/GoogleButton";
 import { useToast } from "@/components/Toast";
+import { logActivity, setActivityActor } from "@/lib/activity";
 
 const PH_MOBILE = /^(09|\+639)\d{9}$/;
 
@@ -49,8 +50,10 @@ export default function RegisterPage() {
         contact,
         birthday: form.birthday,
       });
-      toast("Matagumpay ang registration! Welcome sa Malineng.");
-      router.replace("/");
+      setActivityActor({ uid: cred.user.uid, name: form.fullName.trim(), role: "resident" });
+      logActivity("Account", `Nag-register (${form.purok})`, cred.user.uid);
+      toast("Na-register ka na! Huling hakbang: selfie para ma-verify.");
+      router.replace("/verify");
     } catch (err) {
       setError(friendlyError(err));
       setLoading(false);

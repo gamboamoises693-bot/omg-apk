@@ -94,7 +94,7 @@ export function AmbulanceAlertWatcher() {
   if (!active || !latest) return null;
   const emergency = latest.type === "emergency";
   return (
-    <div className={`fixed inset-x-0 top-0 z-[70] px-3 pt-3 ${emergency ? "animate-pulse" : ""}`} role="alert">
+    <div className={`no-print fixed inset-x-0 top-0 z-[70] px-3 pt-3 ${emergency ? "animate-pulse" : ""}`} role="alert">
       <div className={`mx-auto flex max-w-lg items-center gap-3 rounded-2xl p-3 text-white shadow-xl ${emergency ? "bg-red-600" : "bg-brand"}`}>
         <Siren className="h-8 w-8 shrink-0" />
         <div className="min-w-0 flex-1">
