@@ -13,7 +13,7 @@ import { LoginGate } from "@/components/LoginGate";
 import { useToast } from "@/components/Toast";
 
 function SelfieStep() {
-  const { user, profile, verification, isAdmin } = useAuth();
+  const { user, profile, verification, isStaff: isAdmin } = useAuth();
   const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [selfie, setSelfie] = useState<string | null>(null);

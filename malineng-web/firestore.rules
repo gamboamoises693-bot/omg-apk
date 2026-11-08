@@ -33,8 +33,19 @@ service cloud.firestore {
       return signedIn() && exists(myDocPath());
     }
 
-    function isAdmin() {
+    // Staff = any admin account, including BHW.
+    function isStaff() {
       return hasProfile() && me().role in ['admin', 'superadmin'];
+    }
+
+    // Full admin powers. A BHW is staff but only manages the Botika.
+    function isAdmin() {
+      return isStaff() && me().get('position', '') != 'BHW';
+    }
+
+    // Botika (medicine inventory): BHW, Kapitan and the Super Admin.
+    function isBotika() {
+      return isSuperAdmin() || (isStaff() && me().get('position', '') in ['BHW', 'Kapitan']);
     }
 
     function isSuperAdmin() {
@@ -53,7 +64,7 @@ service cloud.firestore {
     // Admins count as verified.
     function isVerified() {
       return signedIn()
-        && (exists(/databases/$(database)/documents/verifiedUsers/$(request.auth.uid)) || isAdmin());
+        && (exists(/databases/$(database)/documents/verifiedUsers/$(request.auth.uid)) || isStaff());
     }
 
     function verifiedPoster() {
@@ -88,20 +99,55 @@ service cloud.firestore {
 
     // ---------- users ----------
     match /users/{uid} {
-      allow read: if isSelf(uid) || isAdmin();
+      // BHW reads users to look up the resident receiving medicine.
+      allow read: if isSelf(uid) || isAdmin() || isBotika();
       allow create: if isSelf(uid)
         && incoming().role == 'resident'
         && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'createdAt'])
         && isNonEmptyString(incoming().fullName, 120);
       // A user edits their own profile but never role, position or suspension.
       // Only the Super Admin manages roles, and cannot demote themself (avoids lock-out).
-      // Profile photo (photoURL) is for admins only.
+      // Profile photo (photoURL) is for staff (admins and BHW) only.
       allow update: if (isSelf(uid)
           && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended'])
           && (!incoming().diff(existing()).affectedKeys().hasAny(['photoURL'])
-              || (isAdmin() && incoming().photoURL is string && incoming().photoURL.size() < 60000)))
+              || (isStaff() && incoming().photoURL is string && incoming().photoURL.size() < 60000)))
         || (isSuperAdmin() && !(isSelf(uid) && incoming().role != 'superadmin'));
       allow delete: if isSelf(uid) || isSuperAdmin();
+    }
+
+    // ---------- Botika (medicine inventory; BHW) ----------
+    function validMedicine() {
+      return isNonEmptyString(incoming().name, 80)
+        && incoming().form is string
+        && incoming().stock is int && incoming().stock >= 0 && incoming().stock <= 1000000
+        && incoming().minStock is int && incoming().minStock >= 0;
+    }
+
+    match /medicines/{id} {
+      allow read: if isBotika();
+      // Stock can never go below zero, even with two BHWs giving at the same time.
+      allow create, update: if isBotika() && validMedicine();
+      allow delete: if isBotika();
+    }
+
+    // Append-only movement log: dispense / restock / dispose.
+    match /medicineLogs/{id} {
+      allow read: if isBotika();
+      allow create: if isBotika()
+        && incoming().byId == request.auth.uid
+        && incoming().type in ['dispense', 'restock', 'dispose']
+        && incoming().items is list && incoming().items.size() > 0 && incoming().items.size() <= 20
+        && incoming().medicineIds is list
+        && isNonEmptyString(incoming().byName, 120);
+      allow update: if false;
+      allow delete: if isSuperAdmin();
+    }
+
+    // Public "available / ubos" list (no exact counts) for residents.
+    match /botikaPublic/{id} {
+      allow read: if true;
+      allow write: if isBotika();
     }
 
     // ---------- verifications (selfie; private to owner + admins) ----------

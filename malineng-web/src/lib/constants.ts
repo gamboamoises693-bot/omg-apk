@@ -45,7 +45,8 @@ export type AlertType = (typeof ALERT_TYPES)[number];
 export const LISTING_DURATION_DAYS = 30;
 
 /** Admin positions. "Kapitan" can approve ambulance trips (enforced in firestore.rules). */
-export const ADMIN_POSITIONS = ["Kapitan", "Secretary", "Treasurer", "Kagawad", "SK Chairman", "Iba pa"] as const;
+// "BHW" = Barangay Health Worker: manages the Botika only (no other admin powers).
+export const ADMIN_POSITIONS = ["Kapitan", "Secretary", "Treasurer", "Kagawad", "SK Chairman", "BHW", "Iba pa"] as const;
 
 export const REJECT_REASONS = [
   "Malabo o madilim ang litrato",
