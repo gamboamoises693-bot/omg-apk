@@ -18,6 +18,7 @@ export const PENDING_TAB = {
   verification: "verification",
   appointment: "appointments",
   borrow: "hiraman",
+  place: "mapa",
   borrowLate: "hiraman",
 } as const;
 
@@ -67,6 +68,7 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       jobs: query(collection(db, "jobs"), where("status", "==", "pending")),
       ver: query(collection(db, "verifications"), where("status", "==", "pending")),
       appts: query(collection(db, "appointments"), where("status", "==", "natanggap")),
+      places: query(collection(db, "places"), where("status", "==", "pending")),
     };
   }, [isAdmin]);
 
@@ -76,6 +78,7 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
   const jobs = useCollection<Job>(q?.jobs ?? null);
   const ver = useCollection<Verification>(q?.ver ?? null);
   const appts = useCollection<Appointment>(q?.appts ?? null);
+  const places = useCollection<{ id: string; name: string; ownerName: string; category: string }>(q?.places ?? null);
 
   const value = useMemo<Value>(() => {
     if (!isAdmin) return EMPTY;
@@ -92,6 +95,7 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       ...jobs.data.map((j) => ({ key: `job:${j.id}`, kind: "job" as const, emergency: false, title: "💼 Bagong trabaho", body: `${j.posterName}: ${j.title}` })),
       ...ver.data.map((v) => ({ key: `verification:${v.id}`, kind: "verification" as const, emergency: false, title: "✓ Bagong selfie para i-verify", body: `${v.fullName} · ${v.purok || "walang purok"}` })),
       ...appts.data.map((a) => ({ key: `appointment:${a.id}`, kind: "appointment" as const, emergency: false, title: `📅 Bagong ${a.service}`, body: `${a.fullName} · ${a.date}` })),
+      ...places.data.map((p) => ({ key: `place:${p.id}`, kind: "place" as const, emergency: false, title: "📍 Bagong pin sa Mapa", body: `${p.ownerName}: ${p.name} (${p.category})` })),
       ...borrow.data
         .filter((r) => r.status === "pending")
         .map((r) => ({ key: `borrow:${r.id}`, kind: "borrow" as const, emergency: false, title: "📦 Bagong request sa Hiraman", body: `${r.userName}: ${linesText(r.items)}` })),
@@ -108,9 +112,9 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       items,
       total: items.length,
       byTab,
-      loading: borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
+      loading: places.loading || borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
     };
-  }, [isAdmin, amb, listings, posts, jobs, ver, appts, borrow, now]);
+  }, [isAdmin, amb, listings, posts, jobs, ver, appts, places, borrow, now]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

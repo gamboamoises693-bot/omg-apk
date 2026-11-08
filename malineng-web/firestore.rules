@@ -466,6 +466,46 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ---------- Mapa (places pinned on the Malineng map) ----------
+    function validPlace() {
+      return isNonEmptyString(incoming().name, 80)
+        && incoming().category is string && incoming().category.size() <= 40
+        && incoming().lat is number && incoming().lat >= -90 && incoming().lat <= 90
+        && incoming().lng is number && incoming().lng >= -180 && incoming().lng <= 180
+        && incoming().photo is string && incoming().photo.size() < 150000
+        && incoming().description is string && incoming().description.size() <= 300;
+    }
+
+    match /places/{id} {
+      allow read: if resource.data.status == 'approved'
+        || (signedIn() && resource.data.ownerId == request.auth.uid)
+        || isAdmin();
+      // Verified residents submit for approval; evacuation centers are admin-only.
+      allow create: if validPlace() && (
+        isAdmin()
+        || (verifiedPoster()
+          && incoming().ownerId == request.auth.uid
+          && incoming().status == 'pending'
+          && incoming().category != 'Evacuation Center'));
+      // Owners may edit their own pin; it goes back to "pending" for review.
+      allow update: if isAdmin()
+        || (verifiedPoster() && validPlace()
+          && existing().ownerId == request.auth.uid
+          && incoming().ownerId == existing().ownerId
+          && incoming().status == 'pending'
+          && incoming().category != 'Evacuation Center');
+      allow delete: if isAdmin() || (signedIn() && existing().ownerId == request.auth.uid);
+    }
+
+    // ---------- who is online (logged-in users; Super Admin only) ----------
+    match /presenceUsers/{uid} {
+      allow read: if isSuperAdmin();
+      allow create, update: if isSelf(uid)
+        && incoming().keys().hasOnly(['lastSeen'])
+        && incoming().lastSeen == request.time;
+      allow delete: if isSuperAdmin();
+    }
+
     // ---------- presence ("online now" counter) ----------
     // Any visitor (even a guest) marks their device as seen. Only a server
     // timestamp is stored, so there is nothing private to read.

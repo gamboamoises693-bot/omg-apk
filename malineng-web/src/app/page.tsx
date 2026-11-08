@@ -5,6 +5,7 @@ import Link from "next/link";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import {
   Pill,
+  MapPinned,
   Package,
   Ambulance,
   Briefcase,
@@ -38,12 +39,13 @@ import { REQUEST_STATUS_LABEL, formatTime12 } from "@/lib/ambulance";
 import { formatDate, sortNewest, telHref, tsToMillis } from "@/lib/format";
 import type { AmbulanceRequest, Appointment, InfraProject, Listing } from "@/lib/types";
 import { ProgressBar, ProjectStatusPill, projectSortKey } from "@/components/ProjectBits";
-import { LinkButton, SectionTitle, Spinner } from "@/components/ui";
+import { LinkButton, Modal, SectionTitle, Spinner } from "@/components/ui";
 import { AdminShieldLink } from "@/components/AdminShieldLink";
 import { Avatar } from "@/components/Avatar";
 import { LogoButton, LogoMark } from "@/components/BarangayLogo";
 import type { PublicStats } from "@/lib/stats";
 import { useOnlineCount } from "@/lib/presence";
+import { OnlineUsers } from "@/components/OnlineUsers";
 
 type Tint = "green" | "gold" | "red" | "blue" | "purple" | "orange" | "teal" | "pink";
 // Bank-app look: one calm light-blue circle for every service; red only for emergencies.
@@ -67,6 +69,7 @@ const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[
   { href: "/ambulansya", label: "Ambulansya", icon: Ambulance, tint: "red" },
   { href: "/botika", label: "Botika", icon: Pill, tint: "green" },
   { href: "/hiraman", label: "Hiraman", icon: Package, tint: "blue" },
+  { href: "/mapa", label: "Mapa", icon: MapPinned, tint: "blue" },
   { href: "/lost-found", label: "Lost & Found", icon: Search, tint: "pink" },
   { href: "/skills", label: "Skills", icon: Wrench, tint: "orange" },
   { href: "/proyekto", label: "Proyekto", icon: HardHat, tint: "gold" },
@@ -164,12 +167,13 @@ function SummaryCard() {
 }
 
 export default function HomePage() {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const { settings, loading } = useSettings();
   const [hello, setHello] = useState("Magandang araw");
   const [showAll, setShowAll] = useState(false);
   const [stats, setStats] = useState<PublicStats | null>(null);
   const online = useOnlineCount();
+  const [showOnline, setShowOnline] = useState(false);
   useEffect(
     () => onSnapshot(doc(db, "stats", "public"), (snap) => setStats(snap.exists() ? (snap.data() as PublicStats) : null), () => setStats(null)),
     [],
@@ -221,13 +225,21 @@ export default function HomePage() {
         {(online !== null || (stats && stats.members > 0)) && (
           <div className="mt-2.5 flex flex-wrap gap-1.5 text-xs font-semibold">
             {online !== null && (
-              <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1" title="Bukas ang website sa nakaraang 5 minuto">
+              <button
+                type="button"
+                disabled={!isSuperAdmin}
+                onClick={() => setShowOnline(true)}
+                className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 enabled:active:bg-white/25"
+                title="Bukas ang website sa nakaraang 5 minuto"
+                aria-label={isSuperAdmin ? `${online} online ngayon. Tingnan kung sino` : `${online} online ngayon`}
+              >
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75 motion-reduce:hidden" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
                 </span>
                 {online.toLocaleString("en-PH")} online ngayon
-              </span>
+                {isSuperAdmin && <ChevronRight className="-mr-1 h-3.5 w-3.5" aria-hidden />}
+              </button>
             )}
             {stats && stats.members > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">👥 {stats.members.toLocaleString("en-PH")} miyembro</span>}
             {stats && stats.verified > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">✓ {stats.verified.toLocaleString("en-PH")} verified</span>}
@@ -424,6 +436,12 @@ export default function HomePage() {
       )}
 
       <p className="mt-8 text-center text-xs text-gray-400">© {new Date().getFullYear()} Barangay Malineng, {BARANGAY_CITY}</p>
+
+      {isSuperAdmin && (
+        <Modal open={showOnline} onClose={() => setShowOnline(false)} title="Sino ang online">
+          {showOnline && <OnlineUsers totalDevices={online} />}
+        </Modal>
+      )}
     </div>
   );
 }

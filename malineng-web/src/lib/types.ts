@@ -332,6 +332,8 @@ export interface Settings {
   logoURL: string;
   /** Show the live heat index banner (El Niño monitoring). Default: on. */
   showHeatIndex: boolean;
+  /** Center of the Malineng map (set by an admin from the map page). */
+  mapCenter?: { lat: number; lng: number; zoom: number };
   ambulance: AmbulanceSettings;
   puroks: string[];
   alertBanner: string;

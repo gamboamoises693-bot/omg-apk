@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import {
   Pill,
+  MapPinned,
   Package,
   Ambulance,
   ArrowLeft,
@@ -49,6 +50,7 @@ import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminActivity } from "@/components/admin/AdminActivity";
 import { AdminProjects } from "@/components/admin/AdminProjects";
 import { AdminHiraman } from "@/components/admin/AdminHiraman";
+import { AdminMapa } from "@/components/admin/AdminMapa";
 
 interface Section {
   key: string;
@@ -89,6 +91,7 @@ const GROUPS: Group[] = [
     title: "Website at komunidad",
     sections: [
       { key: "proyekto", label: "Proyekto", icon: HardHat, Component: AdminProjects },
+      { key: "mapa", label: "Mapa", icon: MapPinned, Component: AdminMapa },
       { key: "events", label: "Events", icon: CalendarDays, Component: AdminEvents },
       { key: "polls", label: "Botohan", icon: Vote, Component: AdminPolls },
       { key: "purok", label: "Purok Points", icon: Trophy, Component: AdminPurok },

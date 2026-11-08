@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Timestamp, collection, doc, getCountFromServer, query, serverTimestamp, setDoc, where } from "firebase/firestore";
-import { db, isFirebaseConfigured } from "./firebase";
+import { Timestamp, collection, doc, getCountFromServer, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
+import { auth, db, isFirebaseConfigured } from "./firebase";
 
 /**
  * "Online now" counter on the free plan, without Realtime Database:
@@ -16,6 +16,7 @@ const COUNT_REFRESH_MS = 2 * 60_000;
 const DEVICE_KEY = "malineng.deviceId";
 
 let lastBeat = 0;
+let lastUserBeat = { uid: "", at: 0 };
 
 function deviceId(): string {
   try {
@@ -41,6 +42,33 @@ async function beat(): Promise<void> {
     lastBeat = 0;
     console.warn("[presence] heartbeat failed:", err);
   }
+  await beatUser();
+}
+
+/**
+ * Logged-in users also mark presenceUsers/{uid} (only the Super Admin can read it),
+ * so the Super Admin can see WHO is online. Runs right away after login too.
+ */
+async function beatUser(): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (!uid || document.visibilityState !== "visible") return;
+  if (lastUserBeat.uid === uid && Date.now() - lastUserBeat.at < 60_000) return;
+  lastUserBeat = { uid, at: Date.now() };
+  try {
+    await setDoc(doc(db, "presenceUsers", uid), { lastSeen: serverTimestamp() });
+  } catch (err) {
+    lastUserBeat = { uid: "", at: 0 };
+    console.warn("[presence] user heartbeat failed:", err);
+  }
+}
+
+/** Super Admin: uids of logged-in users seen in the last 5 minutes. */
+export async function fetchOnlineUserIds(): Promise<{ uid: string; lastSeen: number }[]> {
+  const cutoff = Timestamp.fromMillis(Date.now() - ONLINE_WINDOW_MS);
+  const snap = await getDocs(query(collection(db, "presenceUsers"), where("lastSeen", ">=", cutoff)));
+  return snap.docs
+    .map((d) => ({ uid: d.id, lastSeen: (d.data().lastSeen as Timestamp | undefined)?.toMillis() ?? 0 }))
+    .sort((a, b) => b.lastSeen - a.lastSeen);
 }
 
 /** Mount once (in Providers): keeps this device marked online while the site is open. */
@@ -48,10 +76,13 @@ export function PresenceBeat(): null {
   useEffect(() => {
     beat();
     const timer = setInterval(beat, BEAT_MS);
+    // Mark the user online as soon as they log in (not only on the next 2-minute beat).
+    const unsubAuth = auth.onAuthStateChanged((u) => u && void beatUser());
     const onVisible = () => document.visibilityState === "visible" && beat();
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearInterval(timer);
+      unsubAuth();
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
