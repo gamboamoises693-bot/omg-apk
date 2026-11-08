@@ -9,6 +9,7 @@ import { formatPeso, friendlyError, sortNewest, timeAgo } from "@/lib/format";
 import type { Job, Listing, Post } from "@/lib/types";
 import { Button, Card, EmptyState, SectionTitle, Spinner } from "@/components/ui";
 import { PostCard } from "@/components/PostCard";
+import { SellerInfo } from "./SellerInfo";
 import { useToast } from "@/components/Toast";
 import { logActivity } from "@/lib/activity";
 
@@ -85,11 +86,11 @@ export function AdminModeration() {
                 <div className="min-w-0">
                   <p className="font-bold">{l.title}</p>
                   <p className="font-semibold text-brand">{formatPeso(l.price)} · {l.category}</p>
-                  <p className="text-sm text-gray-500">{l.sellerName} · {l.purok} · {timeAgo(l.createdAt)}</p>
-                  <p className="text-sm text-gray-500">{l.contact}</p>
+                  <p className="text-sm text-gray-500">{l.purok} · {timeAgo(l.createdAt)}</p>
                 </div>
               </div>
               {l.description && <p className="mt-2 whitespace-pre-line text-gray-700">{l.description}</p>}
+              <SellerInfo uid={l.sellerId} contact={l.contact} messengerLink={l.messengerLink} kind="listings" />
               <ApproveButtons busy={listingMod.busyId === l.id} onApprove={() => listingMod.setStatus(l.id, "approved", l.title)} onReject={() => listingMod.setStatus(l.id, "rejected", l.title)} />
             </Card>
           ))}
@@ -117,7 +118,8 @@ export function AdminModeration() {
             <Card key={j.id}>
               <p className="font-bold">{j.title}</p>
               <p className="text-gray-600">{j.category} · {j.purok} · {j.salary}</p>
-              <p className="text-sm text-gray-500">{j.posterName} · {j.contact} · {timeAgo(j.createdAt)}</p>
+              <p className="text-sm text-gray-500">{timeAgo(j.createdAt)}</p>
+              <SellerInfo uid={j.posterId} contact={j.contact} kind="jobs" />
               <ApproveButtons busy={jobMod.busyId === j.id} onApprove={() => jobMod.setStatus(j.id, "approved", j.title)} onReject={() => jobMod.setStatus(j.id, "rejected", j.title)} />
             </Card>
           ))}

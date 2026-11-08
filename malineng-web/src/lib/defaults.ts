@@ -6,6 +6,7 @@ import { DEFAULT_PUROKS } from "./constants";
  * Once the admin saves Settings in /admin, Firestore data replaces this.
  */
 export const DEFAULT_SETTINGS: Settings = {
+  logoURL: "",
   puroks: DEFAULT_PUROKS,
   ambulance: {
     phone: "",
