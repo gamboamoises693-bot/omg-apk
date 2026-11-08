@@ -150,6 +150,10 @@ export function AdminSettings() {
       <SectionTitle>Alert Banner</SectionTitle>
       <Card className="space-y-3">
         <Select label="Uri ng Alert" options={ALERT_TYPES} value={draft.alertType} onChange={(e) => set("alertType", e.target.value as Settings["alertType"])} />
+        <label className="flex items-center justify-between gap-3 rounded-xl bg-orange-50 p-3">
+          <span className="text-sm"><b>🌡️ Heat Index banner</b><br /><span className="text-gray-600">Live na init sa Cuyapo, para sa El Niño. Lalabas sa itaas ng lahat ng page.</span></span>
+          <input type="checkbox" checked={draft.showHeatIndex} onChange={(e) => set("showHeatIndex", e.target.checked)} className="h-6 w-6 shrink-0 accent-[#0B5C3F]" aria-label="Ipakita ang Heat Index banner" />
+        </label>
         <Textarea label="Mensahe (iwanang blangko para walang alert)" value={draft.alertBanner} onChange={(e) => set("alertBanner", e.target.value)} placeholder="Hal. May baha sa Purok 3. Iwasan muna ang daan." />
       </Card>
 

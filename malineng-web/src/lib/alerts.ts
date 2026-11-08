@@ -53,7 +53,7 @@ export async function requestNotificationPermission(): Promise<PermissionState> 
 }
 
 /** Shows a system notification. Uses the service worker (required on Android), falls back to `new Notification`. */
-export async function showSystemNotification(title: string, body: string, kind: AlertKind, tag: string): Promise<void> {
+export async function showSystemNotification(title: string, body: string, kind: AlertKind, tag: string, url = "/admin/#ambulansya"): Promise<void> {
   if (notificationPermission() !== "granted") return;
   const options: NotificationOptions & { vibrate?: number[]; requireInteraction?: boolean } = {
     body,
@@ -62,7 +62,7 @@ export async function showSystemNotification(title: string, body: string, kind: 
     badge: "/icon.svg",
     requireInteraction: kind === "emergency",
     vibrate: kind === "emergency" ? [400, 150, 400, 150, 400] : [200, 100, 200],
-    data: { url: "/admin/#ambulansya" },
+    data: { url },
   };
   try {
     const reg = (await navigator.serviceWorker?.getRegistration()) ?? (await registerServiceWorker());

@@ -4,6 +4,7 @@ import { Providers } from "@/components/Providers";
 import { TopBar } from "@/components/TopBar";
 import { BottomNav } from "@/components/BottomNav";
 import { AlertBanner } from "@/components/AlertBanner";
+import { HeatIndexBanner } from "@/components/HeatIndexBanner";
 import { TEXT_SIZE_BOOT_SCRIPT } from "@/lib/textSize";
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           <AlertBanner />
+          <HeatIndexBanner />
           <TopBar />
           <main className="mx-auto min-h-screen max-w-3xl px-4 pb-28 pt-4">{children}</main>
           <BottomNav />
