@@ -12,6 +12,8 @@ import { formatDate, friendlyError, sortNewest, todayISO } from "@/lib/format";
 import type { Appointment } from "@/lib/types";
 import { Button, Card, EmptyState, ErrorText, Input, PageHeader, SectionTitle, Select, Spinner, Textarea } from "@/components/ui";
 import { LoginGate } from "@/components/LoginGate";
+import { RequireVerified } from "@/components/RequireVerified";
+import { logActivity } from "@/lib/activity";
 import { useToast } from "@/components/Toast";
 import { StatusTracker } from "@/components/StatusTracker";
 
@@ -59,6 +61,7 @@ function BookForm() {
         createdAt: serverTimestamp(),
       });
       setLastRef(ref.id.slice(0, 8).toUpperCase());
+      logActivity("Appointments", `Nag-book ng ${form.service} para sa ${form.date}`, ref.id);
       setForm((f) => ({ ...f, date: "", notes: "" }));
       toast("Na-book na ang appointment mo!");
     } catch (err) {
@@ -146,9 +149,11 @@ export default function AppointmentPage() {
     <div>
       <PageHeader title="Appointment" subtitle="Mag-book online, kunin sa Barangay Hall. Wala nang mahabang pila." />
       <LoginGate message="Mag-login para makapag-book ng appointment.">
-        <Suspense fallback={<Spinner />}>
-          <BookForm />
-        </Suspense>
+        <RequireVerified feature="makapag-book ng appointment">
+          <Suspense fallback={<Spinner />}>
+            <BookForm />
+          </Suspense>
+        </RequireVerified>
         <MyAppointments />
       </LoginGate>
     </div>

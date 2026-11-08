@@ -10,6 +10,7 @@ import { friendlyError, todayISO } from "@/lib/format";
 import type { Settings } from "@/lib/types";
 import { Button, Card, Input, SectionTitle, Select, Spinner, Textarea } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { logActivity } from "@/lib/activity";
 
 export function AdminSettings() {
   const { settings, loading } = useSettings();
@@ -74,6 +75,7 @@ export function AdminSettings() {
           .filter((p) => p.name.trim())
           .map((p) => ({ name: p.name.trim().slice(0, 80), progress: Math.min(100, Math.max(0, Number(p.progress) || 0)) })),
       });
+      logActivity("Settings", "Nag-update ng Settings (anunsyo, opisyal, hotlines, proyekto, purok, ambulansya)");
       toast("Na-save ang settings! Makikita na agad sa website.");
     } catch (err) {
       toast(friendlyError(err), "error");

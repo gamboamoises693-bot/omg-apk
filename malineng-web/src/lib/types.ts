@@ -16,8 +16,70 @@ export interface UserProfile {
   contact: string;
   birthday: string;
   email?: string;
-  role: "resident" | "admin";
+  role: "resident" | "admin" | "superadmin";
+  /** Admin position, e.g. "Kapitan", "Secretary". Kapitan approves ambulance trips. */
+  position?: string;
+  suspended?: boolean;
   createdAt?: Timestamp;
+}
+
+export type VerificationStatus = "pending" | "verified" | "rejected";
+
+export interface Verification {
+  id: string; // = uid
+  uid: string;
+  fullName: string;
+  purok: string;
+  birthday: string;
+  contact: string;
+  email: string;
+  selfie: string; // compressed data URL
+  status: VerificationStatus;
+  reason?: string;
+  reviewedBy?: string;
+  reviewedByName?: string;
+  submittedAt?: Timestamp;
+  reviewedAt?: Timestamp;
+}
+
+export interface ActivityLog {
+  id: string;
+  actorId: string;
+  actorName: string;
+  actorRole: string;
+  type: string;
+  text: string;
+  targetId?: string;
+  createdAt?: Timestamp;
+}
+
+export interface IssuedDocument {
+  id: string;
+  type: "Barangay Clearance" | "Indigency";
+  fullName: string;
+  purok: string;
+  purpose: string;
+  appointmentId: string;
+  issuedByName: string;
+  signatory: string;
+  valid: boolean;
+  issuedAt?: Timestamp;
+}
+
+export interface HouseholdMember {
+  name: string;
+  relation: string;
+  birthday: string;
+  sex: "Lalaki" | "Babae";
+}
+
+export interface Household {
+  id: string; // = head's uid
+  headName: string;
+  purok: string;
+  address: string;
+  members: HouseholdMember[];
+  updatedAt?: Timestamp;
 }
 
 export interface Post {
@@ -113,6 +175,8 @@ export interface Appointment {
   date: string; // YYYY-MM-DD
   contact: string;
   notes?: string;
+  /** Set when an admin issued the printable document (issuedDocuments/{id}). */
+  documentId?: string;
   status: AppointmentStatus;
   createdAt?: Timestamp;
 }

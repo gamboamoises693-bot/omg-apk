@@ -4,13 +4,23 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { doc, onSnapshot, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import type { UserProfile } from "@/lib/types";
+import type { UserProfile, Verification } from "@/lib/types";
+import { setActivityActor } from "@/lib/activity";
 
 interface AuthContextValue {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  /** Admin or Super Admin. */
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  /** Can approve ambulance trips: Kapitan or Super Admin. */
+  isKapitan: boolean;
+  /** Selfie approved (admins always count as verified). */
+  isVerified: boolean;
+  isSuspended: boolean;
+  /** The user's own selfie verification record, if submitted. */
+  verification: Verification | null;
   /** true when logged in but required profile fields are still empty (e.g. new Google user). */
   needsProfile: boolean;
   logout: () => Promise<void>;
@@ -42,19 +52,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [verifiedFlag, setVerifiedFlag] = useState(false);
+  const [verification, setVerification] = useState<Verification | null>(null);
 
   useEffect(() => {
     let unsubProfile: (() => void) | undefined;
 
+    let unsubVerified: (() => void) | undefined;
+    let unsubVerification: (() => void) | undefined;
+
     const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
       unsubProfile?.();
+      unsubVerified?.();
+      unsubVerification?.();
       setUser(firebaseUser);
 
       if (!firebaseUser) {
         setProfile(null);
+        setVerifiedFlag(false);
+        setVerification(null);
         setLoading(false);
         return;
       }
+
+      // Verified badge flag (public) + own selfie record (private) — both live.
+      unsubVerified = onSnapshot(
+        doc(db, "verifiedUsers", firebaseUser.uid),
+        (snap) => setVerifiedFlag(snap.exists()),
+        () => setVerifiedFlag(false),
+      );
+      unsubVerification = onSnapshot(
+        doc(db, "verifications", firebaseUser.uid),
+        (snap) => setVerification(snap.exists() ? ({ id: snap.id, ...snap.data() } as Verification) : null),
+        () => setVerification(null),
+      );
 
       // Live profile so role changes (e.g. promoted to admin) apply immediately.
       unsubProfile = onSnapshot(
@@ -73,6 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       unsubProfile?.();
+      unsubVerified?.();
+      unsubVerification?.();
       unsubAuth();
     };
   }, []);
@@ -81,17 +114,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
   }, []);
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
+  // Register who is acting, for one-line logActivity() calls everywhere.
+  useEffect(() => {
+    setActivityActor(user && profile ? { uid: user.uid, name: profile.fullName, role: profile.position ? `${profile.role}:${profile.position}` : profile.role } : null);
+  }, [user, profile]);
+
+  const value = useMemo<AuthContextValue>(() => {
+    const isSuperAdmin = profile?.role === "superadmin";
+    const isAdmin = isSuperAdmin || profile?.role === "admin";
+    return {
       user,
       profile,
       loading,
-      isAdmin: profile?.role === "admin",
+      isAdmin,
+      isSuperAdmin,
+      isKapitan: isSuperAdmin || (isAdmin && profile?.position === "Kapitan"),
+      isVerified: isAdmin || verifiedFlag,
+      isSuspended: profile?.suspended === true,
+      verification,
       needsProfile: !!user && !!profile && (!profile.purok || !profile.contact),
       logout,
-    }),
-    [user, profile, loading, logout],
-  );
+    };
+  }, [user, profile, loading, verifiedFlag, verification, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

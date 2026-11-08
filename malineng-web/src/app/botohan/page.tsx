@@ -14,7 +14,7 @@ import { useToast } from "@/components/Toast";
 const pollsCollection = collection(db, "polls");
 
 function PollCard({ poll }: { poll: Poll }) {
-  const { user } = useAuth();
+  const { user, isVerified } = useAuth();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const votes = poll.votes ?? [];
@@ -28,6 +28,7 @@ function PollCard({ poll }: { poll: Poll }) {
 
   const vote = async (option: number) => {
     if (!user) return toast("Mag-login muna para makaboto.", "error");
+    if (!isVerified) return toast("Verified na residente lang ang makakaboto. Mag-selfie sa Account.", "error");
     if (hasVoted || busy) return;
     setBusy(true);
     try {

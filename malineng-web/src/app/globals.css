@@ -36,3 +36,26 @@ textarea {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Printing documents (/dokumento): only the sheet is printed. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}

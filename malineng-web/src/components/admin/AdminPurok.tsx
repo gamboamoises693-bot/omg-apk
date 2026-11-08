@@ -8,6 +8,7 @@ import { friendlyError } from "@/lib/format";
 import type { PurokPoints } from "@/lib/types";
 import { Button, Card } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { logActivity } from "@/lib/activity";
 
 const purokCollection = collection(db, "purokPoints");
 // "Purok 1" -> "purok-1", "Purok 6-A" -> "purok-6-a" (safe Firestore doc id)
@@ -22,6 +23,7 @@ export function AdminPurok() {
     try {
       // increment() is atomic: safe even if two admins click at the same time.
       await setDoc(doc(db, "purokPoints", purokDocId(purok)), { purok, points: increment(points), cleanupCount: increment(cleanup) }, { merge: true });
+      logActivity("Purok Points", `${purok}: ${points > 0 ? "+" : ""}${points} points${cleanup ? " (clean-up drive)" : ""}`);
       toast(`${purok}: ${points > 0 ? "+" : ""}${points} points`);
     } catch (err) {
       toast(friendlyError(err), "error");

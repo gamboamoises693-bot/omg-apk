@@ -3,14 +3,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { collection, deleteDoc, doc, query, updateDoc, where } from "firebase/firestore";
-import { CalendarCheck, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase } from "lucide-react";
-import { db } from "@/lib/firebase";
+import { BadgeCheck, Ban, CalendarCheck, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
+import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup } from "firebase/auth";
+import { db, googleProvider } from "@/lib/firebase";
+import { logActivity, roleLabel } from "@/lib/activity";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { ensureUserDoc, useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { usePuroks } from "@/lib/useSettings";
 import { formatPeso, friendlyError, sortNewest } from "@/lib/format";
 import type { Job, Listing } from "@/lib/types";
-import { Badge, Button, Card, ErrorText, Input, LinkButton, PageHeader, SectionTitle, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Input, LinkButton, Modal, PageHeader, SectionTitle, Select, Spinner } from "@/components/ui";
 import { LoginGate } from "@/components/LoginGate";
 import { TextSizeSetting } from "@/components/TextSizeSetting";
 import { useToast } from "@/components/Toast";
@@ -169,8 +172,91 @@ function MyJobs() {
   );
 }
 
+/** Selfie verification status card. */
+function VerificationCard() {
+  const { isAdmin, isVerified, verification } = useAuth();
+  if (isAdmin) return null;
+  if (isVerified) {
+    return (
+      <Card className="mb-3 flex items-center gap-3">
+        <BadgeCheck className="h-8 w-8 shrink-0 text-blue-600" />
+        <div><p className="font-bold">Verified na residente</p><p className="text-xs text-gray-500">Bukas sa iyo ang lahat ng features.</p></div>
+      </Card>
+    );
+  }
+  if (verification?.status === "pending") {
+    return (
+      <Card className="mb-3 flex items-center gap-3 bg-gold-light">
+        <Clock className="h-8 w-8 shrink-0 text-yellow-700" />
+        <div className="flex-1"><p className="font-bold">Sinusuri pa ang selfie mo</p><p className="text-xs text-yellow-900">Karaniwang 1 araw. Magagamit mo na ang Emergency, Board at Ayuda Checker.</p></div>
+      </Card>
+    );
+  }
+  return (
+    <Card className="mb-3 space-y-2 bg-blue-50">
+      <div className="flex items-center gap-3">
+        {verification?.status === "rejected" ? <XCircle className="h-8 w-8 shrink-0 text-red-600" /> : <BadgeCheck className="h-8 w-8 shrink-0 text-blue-600" />}
+        <div>
+          <p className="font-bold">{verification?.status === "rejected" ? "Kailangang ulitin ang selfie" : "I-verify ang account mo"}</p>
+          <p className="text-xs text-gray-600">{verification?.status === "rejected" ? verification.reason : "Para makapagbenta, mag-post ng trabaho, mag-book ng clearance at bumoto."}</p>
+        </div>
+      </div>
+      <LinkButton href="/verify" full>{verification?.status === "rejected" ? "Kumuha ulit ng selfie" : "Mag-selfie para ma-verify"}</LinkButton>
+    </Card>
+  );
+}
+
+/** Deletes the account and personal data (selfie, household, profile). Requires re-login for safety. */
+function DeleteAccount() {
+  const { user, profile, isSuperAdmin } = useAuth();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  if (!user || isSuperAdmin) return null;
+  const isPasswordUser = user.providerData.some((p) => p.providerId === "password");
+
+  const run = async () => {
+    if (confirmText.trim().toUpperCase() !== "BURAHIN") return setError("I-type ang BURAHIN para kumpirmahin.");
+    setBusy(true);
+    setError("");
+    try {
+      // Firebase requires a recent login before deleting an account.
+      if (isPasswordUser) await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? "", password));
+      else await reauthenticateWithPopup(user, googleProvider);
+      logActivity("Account", `Binura ang sariling account (${profile?.fullName ?? ""})`, user.uid);
+      await Promise.all(["verifications", "verifiedUsers", "households"].map((c) => deleteDoc(doc(db, c, user.uid)).catch(() => undefined)));
+      await deleteDoc(doc(db, "users", user.uid));
+      await user.delete();
+      toast("Nabura na ang account mo at ang personal na data mo.");
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <button onClick={() => setOpen(true)} className="mt-4 w-full text-center text-sm font-semibold text-red-600 underline">Burahin ang account ko</button>
+      <Modal open={open} onClose={() => setOpen(false)} title="Burahin ang account">
+        <div className="space-y-3 text-sm">
+          <p>Mabubura nang <b>permanente</b>: ang profile mo, ang selfie mo, at ang impormasyon ng pamilya mo. Hindi na ito maibabalik.</p>
+          <p className="text-gray-500">Mananatili ang mga record na kailangan ng Barangay (hal. mga naibigay na clearance at ang activity log).</p>
+          {isPasswordUser && <Input label="Password mo" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />}
+          <Input label='I-type ang "BURAHIN"' value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
+          <ErrorText>{error}</ErrorText>
+          <Button variant="danger" full loading={busy} onClick={run}><Trash2 className="h-4 w-4" /> Burahin nang permanente</Button>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 function AccountContent() {
-  const { user, profile, isAdmin, logout, loading } = useAuth();
+  const { user, profile, isAdmin, isVerified, isSuspended, logout, loading } = useAuth();
   const toast = useToast();
 
   // Safety net: logged in but users/{uid} missing (e.g. write failed during signup).
@@ -187,15 +273,24 @@ function AccountContent() {
       <Card className="mb-4 flex items-center gap-4 bg-brand text-white">
         <span className="rounded-full bg-gold p-3 text-brand-dark"><UserRound className="h-8 w-8" /></span>
         <div className="min-w-0">
-          <p className="truncate text-lg font-bold">{profile.fullName}</p>
+          <p className="truncate text-lg font-bold">{profile.fullName} <VerifiedBadge show={isVerified && !isAdmin} className="text-white" /></p>
           <p className="truncate text-white/80">{user?.email}</p>
-          <p className="text-gold">{profile.purok || "Wala pang purok"} · {isAdmin ? "Admin" : "Residente"}</p>
+          <p className="text-gold">{profile.purok || "Wala pang purok"} · {roleLabel(profile.role, profile.position)}</p>
         </div>
       </Card>
+
+      {isSuspended && (
+        <p className="mb-3 flex items-start gap-2 rounded-2xl bg-red-50 p-3 text-sm text-red-800">
+          <Ban className="mt-0.5 h-5 w-5 shrink-0" />
+          <span><b>Naka-suspend ang account mo.</b> Hindi ka muna makakapag-post o makakapag-book. Bukas pa rin sa iyo ang Emergency. Makipag-ugnayan sa Barangay Hall.</span>
+        </p>
+      )}
+      <VerificationCard />
 
       <div className="mb-2 grid grid-cols-2 gap-2">
         <LinkButton href="/appointment" variant="outline"><CalendarCheck className="h-5 w-5" /> Appointments</LinkButton>
         <LinkButton href="/tindahan/magbenta" variant="outline"><Store className="h-5 w-5" /> Magbenta</LinkButton>
+        <LinkButton href="/pamilya" variant="outline" className="col-span-2"><Users className="h-5 w-5" /> Pamilya ko (household)</LinkButton>
       </div>
       {isAdmin && (
         <LinkButton href="/admin" variant="gold" full className="mb-2"><ShieldCheck className="h-5 w-5" /> Admin Dashboard</LinkButton>
@@ -217,6 +312,7 @@ function AccountContent() {
       >
         <LogOut className="h-5 w-5" /> Mag-logout
       </Button>
+      <DeleteAccount />
     </>
   );
 }

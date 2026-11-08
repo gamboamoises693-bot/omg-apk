@@ -10,6 +10,7 @@ import { friendlyError, normalizeName } from "@/lib/format";
 import type { Ayuda } from "@/lib/types";
 import { Badge, Button, Card, ErrorText, Input, SectionTitle, Select, Spinner, Textarea } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { logActivity } from "@/lib/activity";
 
 const ayudaCollection = collection(db, "ayuda");
 const STATUSES = ["qualified", "scheduled", "claimed"] as const;
@@ -52,6 +53,7 @@ export function AdminAyuda() {
         remarks: form.remarks.trim(),
         updatedAt: serverTimestamp(),
       });
+      logActivity("Ayuda", `Nag-save ng ayuda record ${id} (${form.fullName.trim()}): ${form.status}`, id);
       toast("Na-save ang ayuda record.");
       setForm(EMPTY);
     } catch (err) {
@@ -85,6 +87,7 @@ export function AdminAyuda() {
         });
         await batch.commit();
       }
+      logActivity("Ayuda", `Nag-import ng ${lines.length} ayuda records (CSV)`);
       toast(`Na-import ang ${lines.length} records.`);
       setCsv("");
     } catch (err) {
@@ -96,6 +99,7 @@ export function AdminAyuda() {
     if (!confirm("Burahin ang record na ito?")) return;
     try {
       await deleteDoc(doc(db, "ayuda", id));
+      logActivity("Ayuda", `Nagbura ng ayuda record ${id}`, id);
     } catch (err) {
       toast(friendlyError(err), "error");
     }

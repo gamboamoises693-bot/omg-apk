@@ -12,7 +12,8 @@ import { LISTING_CATEGORIES, LISTING_DURATION_DAYS } from "@/lib/constants";
 import { friendlyError, safeMessengerLink } from "@/lib/format";
 import { Button, Card, ErrorText, Input, PageHeader, Select, Textarea, LinkButton } from "@/components/ui";
 import { ImagePicker } from "@/components/ImagePicker";
-import { LoginGate } from "@/components/LoginGate";
+import { RequireVerified } from "@/components/RequireVerified";
+import { logActivity } from "@/lib/activity";
 
 function SellForm() {
   const { user, profile } = useAuth();
@@ -63,6 +64,7 @@ function SellForm() {
         expiresAt,
         createdAt: serverTimestamp(),
       });
+      logActivity("Tindahan", `Nag-post ng paninda: “${form.title.trim()}” ₱${price}`);
       setDone(true);
     } catch (err) {
       setError(friendlyError(err));
@@ -111,9 +113,9 @@ export default function MagbentaPage() {
         <ArrowLeft className="h-5 w-5" /> Tindahan
       </Link>
       <PageHeader title="Magbenta" subtitle="Ilagay ang paninda mo sa Tindahan ng Malineng" />
-      <LoginGate message="Mag-login muna para makapagbenta.">
+      <RequireVerified feature="makapagbenta">
         <SellForm />
-      </LoginGate>
+      </RequireVerified>
     </div>
   );
 }

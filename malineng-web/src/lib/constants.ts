@@ -43,3 +43,16 @@ export const ALERT_TYPES = ["wala", "baha", "brownout", "weather"] as const;
 export type AlertType = (typeof ALERT_TYPES)[number];
 
 export const LISTING_DURATION_DAYS = 30;
+
+/** Admin positions. "Kapitan" can approve ambulance trips (enforced in firestore.rules). */
+export const ADMIN_POSITIONS = ["Kapitan", "Secretary", "Treasurer", "Kagawad", "SK Chairman", "Iba pa"] as const;
+
+export const REJECT_REASONS = [
+  "Malabo o madilim ang litrato",
+  "Hindi kita ang buong mukha",
+  "Hindi tugma sa impormasyon ng profile",
+  "Duplicate na account",
+  "Hindi taga-Barangay Malineng",
+] as const;
+
+export const HOUSEHOLD_RELATIONS = ["Asawa", "Anak", "Magulang", "Kapatid", "Apo", "Lolo/Lola", "Kamag-anak", "Iba pa"] as const;

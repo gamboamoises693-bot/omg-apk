@@ -10,6 +10,7 @@ import { formatDate, friendlyError } from "@/lib/format";
 import type { BarangayEvent } from "@/lib/types";
 import { Button, Card, Input, SectionTitle, Textarea } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { logActivity } from "@/lib/activity";
 
 const eventsCollection = collection(db, "events");
 
@@ -30,6 +31,7 @@ export function AdminEvents() {
     try {
       await addDoc(eventsCollection, { ...form, title: form.title.trim(), createdBy: user.uid, createdAt: serverTimestamp() });
       setForm({ title: "", date: "", location: "", description: "" });
+      logActivity("Events", `Nagdagdag ng event: “${form.title.trim()}” (${form.date})`);
       toast("Na-add ang event.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -60,7 +62,7 @@ export function AdminEvents() {
             <button
               onClick={async () => {
                 if (!confirm("Burahin ang event?")) return;
-                try { await deleteDoc(doc(db, "events", ev.id)); } catch (err) { toast(friendlyError(err), "error"); }
+                try { await deleteDoc(doc(db, "events", ev.id)); logActivity("Events", `Nagbura ng event: “${ev.title}”`, ev.id); } catch (err) { toast(friendlyError(err), "error"); }
               }}
               className="rounded-full p-2 text-gray-400"
               aria-label="Burahin"

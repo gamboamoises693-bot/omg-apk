@@ -75,6 +75,8 @@ export function friendlyError(err: unknown): string {
     "auth/popup-closed-by-user": "Isinara ang Google login window.",
     "auth/too-many-requests": "Masyadong maraming subok. Maghintay muna ng ilang minuto.",
     "auth/network-request-failed": "Walang internet connection. Subukan ulit.",
+    "auth/requires-recent-login": "Para sa seguridad, mag-login ulit bago gawin ito.",
+    "auth/missing-password": "Ilagay ang password mo.",
     "permission-denied": "Wala kang permiso para dito. Naka-login ka ba?",
     unavailable: "Mahina ang internet. Subukan ulit.",
   };

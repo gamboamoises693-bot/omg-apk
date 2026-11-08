@@ -24,6 +24,8 @@ import { Button, Card, EmptyState, Modal, SectionTitle, Select, Spinner, Textare
 import { AmbulanceForm } from "@/components/ambulance/AmbulanceForm";
 import { STATUS_PILL } from "@/components/ambulance/AmbulanceTracker";
 import { useToast } from "@/components/Toast";
+import { useAuth } from "@/context/AuthContext";
+import { logActivity } from "@/lib/activity";
 import { AlertsSettingsCard } from "./AlertsSettingsCard";
 
 const requestsCollection = collection(db, "ambulanceRequests");
@@ -57,6 +59,7 @@ function RequestRow({ r, onOpen }: { r: AmbulanceRequest; onOpen: () => void }) 
 }
 
 function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; all: AmbulanceRequest[]; drivers: string[]; onClose: () => void }) {
+  const { isKapitan } = useAuth();
   const toast = useToast();
   const [driver, setDriver] = useState(req.driver ?? drivers[0] ?? "");
   const [hours, setHours] = useState(String(req.durationHours ?? DEFAULT_DURATION[req.type]));
@@ -84,6 +87,7 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
         batch.delete(slotRef);
       }
       await batch.commit();
+      logActivity("Ambulansya", `${req.type === "emergency" ? "🚨 " : ""}${req.patientName} (${req.date} ${formatTime12(req.time)}): ${REQUEST_STATUS_LABEL[status]}${driver.trim() ? ` · Driver: ${driver.trim()}` : ""}`, req.id);
       toast(`Status: ${REQUEST_STATUS_LABEL[status]}`);
       onClose();
     } catch (err) {
@@ -97,6 +101,7 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
     if (!confirm("Burahin nang tuluyan ang request na ito?")) return;
     try {
       await Promise.all([deleteDoc(doc(db, "ambulanceRequests", req.id)), deleteDoc(doc(db, "ambulanceSchedule", req.id))]);
+      logActivity("Ambulansya", `Nagbura ng ambulance request ni ${req.patientName}`, req.id);
       toast("Nabura.");
       onClose();
     } catch (err) {
@@ -104,7 +109,7 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
     }
   };
 
-  const editable = req.status === "pending" || req.status === "approved";
+  const editable = isKapitan && (req.status === "pending" || req.status === "approved");
 
   return (
     <div className="space-y-4">
@@ -155,6 +160,9 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
         </>
       )}
 
+      {!isKapitan ? (
+        <p className="rounded-xl bg-gold-light p-3 text-sm text-yellow-900">Si <b>Kapitan</b> (o ang Super Admin) lang ang makaka-approve at makakapagpalit ng status ng ambulansya.</p>
+      ) : (
       <div className="grid grid-cols-2 gap-2">
         {req.status === "pending" && (
           <>
@@ -176,6 +184,7 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
           <Button variant="outline" className="col-span-2" onClick={remove}>Burahin ang record</Button>
         )}
       </div>
+      )}
     </div>
   );
 }
@@ -183,6 +192,7 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
 export function AdminAmbulance() {
   const toast = useToast();
   const { settings } = useSettings();
+  const { isKapitan } = useAuth();
   const { data, loading } = useCollection<AmbulanceRequest>(requestsCollection);
   const [day, setDay] = useState(addDaysISO(0));
   const [openId, setOpenId] = useState<string | null>(null);
@@ -205,6 +215,7 @@ export function AdminAmbulance() {
     try {
       // merge:true deep-merges, so only ambulance.status changes.
       await setDoc(doc(db, "settings", "main"), { ambulance: { status } }, { merge: true });
+      logActivity("Ambulansya", `Status ng ambulansya: ${AVAILABILITY_LABEL[status]}`);
       toast(`Ambulansya: ${AVAILABILITY_LABEL[status]}`);
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -222,6 +233,7 @@ export function AdminAmbulance() {
             <button
               key={s}
               onClick={() => setAvailability(s)}
+              disabled={!isKapitan}
               className={`rounded-xl px-2 py-2 text-sm font-bold ${settings.ambulance.status === s ? AVAIL_BTN[s] : "bg-surface text-gray-600"}`}
               aria-pressed={settings.ambulance.status === s}
             >

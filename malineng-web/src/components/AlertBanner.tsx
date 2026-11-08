@@ -33,7 +33,7 @@ export function AlertBanner() {
   const Icon = style.icon;
 
   return (
-    <div className={`${style.cls} px-4 py-3`} role="alert">
+    <div className={`no-print ${style.cls} px-4 py-3`} role="alert">
       <div className="mx-auto flex max-w-3xl items-start gap-3">
         <Icon className="mt-0.5 h-6 w-6 shrink-0" aria-hidden />
         <p className="flex-1 font-semibold">

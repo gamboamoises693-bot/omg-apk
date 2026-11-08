@@ -12,12 +12,14 @@ import { formatDate, friendlyError, todayISO } from "@/lib/format";
 import type { AmbulanceSlot } from "@/lib/types";
 import { Button, ErrorText, Input, Select, Textarea } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { RequireVerified } from "@/components/RequireVerified";
+import { logActivity } from "@/lib/activity";
 
 type Mode = "emergency" | "schedule";
 
 /** Resident (or admin manual booking) request form. Always saved as "pending". */
 export function AmbulanceForm({ initialMode = "schedule", onDone }: { initialMode?: Mode; onDone?: () => void }) {
-  const { user, profile } = useAuth();
+  const { user, profile, isVerified } = useAuth();
   const puroks = usePuroks();
   const toast = useToast();
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -87,6 +89,7 @@ export function AmbulanceForm({ initialMode = "schedule", onDone }: { initialMod
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      logActivity("Ambulansya", isEmg ? `🚨 Emergency request: ${form.patientName.trim()} · ${form.pickup.trim()}` : `Nag-request ng ambulansya (${form.reason}) para sa ${form.date} ${form.time}`);
       toast(isEmg ? "Naipadala ang emergency request! Tumawag din kung kritikal." : "Naipadala! Aabisuhan ka kapag naaprubahan.");
       setForm((f) => ({ ...f, reason: "", time: "", destination: "", notes: "" }));
       onDone?.();
@@ -108,6 +111,12 @@ export function AmbulanceForm({ initialMode = "schedule", onDone }: { initialMod
         </button>
       </div>
 
+      {mode === "schedule" && !isVerified ? (
+        <RequireVerified feature="makapag-schedule ng ambulansya">
+          <span />
+        </RequireVerified>
+      ) : (
+      <>
       {mode === "emergency" && (
         <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-800">
           Kung kritikal ang pasyente, <b>tumawag agad</b>. Makikita ng Barangay ang online request, pero mas mabilis ang tawag.
@@ -151,6 +160,8 @@ export function AmbulanceForm({ initialMode = "schedule", onDone }: { initialMod
       <Button type="submit" full loading={loading} variant={mode === "emergency" ? "danger" : "primary"} disabled={!!clash}>
         {mode === "emergency" ? "🚨 Ipadala ang Emergency Request" : "Ipadala ang Request"}
       </Button>
+      </>
+      )}
     </form>
   );
 }
