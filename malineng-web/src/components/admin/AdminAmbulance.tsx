@@ -24,6 +24,7 @@ import { Button, Card, EmptyState, Modal, SectionTitle, Select, Spinner, Textare
 import { AmbulanceForm } from "@/components/ambulance/AmbulanceForm";
 import { STATUS_PILL } from "@/components/ambulance/AmbulanceTracker";
 import { useToast } from "@/components/Toast";
+import { AlertsSettingsCard } from "./AlertsSettingsCard";
 
 const requestsCollection = collection(db, "ambulanceRequests");
 const AVAIL_OPTIONS: AmbulanceAvailability[] = ["available", "busy", "maintenance"];
@@ -232,6 +233,10 @@ export function AdminAmbulance() {
           <p className="text-sm text-yellow-800">Paalala: ilagay ang numero ng ambulansya at mga driver sa tab na <b>Settings → Ambulansya</b>.</p>
         )}
       </Card>
+
+      <div className="mt-3">
+        <AlertsSettingsCard />
+      </div>
 
       <SectionTitle>Naghihintay ng approval ({pending.length})</SectionTitle>
       {pending.length === 0 ? (
