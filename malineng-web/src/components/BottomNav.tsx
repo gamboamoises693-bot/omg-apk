@@ -36,10 +36,12 @@ export function BottomNav() {
             <li key={href}>
               <Link
                 href={href}
-                className={`flex flex-col items-center gap-0.5 pb-2 pt-2 text-[0.7rem] font-semibold ${active ? "text-brand" : "text-gray-400"}`}
+                className={`flex flex-col items-center gap-0.5 pb-2 pt-1.5 text-[0.7rem] font-semibold ${active ? "text-brand" : "text-gray-500"}`}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-[1.4rem] w-[1.4rem]" strokeWidth={active ? 2.4 : 2} aria-hidden />
+                <span className={`flex h-8 w-14 items-center justify-center rounded-full transition-colors ${active ? "bg-brand-light" : ""}`}>
+                  <Icon className="h-[1.35rem] w-[1.35rem]" strokeWidth={active ? 2.4 : 2} aria-hidden />
+                </span>
                 {label}
               </Link>
             </li>

@@ -171,7 +171,7 @@ function ProjectForm({ project, onClose }: { project: InfraProject | null; onClo
         <Select label="Status" options={STATUSES.map((s) => PROJECT_STATUS_LABEL[s])} value={PROJECT_STATUS_LABEL[d.status]} onChange={(e) => set("status", STATUSES.find((s) => PROJECT_STATUS_LABEL[s] === e.target.value) ?? "planned")} />
         <div>
           <span className="mb-1 flex justify-between text-[0.85rem] font-semibold text-gray-700"><span>Progress</span><span className="text-brand">{d.status === "completed" ? 100 : d.progress}%</span></span>
-          <input type="range" min={0} max={100} step={5} value={d.status === "completed" ? 100 : d.progress} disabled={d.status === "completed"} onChange={(e) => set("progress", Number(e.target.value))} className="w-full accent-[#0B5C3F]" aria-label="Progress" />
+          <input type="range" min={0} max={100} step={5} value={d.status === "completed" ? 100 : d.progress} disabled={d.status === "completed"} onChange={(e) => set("progress", Number(e.target.value))} className="w-full accent-brand" aria-label="Progress" />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Input label="Sinimulan" type="date" value={d.startDate} onChange={(e) => set("startDate", e.target.value)} />

@@ -127,7 +127,7 @@ function SelfieStep() {
       <input ref={inputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ""; }} />
 
       <label className="flex items-start gap-2 text-sm text-gray-700">
-        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 accent-[#0B5C3F]" />
+        <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 accent-brand" />
         <span>Pumapayag akong gamitin ng Barangay Malineng ang selfie ko para lang sa pag-verify ng account, ayon sa <b>Data Privacy Act (RA 10173)</b>. Admin lang ang makakakita nito, at mabubura ito kapag binura ko ang account ko.</span>
       </label>
 

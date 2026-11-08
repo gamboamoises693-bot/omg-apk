@@ -42,17 +42,20 @@ import { AdminShieldLink } from "@/components/AdminShieldLink";
 import { Avatar } from "@/components/Avatar";
 import { LogoButton, LogoMark } from "@/components/BarangayLogo";
 import type { PublicStats } from "@/lib/stats";
+import { useOnlineCount } from "@/lib/presence";
 
 type Tint = "green" | "gold" | "red" | "blue" | "purple" | "orange" | "teal" | "pink";
+// Bank-app look: one calm light-blue circle for every service; red only for emergencies.
+const UNIFORM = "bg-brand-light text-brand";
 const TINT: Record<Tint, string> = {
-  green: "bg-brand-light text-brand",
-  gold: "bg-gold-light text-yellow-700",
+  green: UNIFORM,
+  gold: UNIFORM,
   red: "bg-red-50 text-red-600",
-  blue: "bg-blue-50 text-blue-600",
-  purple: "bg-purple-50 text-purple-600",
-  orange: "bg-orange-50 text-orange-600",
-  teal: "bg-teal-50 text-teal-600",
-  pink: "bg-pink-50 text-pink-600",
+  blue: UNIFORM,
+  purple: UNIFORM,
+  orange: UNIFORM,
+  teal: UNIFORM,
+  pink: UNIFORM,
 };
 
 const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[] = [
@@ -164,6 +167,7 @@ export default function HomePage() {
   const [hello, setHello] = useState("Magandang araw");
   const [showAll, setShowAll] = useState(false);
   const [stats, setStats] = useState<PublicStats | null>(null);
+  const online = useOnlineCount();
   useEffect(
     () => onSnapshot(doc(db, "stats", "public"), (snap) => setStats(snap.exists() ? (snap.data() as PublicStats) : null), () => setStats(null)),
     [],
@@ -212,11 +216,20 @@ export default function HomePage() {
           <LogoMark size="h-6 w-6" textClass="text-[0.65rem]" />
           <span>Barangay Malineng · {BARANGAY_CITY}</span>
         </LogoButton>
-        {stats && stats.members > 0 && (
+        {(online !== null || (stats && stats.members > 0)) && (
           <div className="mt-2.5 flex flex-wrap gap-1.5 text-xs font-semibold">
-            <span className="rounded-full bg-white/15 px-2.5 py-1">👥 {stats.members.toLocaleString("en-PH")} miyembro</span>
-            {stats.verified > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">✓ {stats.verified.toLocaleString("en-PH")} verified</span>}
-            {stats.households > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">🏠 {stats.households.toLocaleString("en-PH")} household</span>}
+            {online !== null && (
+              <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1" title="Bukas ang website sa nakaraang 5 minuto">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75 motion-reduce:hidden" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                </span>
+                {online.toLocaleString("en-PH")} online ngayon
+              </span>
+            )}
+            {stats && stats.members > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">👥 {stats.members.toLocaleString("en-PH")} miyembro</span>}
+            {stats && stats.verified > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">✓ {stats.verified.toLocaleString("en-PH")} verified</span>}
+            {stats && stats.households > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">🏠 {stats.households.toLocaleString("en-PH")} household</span>}
           </div>
         )}
       </section>
@@ -231,14 +244,14 @@ export default function HomePage() {
       <div className="grid grid-cols-4 gap-x-1 gap-y-4 rounded-2xl bg-white px-2 py-4 shadow-card">
         {services.map(({ href, label, icon: Icon, tint }) => (
           <Link key={href} href={href} className="flex flex-col items-center gap-1.5 text-center active:scale-95">
-            <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${TINT[tint]}`}>
+            <span className={`flex h-12 w-12 items-center justify-center rounded-full ${TINT[tint]}`}>
               <Icon className="h-5 w-5" aria-hidden />
             </span>
             <span className="text-[0.75rem] font-medium leading-tight text-gray-700">{label}</span>
           </Link>
         ))}
         <button onClick={() => setShowAll((v) => !v)} className="flex flex-col items-center gap-1.5 text-center active:scale-95" aria-expanded={showAll}>
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-600">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-brand">
             {showAll ? <ChevronUp className="h-5 w-5" /> : <LayoutGrid className="h-5 w-5" />}
           </span>
           <span className="text-[0.75rem] font-medium leading-tight text-gray-700">{showAll ? "Itago" : "Lahat"}</span>

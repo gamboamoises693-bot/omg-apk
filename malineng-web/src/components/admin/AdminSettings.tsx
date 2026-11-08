@@ -193,7 +193,7 @@ function AlertSection({ settings, onBack }: { settings: Settings; onBack: () => 
       <Card>
         <label className="flex items-center justify-between gap-3">
           <span className="text-sm"><b>🌡️ Heat Index banner</b><br /><span className="text-gray-600">Live na init sa Cuyapo, para sa El Niño.</span></span>
-          <input type="checkbox" checked={showHeatIndex} onChange={(e) => setShowHeatIndex(e.target.checked)} className="h-6 w-6 shrink-0 accent-[#0B5C3F]" aria-label="Ipakita ang Heat Index banner" />
+          <input type="checkbox" checked={showHeatIndex} onChange={(e) => setShowHeatIndex(e.target.checked)} className="h-6 w-6 shrink-0 accent-brand" aria-label="Ipakita ang Heat Index banner" />
         </label>
       </Card>
       <Card className="space-y-3">
