@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Ambulance, Flame, Phone, ShieldAlert } from "lucide-react";
 import { useSettings } from "@/lib/useSettings";
 import { telHref } from "@/lib/format";
-import { Modal, PageHeader, Spinner } from "@/components/ui";
+import { Modal, PageHeader, SectionTitle, Spinner } from "@/components/ui";
+import { HotlineList } from "@/components/HotlineList";
 
 export default function EmergencyPage() {
   const { settings, loading } = useSettings();
@@ -39,6 +40,8 @@ export default function EmergencyPage() {
           <a href="tel:911" className="flex w-full items-center justify-center gap-3 rounded-3xl border-4 border-red-600 bg-white p-5 text-2xl font-black text-red-600">
             <Phone className="h-8 w-8" /> 911 (National)
           </a>
+          <SectionTitle>Cuyapo Hotlines</SectionTitle>
+          <HotlineList hotlines={settings.hotlines} />
         </div>
       )}
 

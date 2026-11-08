@@ -19,7 +19,13 @@ export function useSettings() {
         setSettings({
           ...DEFAULT_SETTINGS,
           ...data,
-          emergencyNumbers: { ...DEFAULT_SETTINGS.emergencyNumbers, ...(data.emergencyNumbers ?? {}) },
+          // Blank saved numbers fall back to the defaults (e.g. BFP Cuyapo).
+          emergencyNumbers: {
+            tanod: data.emergencyNumbers?.tanod || DEFAULT_SETTINGS.emergencyNumbers.tanod,
+            healthCenter: data.emergencyNumbers?.healthCenter || DEFAULT_SETTINGS.emergencyNumbers.healthCenter,
+            bfp: data.emergencyNumbers?.bfp || DEFAULT_SETTINGS.emergencyNumbers.bfp,
+          },
+          hotlines: Array.isArray(data.hotlines) ? data.hotlines : DEFAULT_SETTINGS.hotlines,
           // An empty array is a valid admin choice (all projects removed); only fall back when never saved.
           projects: Array.isArray(data.projects) ? data.projects : DEFAULT_SETTINGS.projects,
           puroks: data.puroks?.length ? data.puroks : DEFAULT_SETTINGS.puroks,

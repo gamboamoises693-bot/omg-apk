@@ -176,6 +176,11 @@ export interface Project {
   progress: number; // 0-100
 }
 
+export interface Hotline {
+  name: string;
+  numbers: string[];
+}
+
 export interface EmergencyNumbers {
   tanod: string;
   healthCenter: string;
@@ -187,6 +192,7 @@ export interface Settings {
   alertBanner: string;
   alertType: AlertType;
   emergencyNumbers: EmergencyNumbers;
+  hotlines: Hotline[];
   officials: Official[];
   announcements: Announcement[];
   projects: Project[];

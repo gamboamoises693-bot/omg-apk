@@ -26,6 +26,7 @@ import { useSettings } from "@/lib/useSettings";
 import { Card, LinkButton, SectionTitle, Spinner } from "@/components/ui";
 import { formatDate, telHref } from "@/lib/format";
 import { BARANGAY_CITY } from "@/lib/constants";
+import { HotlineList } from "@/components/HotlineList";
 
 const QUICK_SERVICES = [
   { label: "Barangay Clearance", icon: FileText, service: "Barangay Clearance" },
@@ -198,6 +199,13 @@ export default function HomePage() {
               </Card>
             ))}
           </div>
+
+          <SectionTitle>Cuyapo Hotlines</SectionTitle>
+          <HotlineList hotlines={settings.hotlines} />
+          <a href="tel:911" className="mt-3 flex items-center justify-between rounded-2xl border-2 border-red-600 bg-white p-4 font-bold text-red-600">
+            <span>Nationwide Emergency Hotline</span>
+            <span className="flex items-center gap-2"><Phone className="h-5 w-5" /> 911</span>
+          </a>
         </>
       )}
 

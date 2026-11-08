@@ -58,6 +58,9 @@ export function AdminSettings() {
       await setDoc(doc(db, "settings", "main"), {
         ...draft,
         puroks,
+        hotlines: draft.hotlines
+          .map((h) => ({ name: h.name.trim().slice(0, 80), numbers: h.numbers.map((n) => n.trim()).filter(Boolean).slice(0, 5) }))
+          .filter((h) => h.name && h.numbers.length),
         officials: draft.officials.filter((o) => o.name.trim()),
         announcements: draft.announcements.filter((a) => a.title.trim()),
         projects: draft.projects
@@ -117,6 +120,33 @@ export function AdminSettings() {
         <Input label="Tanod" type="tel" value={draft.emergencyNumbers.tanod} onChange={(e) => set("emergencyNumbers", { ...draft.emergencyNumbers, tanod: e.target.value })} />
         <Input label="Health Center" type="tel" value={draft.emergencyNumbers.healthCenter} onChange={(e) => set("emergencyNumbers", { ...draft.emergencyNumbers, healthCenter: e.target.value })} />
         <Input label="BFP (Bumbero)" type="tel" value={draft.emergencyNumbers.bfp} onChange={(e) => set("emergencyNumbers", { ...draft.emergencyNumbers, bfp: e.target.value })} />
+      </Card>
+
+      <SectionTitle>Cuyapo Hotlines</SectionTitle>
+      <Card className="space-y-4">
+        <p className="text-sm text-gray-500">Lalabas sa Home at sa Emergency page. Kung higit sa isa ang numero, paghiwalayin ng kuwit (,).</p>
+        {draft.hotlines.map((h, i) => (
+          <div key={i} className="space-y-2 rounded-xl bg-surface p-3">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input label="Pangalan" value={h.name} maxLength={80} placeholder="Hal. Cuyapo MDRRMO" onChange={(e) => set("hotlines", draft.hotlines.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+              </div>
+              <button type="button" onClick={() => set("hotlines", draft.hotlines.filter((_, j) => j !== i))} className="mb-2 rounded-full p-2 text-red-600" aria-label={`Tanggalin ang ${h.name}`}>
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
+            <Input
+              label="Numero"
+              type="tel"
+              placeholder="09171234567, 09981234567"
+              value={h.numbers.join(", ")}
+              onChange={(e) => set("hotlines", draft.hotlines.map((x, j) => (j === i ? { ...x, numbers: e.target.value.split(",").map((n) => n.trimStart()) } : x)))}
+            />
+          </div>
+        ))}
+        <Button variant="outline" full onClick={() => set("hotlines", [...draft.hotlines, { name: "", numbers: [""] }])}>
+          <Plus className="h-5 w-5" /> Magdagdag ng Hotline
+        </Button>
       </Card>
 
       <SectionTitle>Mga Opisyal</SectionTitle>
