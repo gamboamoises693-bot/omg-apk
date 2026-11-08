@@ -6,7 +6,8 @@ import { Briefcase, CheckCircle2, MapPin, Phone, Plus, Wallet } from "lucide-rea
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
-import { JOB_CATEGORIES, PUROKS } from "@/lib/constants";
+import { JOB_CATEGORIES } from "@/lib/constants";
+import { usePuroks } from "@/lib/useSettings";
 import { friendlyError, sortNewest, telHref, timeAgo } from "@/lib/format";
 import type { Job } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, ErrorText, Input, Modal, PageHeader, Select, Spinner } from "@/components/ui";
@@ -15,6 +16,7 @@ import { useToast } from "@/components/Toast";
 
 function JobForm({ onDone }: { onDone: () => void }) {
   const { user, profile } = useAuth();
+  const puroks = usePuroks();
   const toast = useToast();
   const [form, setForm] = useState({ title: "", purok: "", salary: "", contact: "", category: "" });
   const [loading, setLoading] = useState(false);
@@ -57,7 +59,7 @@ function JobForm({ onDone }: { onDone: () => void }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input label="Anong trabaho?" required maxLength={120} placeholder="Hal. Kailangan ng helper sa karinderya" value={form.title} onChange={update("title")} />
       <Select label="Category" required options={JOB_CATEGORIES} placeholder="-- Pumili --" value={form.category} onChange={update("category")} />
-      <Select label="Purok" required options={PUROKS} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} />
+      <Select label="Purok" required options={puroks} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} />
       <Input label="Sahod" placeholder="Hal. ₱500/araw" value={form.salary} onChange={update("salary")} />
       <Input label="Contact Number" type="tel" required value={form.contact} onChange={update("contact")} />
       <ErrorText>{error}</ErrorText>

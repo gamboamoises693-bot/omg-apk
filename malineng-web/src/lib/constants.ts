@@ -1,8 +1,8 @@
 export const BARANGAY_NAME = "Barangay Malineng";
-export const BARANGAY_CITY = "Angeles City, Pampanga";
+export const BARANGAY_CITY = "Cuyapo, Nueva Ecija";
 
-export const PUROKS = ["Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5"] as const;
-export type Purok = (typeof PUROKS)[number];
+/** Starting list only. Admin can add/rename/remove puroks in /admin > Settings. */
+export const DEFAULT_PUROKS: string[] = ["Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5"];
 
 export const LISTING_CATEGORIES = ["Ulam", "Pagkain", "Ukay", "Halaman", "Homemade", "Iba pa"] as const;
 export type ListingCategory = (typeof LISTING_CATEGORIES)[number];

@@ -6,7 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { AlertBanner } from "@/components/AlertBanner";
 
 export const metadata: Metadata = {
-  title: "Barangay Malineng | Angeles City, Pampanga",
+  title: "Barangay Malineng | Cuyapo, Nueva Ecija",
   description: "Opisyal na community website ng Barangay Malineng: serbisyo, tindahan, trabaho, ayuda checker at iba pa.",
   manifest: "/manifest.json",
   icons: { icon: "/icon.svg", apple: "/icon.svg" },

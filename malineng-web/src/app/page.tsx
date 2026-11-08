@@ -25,6 +25,7 @@ import {
 import { useSettings } from "@/lib/useSettings";
 import { Card, LinkButton, SectionTitle, Spinner } from "@/components/ui";
 import { formatDate, telHref } from "@/lib/format";
+import { BARANGAY_CITY } from "@/lib/constants";
 
 const QUICK_SERVICES = [
   { label: "Barangay Clearance", icon: FileText, service: "Barangay Clearance" },
@@ -199,7 +200,7 @@ export default function HomePage() {
         </>
       )}
 
-      <p className="mt-8 text-center text-sm text-gray-400">© {new Date().getFullYear()} Barangay Malineng, Angeles City, Pampanga</p>
+      <p className="mt-8 text-center text-sm text-gray-400">© {new Date().getFullYear()} Barangay Malineng, {BARANGAY_CITY}</p>
     </div>
   );
 }

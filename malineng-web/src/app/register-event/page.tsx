@@ -5,13 +5,15 @@ import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { CheckCircle2, ClipboardList } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { PUROKS, REGISTRATION_PURPOSES } from "@/lib/constants";
+import { REGISTRATION_PURPOSES } from "@/lib/constants";
+import { usePuroks } from "@/lib/useSettings";
 import { friendlyError } from "@/lib/format";
 import { Button, Card, ErrorText, Input, PageHeader, Select } from "@/components/ui";
 import { LoginGate } from "@/components/LoginGate";
 
 function RegistrationForm() {
   const { user, profile } = useAuth();
+  const puroks = usePuroks();
   const [form, setForm] = useState({ fullName: "", purok: "", contact: "", purpose: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -64,7 +66,7 @@ function RegistrationForm() {
     <Card>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Buong Pangalan" required value={form.fullName} onChange={update("fullName")} />
-        <Select label="Purok" required options={PUROKS} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} />
+        <Select label="Purok" required options={puroks} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} />
         <Input label="Contact Number" type="tel" required value={form.contact} onChange={update("contact")} />
         <Select label="Para saan?" required options={REGISTRATION_PURPOSES} placeholder="-- Pumili --" value={form.purpose} onChange={update("purpose")} />
         <ErrorText>{error}</ErrorText>

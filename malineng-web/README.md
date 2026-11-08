@@ -1,6 +1,6 @@
 # Barangay Malineng Website
 
-Opisyal na community website ng **Barangay Malineng, Angeles City, Pampanga**.
+Opisyal na community website ng **Barangay Malineng, Cuyapo, Nueva Ecija**.
 Next.js + Tailwind + Firebase (Auth, Firestore, Storage, Hosting). Mobile-first, Tagalog/Taglish.
 
 ## Mga Feature

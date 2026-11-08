@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Phone, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { BARANGAY_CITY } from "@/lib/constants";
 
 export function TopBar() {
   const { isAdmin } = useAuth();
@@ -13,7 +14,7 @@ export function TopBar() {
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold text-lg font-black text-brand-dark">M</span>
           <span className="leading-tight">
             <span className="block text-lg font-bold">Barangay Malineng</span>
-            <span className="block text-xs text-white/80">Angeles City, Pampanga</span>
+            <span className="block text-xs text-white/80">{BARANGAY_CITY}</span>
           </span>
         </Link>
         <div className="flex items-center gap-2">

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { ensureUserDoc, useAuth } from "@/context/AuthContext";
-import { PUROKS } from "@/lib/constants";
+import { usePuroks } from "@/lib/useSettings";
 import { friendlyError } from "@/lib/format";
 import { Button, Card, ErrorText, Input, Select } from "@/components/ui";
 import { GoogleButton } from "@/components/GoogleButton";
@@ -18,6 +18,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const toast = useToast();
   const { user, loading: authLoading } = useAuth();
+  const puroks = usePuroks();
   const [form, setForm] = useState({ fullName: "", purok: "", contact: "", email: "", password: "", birthday: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -63,7 +64,7 @@ export default function RegisterPage() {
       <Card>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Buong Pangalan" required autoComplete="name" placeholder="Juan Dela Cruz" value={form.fullName} onChange={update("fullName")} />
-          <Select label="Purok" required options={PUROKS} placeholder="-- Pumili ng Purok --" value={form.purok} onChange={update("purok")} />
+          <Select label="Purok" required options={puroks} placeholder="-- Pumili ng Purok --" value={form.purok} onChange={update("purok")} />
           <Input label="Contact Number" type="tel" inputMode="tel" required placeholder="09171234567" value={form.contact} onChange={update("contact")} />
           <Input label="Birthday" type="date" required value={form.birthday} onChange={update("birthday")} />
           <Input label="Email" type="email" required autoComplete="email" value={form.email} onChange={update("email")} />
