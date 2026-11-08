@@ -12,6 +12,7 @@ import { formatPeso, friendlyError, sortNewest } from "@/lib/format";
 import type { Job, Listing } from "@/lib/types";
 import { Badge, Button, Card, ErrorText, Input, LinkButton, PageHeader, SectionTitle, Select, Spinner } from "@/components/ui";
 import { LoginGate } from "@/components/LoginGate";
+import { TextSizeSetting } from "@/components/TextSizeSetting";
 import { useToast } from "@/components/Toast";
 
 const STATUS_BADGE = {
@@ -186,7 +187,7 @@ function AccountContent() {
       <Card className="mb-4 flex items-center gap-4 bg-brand text-white">
         <span className="rounded-full bg-gold p-3 text-brand-dark"><UserRound className="h-8 w-8" /></span>
         <div className="min-w-0">
-          <p className="truncate text-xl font-bold">{profile.fullName}</p>
+          <p className="truncate text-lg font-bold">{profile.fullName}</p>
           <p className="truncate text-white/80">{user?.email}</p>
           <p className="text-gold">{profile.purok || "Wala pang purok"} · {isAdmin ? "Admin" : "Residente"}</p>
         </div>
@@ -227,6 +228,13 @@ export default function AccountPage() {
       <LoginGate message="Mag-login o mag-register para magkaroon ng account.">
         <AccountContent />
       </LoginGate>
+
+      {/* Available to everyone, even without logging in (e.g. senior citizens). */}
+      <SectionTitle>Laki ng text (Aa)</SectionTitle>
+      <Card>
+        <TextSizeSetting />
+        <p className="mt-2 text-xs text-gray-500">Para sa phone na ito lang. Piliin ang “Malaki” kung nahihirapang magbasa.</p>
+      </Card>
     </div>
   );
 }

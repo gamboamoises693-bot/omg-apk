@@ -76,9 +76,9 @@ export default function AyudaPage() {
               return (
                 <Card key={r.id}>
                   <p className="text-sm text-gray-500">Control No. {r.controlNumber || r.id}</p>
-                  <p className="text-xl font-bold">{r.fullName}</p>
+                  <p className="text-lg font-bold">{r.fullName}</p>
                   <p className="mt-1 text-gray-700">Program: <b>{r.program}</b></p>
-                  <div className={`mt-3 flex items-center gap-2 rounded-xl px-4 py-3 text-lg font-bold ${style.cls}`}>
+                  <div className={`mt-3 flex items-center gap-2 rounded-xl px-3 py-2.5 text-base font-bold ${style.cls}`}>
                     <Icon className="h-6 w-6" /> {AYUDA_STATUS_LABEL[r.status] ?? r.status}
                   </div>
                   {r.remarks && <p className="mt-3 whitespace-pre-line text-gray-700"><b>Remarks:</b> {r.remarks}</p>}

@@ -75,7 +75,7 @@ function SellForm() {
     return (
       <Card className="text-center">
         <CheckCircle2 className="mx-auto mb-2 h-16 w-16 text-brand" />
-        <p className="text-xl font-bold">Naipadala na ang paninda mo!</p>
+        <p className="text-lg font-bold">Naipadala na ang paninda mo!</p>
         <p className="mt-1 text-gray-600">Ire-review ito ng admin. Lalabas sa Tindahan kapag na-approve. Tatagal ito ng {LISTING_DURATION_DAYS} araw.</p>
         <div className="mt-4 grid gap-2">
           <Button full onClick={() => { setDone(false); setFile(null); setForm((f) => ({ ...f, title: "", price: "", description: "" })); }}>Magbenta pa ng iba</Button>

@@ -1,217 +1,336 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { collection, query, where } from "firebase/firestore";
 import {
-  FileText,
-  HeartHandshake,
-  Receipt,
-  ShieldAlert,
-  Store,
-  MessagesSquare,
-  Briefcase,
-  Wrench,
-  Siren,
   Ambulance,
-  Search,
-  HandCoins,
+  Briefcase,
   CalendarCheck,
   CalendarDays,
-  Vote,
-  Trophy,
+  ChevronRight,
+  ChevronUp,
   ClipboardList,
+  FileText,
+  HandCoins,
+  LayoutGrid,
   Megaphone,
+  MessagesSquare,
   Phone,
+  Search,
+  ShieldAlert,
+  Siren,
+  Store,
+  Trophy,
   UserRound,
+  Vote,
+  Wrench,
 } from "lucide-react";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/lib/useSettings";
-import { Card, LinkButton, SectionTitle, Spinner } from "@/components/ui";
-import { formatDate, telHref } from "@/lib/format";
-import { BARANGAY_CITY } from "@/lib/constants";
-import { HotlineList } from "@/components/HotlineList";
+import { useCollection } from "@/lib/useCollection";
+import { APPOINTMENT_STATUS_LABEL, BARANGAY_CITY } from "@/lib/constants";
+import { REQUEST_STATUS_LABEL, formatTime12 } from "@/lib/ambulance";
+import { formatDate, sortNewest, telHref } from "@/lib/format";
+import type { AmbulanceRequest, Appointment, Listing } from "@/lib/types";
+import { LinkButton, SectionTitle, Spinner } from "@/components/ui";
+import { AdminShieldLink } from "@/components/AdminShieldLink";
 
-const QUICK_SERVICES = [
-  { label: "Barangay Clearance", icon: FileText, service: "Barangay Clearance" },
-  { label: "Indigency", icon: HeartHandshake, service: "Indigency" },
-  { label: "Cedula", icon: Receipt, service: "Cedula" },
-  { label: "Blotter / Report", icon: ShieldAlert, service: "Blotter" },
-] as const;
+type Tint = "green" | "gold" | "red" | "blue" | "purple" | "orange" | "teal" | "pink";
+const TINT: Record<Tint, string> = {
+  green: "bg-brand-light text-brand",
+  gold: "bg-gold-light text-yellow-700",
+  red: "bg-red-50 text-red-600",
+  blue: "bg-blue-50 text-blue-600",
+  purple: "bg-purple-50 text-purple-600",
+  orange: "bg-orange-50 text-orange-600",
+  teal: "bg-teal-50 text-teal-600",
+  pink: "bg-pink-50 text-pink-600",
+};
 
-const ALL_FEATURES = [
-  { href: "/tindahan", label: "Tindahan", icon: Store, color: "bg-gold-light text-yellow-800" },
-  { href: "/board", label: "Community Board", icon: MessagesSquare, color: "bg-blue-50 text-blue-700" },
-  { href: "/trabaho", label: "Trabaho", icon: Briefcase, color: "bg-brand-light text-brand" },
-  { href: "/skills", label: "Skills", icon: Wrench, color: "bg-orange-50 text-orange-700" },
-  { href: "/ayuda", label: "Ayuda Checker", icon: HandCoins, color: "bg-emerald-50 text-emerald-700" },
-  { href: "/appointment", label: "Appointment", icon: CalendarCheck, color: "bg-purple-50 text-purple-700" },
-  { href: "/lost-found", label: "Lost & Found", icon: Search, color: "bg-pink-50 text-pink-700" },
-  { href: "/register-event", label: "Magparehistro", icon: ClipboardList, color: "bg-teal-50 text-teal-700" },
-  { href: "/events", label: "Events", icon: CalendarDays, color: "bg-indigo-50 text-indigo-700" },
-  { href: "/botohan", label: "Botohan", icon: Vote, color: "bg-cyan-50 text-cyan-700" },
-  { href: "/purok", label: "Purok Points", icon: Trophy, color: "bg-amber-50 text-amber-700" },
-  { href: "/ambulansya", label: "Ambulansya", icon: Ambulance, color: "bg-red-50 text-red-700" },
-  { href: "/emergency", label: "Emergency", icon: Siren, color: "bg-red-50 text-red-700" },
-] as const;
+const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[] = [
+  { href: "/tindahan", label: "Tindahan", icon: Store, tint: "gold" },
+  { href: "/trabaho", label: "Trabaho", icon: Briefcase, tint: "green" },
+  { href: "/ayuda", label: "Ayuda", icon: HandCoins, tint: "teal" },
+  { href: "/appointment", label: "Appointment", icon: CalendarCheck, tint: "purple" },
+  { href: "/ambulansya", label: "Ambulansya", icon: Ambulance, tint: "red" },
+  { href: "/lost-found", label: "Lost & Found", icon: Search, tint: "pink" },
+  { href: "/skills", label: "Skills", icon: Wrench, tint: "orange" },
+  // Shown after "Lahat":
+  { href: "/board", label: "Board", icon: MessagesSquare, tint: "blue" },
+  { href: "/register-event", label: "Magpa-rehistro", icon: ClipboardList, tint: "teal" },
+  { href: "/events", label: "Events", icon: CalendarDays, tint: "blue" },
+  { href: "/botohan", label: "Botohan", icon: Vote, tint: "purple" },
+  { href: "/purok", label: "Purok Points", icon: Trophy, tint: "gold" },
+  { href: "/emergency", label: "Emergency", icon: Siren, tint: "red" },
+];
+const PRIMARY_COUNT = 7;
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Magandang umaga";
+  if (h < 18) return "Magandang hapon";
+  return "Magandang gabi";
+}
+
+function initials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join("") || "M"
+  );
+}
+
+/** "Balance card": the signed-in resident's live request statuses. */
+function SummaryCard() {
+  const { user, loading } = useAuth();
+  const apptQ = useMemo(() => (user ? query(collection(db, "appointments"), where("userId", "==", user.uid)) : null), [user]);
+  const ambQ = useMemo(() => (user ? query(collection(db, "ambulanceRequests"), where("userId", "==", user.uid)) : null), [user]);
+  const listQ = useMemo(() => (user ? query(collection(db, "listings"), where("sellerId", "==", user.uid)) : null), [user]);
+  const appts = useCollection<Appointment>(apptQ);
+  const ambs = useCollection<AmbulanceRequest>(ambQ);
+  const listings = useCollection<Listing>(listQ);
+
+  if (loading) return <div className="h-36" />;
+
+  if (!user) {
+    return (
+      <>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Ang mga request mo</p>
+        <p className="mt-0.5 text-[1.05rem] font-bold text-gray-900">Mag-login para ma-track ang clearance, ambulansya at paninda mo.</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <LinkButton href="/login">Mag-login</LinkButton>
+          <LinkButton href="/register" variant="soft">Mag-register</LinkButton>
+        </div>
+      </>
+    );
+  }
+
+  const latestAppt = sortNewest(appts.data)[0];
+  const activeAmb = sortNewest(ambs.data).find((r) => ["pending", "approved", "enroute"].includes(r.status));
+  const pendingListings = listings.data.filter((l) => l.status === "pending").length;
+
+  let headline = "Wala kang aktibong request ngayon.";
+  if (activeAmb?.status === "enroute") headline = "🚑 Papunta na ang ambulansya";
+  else if (latestAppt?.status === "ready") headline = `${latestAppt.service}: Ready na kunin`;
+  else if (activeAmb) headline = `Ambulansya: ${REQUEST_STATUS_LABEL[activeAmb.status]}`;
+  else if (latestAppt) headline = `${latestAppt.service}: ${APPOINTMENT_STATUS_LABEL[latestAppt.status].split(" —")[0]}`;
+
+  return (
+    <>
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Ang mga request mo</p>
+      <p className="mt-0.5 text-[1.05rem] font-bold text-gray-900">{headline}</p>
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
+        {latestAppt && (
+          <Link href="/appointment" className={`rounded-full px-2.5 py-1 text-xs font-semibold ${latestAppt.status === "ready" ? "bg-brand-light text-brand" : "bg-gold-light text-yellow-800"}`}>
+            ● {latestAppt.service} · {formatDate(latestAppt.date)}
+          </Link>
+        )}
+        {activeAmb && (
+          <Link href="/ambulansya" className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+            ● Ambulansya · {formatTime12(activeAmb.time)}
+          </Link>
+        )}
+        {pendingListings > 0 && (
+          <Link href="/account" className="rounded-full bg-gold-light px-2.5 py-1 text-xs font-semibold text-yellow-800">
+            ● {pendingListings} paninda · naghihintay
+          </Link>
+        )}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <LinkButton href="/appointment?service=Barangay%20Clearance"><FileText className="h-4 w-4" /> Clearance</LinkButton>
+        <LinkButton href="/appointment?service=Blotter" variant="soft"><ShieldAlert className="h-4 w-4" /> Mag-report</LinkButton>
+      </div>
+    </>
+  );
+}
 
 export default function HomePage() {
+  const { profile } = useAuth();
   const { settings, loading } = useSettings();
+  const [hello, setHello] = useState("Magandang araw");
+  const [showAll, setShowAll] = useState(false);
+  // Computed on the client: the static build would otherwise freeze the build-time hour.
+  useEffect(() => setHello(greeting()), []);
+
   const punong = settings.officials.find((o) => /punong/i.test(o.position));
   const others = settings.officials.filter((o) => o !== punong);
+  const firstName = profile?.fullName?.split(" ")[0];
 
-  const emergency = [
-    { label: "Tanod", number: settings.emergencyNumbers.tanod },
-    { label: "Health Center", number: settings.emergencyNumbers.healthCenter },
-    { label: "BFP (Bumbero)", number: settings.emergencyNumbers.bfp },
-  ];
+  const emergencyRows = [
+    ...[
+      { name: "Tanod", number: settings.emergencyNumbers.tanod, icon: ShieldAlert, tint: "blue" as Tint },
+      { name: "Health Center", number: settings.emergencyNumbers.healthCenter, icon: Ambulance, tint: "green" as Tint },
+    ].filter((e) => e.number),
+    ...settings.hotlines.slice(0, 3).map((h) => ({ name: h.name, number: h.numbers[0] ?? "", icon: Siren, tint: "red" as Tint })),
+  ].filter((r) => r.number);
+
+  const services = showAll ? SERVICES : SERVICES.slice(0, PRIMARY_COUNT);
 
   return (
     <div>
-      {/* Hero */}
-      <section className="-mx-4 -mt-4 bg-gradient-to-b from-brand to-brand-dark px-5 pb-8 pt-7 text-white">
-        <p className="text-sm font-semibold uppercase tracking-wider text-gold">Barangay Malineng</p>
-        <h1 className="mt-1 text-3xl font-extrabold leading-tight">Serbisyong Tapat, Para sa Malineng</h1>
-        <p className="mt-2 text-white/85">Kumuha ng dokumento, mag-report, bumili at magbenta — lahat dito na.</p>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <LinkButton href="/appointment?service=Barangay%20Clearance" variant="gold">
-            <FileText className="h-5 w-5" /> Kumuha ng Clearance
-          </LinkButton>
-          <LinkButton href="/appointment?service=Blotter" variant="outline">
-            <ShieldAlert className="h-5 w-5" /> Mag-report
-          </LinkButton>
+      {/* Greeting header */}
+      <section className="-mx-4 -mt-4 bg-gradient-to-br from-brand to-brand-deep px-4 pb-14 pt-5 text-white">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold text-sm font-black text-brand-deep">
+              {profile ? initials(profile.fullName) : "M"}
+            </span>
+            <div className="leading-tight">
+              <p className="text-xs text-white/75">{hello},</p>
+              <p className="text-base font-bold">{firstName ? `${firstName} 👋` : "Kabarangay 👋"}</p>
+            </div>
+          </div>
+          <AdminShieldLink />
         </div>
+        <p className="mt-3 text-xs text-white/70">Barangay Malineng · {BARANGAY_CITY}</p>
       </section>
 
-      {/* Quick services */}
-      <SectionTitle>Mabilis na Serbisyo</SectionTitle>
-      <div className="grid grid-cols-2 gap-3">
-        {QUICK_SERVICES.map(({ label, icon: Icon, service }) => (
-          <Link
-            key={service}
-            href={`/appointment?service=${encodeURIComponent(service)}`}
-            className="flex flex-col items-center gap-2 rounded-2xl bg-white p-4 text-center shadow-sm ring-1 ring-gray-100 active:bg-brand-light"
-          >
-            <span className="rounded-full bg-brand-light p-3 text-brand">
-              <Icon className="h-7 w-7" aria-hidden />
-            </span>
-            <span className="font-bold text-gray-800">{label}</span>
-          </Link>
-        ))}
-      </div>
+      {/* Summary card */}
+      <section className="relative z-10 -mt-10 rounded-2xl bg-white p-4 shadow-float">
+        <SummaryCard />
+      </section>
 
-      {/* All features */}
-      <SectionTitle>Lahat ng Serbisyo</SectionTitle>
-      <div className="grid grid-cols-3 gap-3">
-        {ALL_FEATURES.map(({ href, label, icon: Icon, color }) => (
-          <Link key={href} href={href} className="flex flex-col items-center gap-2 rounded-2xl bg-white p-3 text-center shadow-sm ring-1 ring-gray-100 active:scale-95">
-            <span className={`rounded-xl p-3 ${color}`}>
-              <Icon className="h-6 w-6" aria-hidden />
+      {/* Services grid */}
+      <SectionTitle>Mga Serbisyo</SectionTitle>
+      <div className="grid grid-cols-4 gap-x-1 gap-y-4 rounded-2xl bg-white px-2 py-4 shadow-card">
+        {services.map(({ href, label, icon: Icon, tint }) => (
+          <Link key={href} href={href} className="flex flex-col items-center gap-1.5 text-center active:scale-95">
+            <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${TINT[tint]}`}>
+              <Icon className="h-5 w-5" aria-hidden />
             </span>
-            <span className="text-sm font-semibold leading-tight text-gray-800">{label}</span>
+            <span className="text-[0.75rem] font-medium leading-tight text-gray-700">{label}</span>
           </Link>
         ))}
+        <button onClick={() => setShowAll((v) => !v)} className="flex flex-col items-center gap-1.5 text-center active:scale-95" aria-expanded={showAll}>
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-600">
+            {showAll ? <ChevronUp className="h-5 w-5" /> : <LayoutGrid className="h-5 w-5" />}
+          </span>
+          <span className="text-[0.75rem] font-medium leading-tight text-gray-700">{showAll ? "Itago" : "Lahat"}</span>
+        </button>
       </div>
 
       {loading ? (
         <Spinner />
       ) : (
         <>
-          {/* Announcements */}
-          <SectionTitle>Mga Anunsyo</SectionTitle>
-          {settings.announcements.length === 0 ? (
-            <Card className="text-gray-500">Wala pang anunsyo sa ngayon.</Card>
-          ) : (
-            <div className="space-y-3">
-              {settings.announcements.map((a, i) => (
-                <Card key={`${a.title}-${i}`} className="border-l-4 border-gold">
-                  <div className="flex items-start gap-3">
-                    <Megaphone className="mt-1 h-5 w-5 shrink-0 text-gold-dark" aria-hidden />
-                    <div>
-                      <p className="font-bold">{a.title}</p>
-                      {a.date && <p className="text-sm text-gray-500">{formatDate(a.date)}</p>}
-                      <p className="mt-1 whitespace-pre-line text-gray-700">{a.body}</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Officials */}
-          <SectionTitle>Mga Opisyal ng Barangay</SectionTitle>
-          {settings.officials.length === 0 ? (
-            <Card className="text-gray-500">Ilalagay pa ng admin ang listahan ng opisyal.</Card>
-          ) : (
+          {/* Announcements carousel */}
+          {settings.announcements.length > 0 && (
             <>
-              {punong && (
-                <Card className="mb-3 flex items-center gap-4 bg-brand text-white">
-                  <span className="rounded-full bg-gold p-3 text-brand-dark">
-                    <UserRound className="h-8 w-8" aria-hidden />
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-gold">{punong.position}</p>
-                    <p className="text-xl font-bold">{punong.name}</p>
-                  </div>
-                </Card>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                {others.map((o, i) => (
-                  <Card key={`${o.name}-${i}`} className="text-center">
-                    <UserRound className="mx-auto mb-1 h-8 w-8 text-brand" aria-hidden />
-                    <p className="font-bold leading-tight">{o.name}</p>
-                    <p className="text-sm text-gray-500">{o.position}</p>
-                  </Card>
+              <SectionTitle>Mga Anunsyo</SectionTitle>
+              <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
+                {settings.announcements.map((a, i) => (
+                  <article
+                    key={`${a.title}-${i}`}
+                    className={`flex min-h-[7rem] w-[80%] max-w-sm shrink-0 snap-start flex-col justify-between rounded-2xl p-4 ${i % 2 === 0 ? "bg-gradient-to-br from-brand to-brand-deep text-white" : "bg-gradient-to-br from-gold to-gold-dark text-brand-deep"}`}
+                  >
+                    <p className="flex items-center gap-1 text-[0.7rem] font-bold uppercase tracking-wide opacity-80">
+                      <Megaphone className="h-3.5 w-3.5" /> {a.date ? formatDate(a.date) : "Anunsyo"}
+                    </p>
+                    <p className="mt-1 font-bold leading-snug">{a.title}</p>
+                    {a.body && <p className="mt-1 line-clamp-2 whitespace-pre-line text-xs opacity-90">{a.body}</p>}
+                  </article>
                 ))}
               </div>
             </>
           )}
 
+          {/* Officials */}
+          {settings.officials.length > 0 && (
+            <>
+              <SectionTitle>Mga Opisyal</SectionTitle>
+              <div className="overflow-hidden rounded-2xl bg-white shadow-card">
+                {punong && (
+                  <div className="flex items-center gap-3 border-b border-gray-100 p-3.5">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-sm font-bold text-gold">{initials(punong.name)}</span>
+                    <div>
+                      <p className="font-bold">{punong.name}</p>
+                      <p className="text-xs text-gray-500">{punong.position}</p>
+                    </div>
+                  </div>
+                )}
+                {others.length > 0 && (
+                  <div className="no-scrollbar flex gap-4 overflow-x-auto p-3.5">
+                    {others.map((o, i) => (
+                      <div key={`${o.name}-${i}`} className="flex w-16 shrink-0 flex-col items-center text-center">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-light text-brand">
+                          <UserRound className="h-5 w-5" />
+                        </span>
+                        <p className="mt-1 line-clamp-2 text-[0.7rem] font-semibold leading-tight">{o.name}</p>
+                        <p className="text-[0.65rem] text-gray-500">{o.position}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           {/* Transparency */}
-          <SectionTitle>Transparency: Mga Proyekto</SectionTitle>
-          <Card className="space-y-4">
-            {settings.projects.length === 0 && <p className="text-gray-500">Wala pang naka-post na proyekto.</p>}
-            {settings.projects.map((p, i) => {
-              const pct = Math.min(100, Math.max(0, Number(p.progress) || 0));
-              return (
-                <div key={`${p.name}-${i}`}>
-                  <div className="mb-1 flex justify-between gap-2 font-semibold">
-                    <span>{p.name}</span>
-                    <span className="shrink-0 text-brand">{pct === 100 ? "✅ Tapos na" : `${pct}%`}</span>
-                  </div>
-                  <div className="h-4 overflow-hidden rounded-full bg-gray-200" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={p.name}>
-                    <div className="h-full rounded-full bg-gradient-to-r from-brand to-gold transition-all" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </Card>
+          {settings.projects.length > 0 && (
+            <>
+              <SectionTitle>Transparency</SectionTitle>
+              <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white shadow-card">
+                {settings.projects.map((p, i) => {
+                  const pct = Math.min(100, Math.max(0, Number(p.progress) || 0));
+                  return (
+                    <li key={`${p.name}-${i}`} className="px-4 py-3">
+                      <div className="flex justify-between gap-2 text-sm">
+                        <span className="font-semibold">{p.name}</span>
+                        <span className="shrink-0 font-bold text-brand">{pct === 100 ? "✅ Tapos na" : `${pct}%`}</span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={p.name}>
+                        <div className="h-full rounded-full bg-gradient-to-r from-brand to-gold" style={{ width: `${pct}%` }} />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
 
           {/* Emergency */}
-          <SectionTitle>Emergency Contacts</SectionTitle>
-          <div className="space-y-3">
-            {emergency.map((e) => (
-              <Card key={e.label} className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold">{e.label}</p>
-                  <p className="text-gray-600">{e.number || "Wala pang number"}</p>
+          <SectionTitle
+            action={
+              <Link href="/emergency" className="flex items-center text-xs font-semibold text-brand">
+                Lahat <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            }
+          >
+            Emergency
+          </SectionTitle>
+          <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white shadow-card">
+            {emergencyRows.map((r, i) => (
+              <li key={`${r.name}-${i}`} className="flex items-center gap-3 px-4 py-3">
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${TINT[r.tint]}`}>
+                  <r.icon className="h-[1.1rem] w-[1.1rem]" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{r.name}</p>
+                  <p className="text-xs tabular-nums text-gray-500">{r.number}</p>
                 </div>
-                {e.number && (
-                  <a href={telHref(e.number)} className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-3 font-bold text-white">
-                    <Phone className="h-5 w-5" /> Tawagan
-                  </a>
-                )}
-              </Card>
+                <a href={telHref(r.number)} className="flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-bold text-white active:bg-red-700" aria-label={`Tawagan ang ${r.name}`}>
+                  <Phone className="h-3.5 w-3.5" /> Tawagan
+                </a>
+              </li>
             ))}
-          </div>
-
-          <SectionTitle>Cuyapo Hotlines</SectionTitle>
-          <HotlineList hotlines={settings.hotlines} />
-          <a href="tel:911" className="mt-3 flex items-center justify-between rounded-2xl border-2 border-red-600 bg-white p-4 font-bold text-red-600">
-            <span>Nationwide Emergency Hotline</span>
-            <span className="flex items-center gap-2"><Phone className="h-5 w-5" /> 911</span>
-          </a>
+            <li>
+              <a href="tel:911" className="flex items-center justify-between px-4 py-3 text-sm font-bold text-red-600">
+                Nationwide Emergency
+                <span className="flex items-center gap-1">
+                  <Phone className="h-4 w-4" /> 911
+                </span>
+              </a>
+            </li>
+          </ul>
         </>
       )}
 
-      <p className="mt-8 text-center text-sm text-gray-400">© {new Date().getFullYear()} Barangay Malineng, {BARANGAY_CITY}</p>
+      <p className="mt-8 text-center text-xs text-gray-400">© {new Date().getFullYear()} Barangay Malineng, {BARANGAY_CITY}</p>
     </div>
   );
 }

@@ -35,7 +35,7 @@ export default function TindahanPage() {
       <div className="-mx-4 -mt-4 mb-4 bg-gold px-4 pb-4 pt-5">
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold text-brand-dark">Tindahan ng Malineng</h1>
+            <h1 className="text-xl font-extrabold text-brand-dark">Tindahan ng Malineng</h1>
             <p className="text-sm font-semibold text-brand-dark/80">Libre mag-benta. Walang bayad, walang commission.</p>
           </div>
           <Store className="h-10 w-10 text-brand-dark" aria-hidden />
@@ -94,7 +94,7 @@ export default function TindahanPage() {
                 )}
                 <div className="p-3 pb-2">
                   <p className="line-clamp-2 font-semibold leading-tight text-gray-800">{l.title}</p>
-                  <p className="mt-1 text-lg font-extrabold text-brand">{formatPeso(l.price)}</p>
+                  <p className="mt-1 text-base font-extrabold text-brand">{formatPeso(l.price)}</p>
                   <p className="truncate text-sm text-gray-500">{l.sellerName} · {l.purok}</p>
                 </div>
               </Link>

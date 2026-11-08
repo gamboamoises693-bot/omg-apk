@@ -17,10 +17,10 @@ function EventCard({ e, past = false }: { e: BarangayEvent; past?: boolean }) {
     <Card className={`flex gap-4 ${past ? "opacity-60" : ""}`}>
       <div className="flex w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-brand py-2 text-white">
         <span className="text-xs font-semibold uppercase">{d.toLocaleDateString("fil-PH", { month: "short" })}</span>
-        <span className="text-2xl font-black">{d.getDate() || "?"}</span>
+        <span className="text-xl font-black">{d.getDate() || "?"}</span>
       </div>
       <div className="min-w-0">
-        <p className="text-lg font-bold leading-tight">{e.title}</p>
+        <p className="text-base font-bold leading-tight">{e.title}</p>
         <p className="text-sm text-gray-500">{formatDate(e.date)}</p>
         {e.location && <p className="flex items-center gap-1 text-gray-600"><MapPin className="h-4 w-4" /> {e.location}</p>}
         {e.description && <p className="mt-1 whitespace-pre-line text-gray-700">{e.description}</p>}

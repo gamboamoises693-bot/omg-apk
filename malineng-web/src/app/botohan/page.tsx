@@ -46,7 +46,7 @@ function PollCard({ poll }: { poll: Poll }) {
   return (
     <Card>
       <div className="mb-3 flex items-start justify-between gap-2">
-        <p className="text-lg font-bold">{poll.question}</p>
+        <p className="text-base font-bold">{poll.question}</p>
         <Badge color={poll.isActive ? "green" : "gray"}>{poll.isActive ? "Bukas" : "Sarado"}</Badge>
       </div>
       <div className="space-y-2">

@@ -33,7 +33,7 @@ export default function EmergencyPage() {
             >
               <Icon className="h-14 w-14 shrink-0" aria-hidden />
               <span>
-                <span className="block text-2xl font-black">{label}</span>
+                <span className="block text-xl font-black">{label}</span>
                 <span className="block text-white/90">{sub}</span>
               </span>
             </button>
@@ -54,7 +54,7 @@ export default function EmergencyPage() {
           <div className="text-center">
             {selected.number ? (
               <>
-                <p className="text-4xl font-black tracking-wide text-red-600">{selected.number}</p>
+                <p className="text-3xl font-black tracking-wide text-red-600">{selected.number}</p>
                 <a href={telHref(selected.number)} className="mt-5 flex w-full items-center justify-center gap-3 rounded-2xl bg-red-600 py-5 text-2xl font-black text-white">
                   <Phone className="h-8 w-8" /> TAWAGAN NA
                 </a>

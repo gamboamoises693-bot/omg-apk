@@ -55,7 +55,7 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="mb-1 text-2xl font-bold text-brand">Mag-login</h1>
+      <h1 className="mb-1 text-xl font-extrabold text-gray-900">Mag-login</h1>
       <p className="mb-4 text-gray-600">Para makapag-post, makapagbenta at makapag-book ng appointment.</p>
       <Card>
         <form onSubmit={handleSubmit} className="space-y-4">
