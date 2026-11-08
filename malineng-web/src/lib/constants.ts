@@ -55,4 +55,26 @@ export const REJECT_REASONS = [
   "Hindi taga-Barangay Malineng",
 ] as const;
 
+export const PROJECT_CATEGORIES = ["Imprastraktura", "Kalusugan", "Edukasyon", "Kabuhayan", "Kapaligiran", "Peace & Order", "Iba pa"] as const;
+export const INFRA_CATEGORY = "Imprastraktura";
+
+export const FUND_SOURCES = [
+  "20% Development Fund",
+  "General Fund ng Barangay",
+  "SK Fund",
+  "BDRRM Fund",
+  "LGU Cuyapo (Munisipyo)",
+  "Provincial Government",
+  "National / DPWH",
+  "Donasyon / Private",
+  "Iba pa",
+] as const;
+
+export const PROJECT_STATUS_LABEL = {
+  planned: "Nakaplano",
+  ongoing: "Ginagawa",
+  completed: "Tapos na",
+  delayed: "Naantala",
+} as const;
+
 export const HOUSEHOLD_RELATIONS = ["Asawa", "Anak", "Magulang", "Kapatid", "Apo", "Lolo/Lola", "Kamag-anak", "Iba pa"] as const;

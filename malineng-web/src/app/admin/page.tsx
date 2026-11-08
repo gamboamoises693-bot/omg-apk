@@ -19,6 +19,7 @@ import { AdminHouseholds } from "@/components/admin/AdminHouseholds";
 import { AdminReport } from "@/components/admin/AdminReport";
 import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminActivity } from "@/components/admin/AdminActivity";
+import { AdminProjects } from "@/components/admin/AdminProjects";
 
 // superOnly tabs are also enforced server-side by firestore.rules.
 const TABS = [
@@ -30,6 +31,7 @@ const TABS = [
   { key: "households", label: "Households", Component: AdminHouseholds, superOnly: false },
   { key: "registrations", label: "Registrations", Component: AdminRegistrations, superOnly: false },
   { key: "report", label: "📊 Report", Component: AdminReport, superOnly: false },
+  { key: "proyekto", label: "🏗️ Proyekto", Component: AdminProjects, superOnly: false },
   { key: "settings", label: "Settings", Component: AdminSettings, superOnly: false },
   { key: "events", label: "Events", Component: AdminEvents, superOnly: false },
   { key: "polls", label: "Botohan", Component: AdminPolls, superOnly: false },

@@ -339,6 +339,16 @@ service cloud.firestore {
           && incoming().votes.hasAll(existing().votes));
     }
 
+    // ---------- projects (transparency) + full-size before/after photos ----------
+    match /projects/{projectId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /projectPhotos/{projectId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // ---------- events ----------
     match /events/{eventId} {
       allow read: if true;
