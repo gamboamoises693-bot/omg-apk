@@ -227,6 +227,8 @@ export interface PurokPoints {
 export interface Official {
   name: string;
   position: string;
+  /** Small compressed photo (data URL) stored in settings/main. */
+  photoURL?: string;
 }
 
 export interface Announcement {
@@ -294,6 +296,8 @@ export interface AmbulanceSlot {
 }
 
 export interface Settings {
+  /** Barangay seal/logo (data URL). Empty = default "M" mark. */
+  logoURL: string;
   ambulance: AmbulanceSettings;
   puroks: string[];
   alertBanner: string;

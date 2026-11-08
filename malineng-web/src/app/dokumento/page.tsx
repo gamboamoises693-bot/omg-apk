@@ -9,6 +9,7 @@ import { db } from "@/lib/firebase";
 import type { IssuedDocument } from "@/lib/types";
 import { Button, EmptyState, PageHeader, Spinner } from "@/components/ui";
 import { AdminGate } from "@/components/LoginGate";
+import { useSettings } from "@/lib/useSettings";
 
 function ordinal(n: number): string {
   const s = ["th", "st", "nd", "rd"];
@@ -22,6 +23,7 @@ function DocumentView() {
   const [d, setD] = useState<IssuedDocument | null>(null);
   const [qr, setQr] = useState("");
   const [state, setState] = useState<"loading" | "ok" | "missing">("loading");
+  const { settings } = useSettings();
 
   useEffect(() => {
     if (!id) return setState("missing");
@@ -52,7 +54,11 @@ function DocumentView() {
       </div>
 
       <article className="print-sheet mx-auto max-w-[210mm] bg-white p-8 font-serif text-[13px] leading-relaxed text-black shadow-card print:shadow-none">
-        <header className="text-center">
+        <header className="relative text-center">
+          {settings.logoURL && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={settings.logoURL} alt="Logo ng Barangay" className="absolute left-0 top-0 h-20 w-20 object-contain" />
+          )}
           <p>Republic of the Philippines</p>
           <p>Province of Nueva Ecija</p>
           <p>Municipality of Cuyapo</p>

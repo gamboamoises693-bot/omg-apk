@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { doc, setDoc } from "firebase/firestore";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Camera, Plus, Trash2, UserRound } from "lucide-react";
+import { compressToDataUrl } from "@/lib/upload";
 import { db } from "@/lib/firebase";
 import { useSettings } from "@/lib/useSettings";
 import { ALERT_TYPES } from "@/lib/constants";
@@ -11,6 +12,34 @@ import type { Settings } from "@/lib/types";
 import { Button, Card, Input, SectionTitle, Select, Spinner, Textarea } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { logActivity } from "@/lib/activity";
+
+/** Tap-to-change round photo for an official. Small (≈10KB) so many fit in settings/main. */
+function OfficialPhoto({ photo, name, onChange, onError }: { photo?: string; name: string; onChange: (url: string) => void; onError: (msg: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pick = async (file?: File) => {
+    if (!file) return;
+    try {
+      onChange(await compressToDataUrl(file, 160, 0.72, 40_000));
+    } catch (err) {
+      onError(friendlyError(err));
+    }
+  };
+  return (
+    <div className="mb-1 flex shrink-0 flex-col items-center gap-0.5">
+      <button type="button" onClick={() => inputRef.current?.click()} className="relative h-12 w-12 overflow-hidden rounded-full bg-brand-light text-brand" aria-label={`Litrato ni ${name || "opisyal"}`}>
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <UserRound className="mx-auto h-6 w-6" />
+        )}
+        <span className="absolute bottom-0 right-0 rounded-full bg-brand p-0.5 text-white"><Camera className="h-3 w-3" /></span>
+      </button>
+      {photo && <button type="button" onClick={() => onChange("")} className="text-[0.65rem] font-semibold text-red-600">Alisin</button>}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ""; }} />
+    </div>
+  );
+}
 
 export function AdminSettings() {
   const { settings, loading } = useSettings();
@@ -69,7 +98,9 @@ export function AdminSettings() {
         hotlines: draft.hotlines
           .map((h) => ({ name: h.name.trim().slice(0, 80), numbers: h.numbers.map((n) => n.trim()).filter(Boolean).slice(0, 5) }))
           .filter((h) => h.name && h.numbers.length),
-        officials: draft.officials.filter((o) => o.name.trim()),
+        // Logo is changed live from the top bar; keep the latest value, not the stale draft.
+        logoURL: settings.logoURL,
+        officials: draft.officials.filter((o) => o.name.trim()).map((o) => ({ name: o.name.trim(), position: o.position.trim(), photoURL: o.photoURL ?? "" })),
         announcements: draft.announcements.filter((a) => a.title.trim()),
         projects: draft.projects
           .filter((p) => p.name.trim())
@@ -172,9 +203,15 @@ export function AdminSettings() {
 
       <SectionTitle>Mga Opisyal</SectionTitle>
       <Card className="space-y-3">
-        <p className="text-sm text-gray-500">Gamitin ang posisyong &quot;Punong Barangay&quot; para lumabas siya sa itaas.</p>
+        <p className="text-sm text-gray-500">Pindutin ang bilog para lagyan ng litrato. Gamitin ang posisyong &quot;Punong Barangay&quot; para lumabas siya sa itaas at sa pirma ng Clearance.</p>
         {draft.officials.map((o, i) => (
           <div key={i} className="flex items-end gap-2">
+            <OfficialPhoto
+              photo={o.photoURL}
+              name={o.name}
+              onChange={(photoURL) => set("officials", draft.officials.map((x, j) => (j === i ? { ...x, photoURL } : x)))}
+              onError={(msg) => toast(msg, "error")}
+            />
             <div className="grid flex-1 grid-cols-2 gap-2">
               <Input label="Posisyon" value={o.position} onChange={(e) => set("officials", draft.officials.map((x, j) => (j === i ? { ...x, position: e.target.value } : x)))} />
               <Input label="Pangalan" value={o.name} onChange={(e) => set("officials", draft.officials.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />

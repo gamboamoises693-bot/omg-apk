@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { collection, doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, where, writeBatch } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { Ban, KeyRound, ShieldCheck, Undo2 } from "lucide-react";
+import { Ban, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2 } from "lucide-react";
+import { firebaseConfig } from "@/config/firebase.config";
 import { auth, db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
@@ -77,6 +78,54 @@ function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; o
     }
   };
 
+  const [deleted, setDeleted] = useState(false);
+  const [alsoPosts, setAlsoPosts] = useState(true);
+
+  /**
+   * Removes the user's data from Firestore. The login itself (Firebase Auth) can only be
+   * removed from the Firebase Console on the free plan, so we link there afterwards.
+   */
+  const deleteAccount = async () => {
+    if (!confirm(`Burahin ang account ni ${u.fullName}? Mabubura ang profile, selfie at household niya${alsoPosts ? ", pati ang mga paninda, trabaho at post niya" : ""}.`)) return;
+    setBusy(true);
+    try {
+      if (alsoPosts) {
+        const owned: [string, string][] = [["listings", "sellerId"], ["jobs", "posterId"], ["posts", "authorId"], ["skills", "userId"], ["lostFound", "userId"]];
+        for (const [col, field] of owned) {
+          const snap = await getDocs(query(collection(db, col), where(field, "==", u.id)));
+          await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+        }
+      }
+      await Promise.all(["verifications", "verifiedUsers", "households"].map((c) => deleteDoc(doc(db, c, u.id)).catch(() => undefined)));
+      await deleteDoc(doc(db, "users", u.id));
+      logActivity("Roles", `Binura ang account ni ${u.fullName}${alsoPosts ? " (kasama ang mga post)" : ""}`, u.id);
+      toast("Nabura ang data. Huling hakbang: burahin ang login sa Firebase.");
+      setDeleted(true);
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (deleted) {
+    return (
+      <div className="space-y-3 text-sm">
+        <p className="rounded-xl bg-brand-light p-3 font-semibold text-brand">✓ Nabura ang data ni {u.fullName}.</p>
+        <p><b>Huling hakbang:</b> burahin ang login niya para hindi na siya makapag-login ulit:</p>
+        <ol className="list-decimal space-y-1 pl-5 text-gray-700">
+          <li>Buksan ang Firebase Authentication (button sa ibaba).</li>
+          <li>Hanapin ang <b className="break-all">{u.email || u.id}</b>.</li>
+          <li>Pindutin ang <b>⋮</b> sa dulo → <b>Delete account</b>.</li>
+        </ol>
+        <a href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-brand py-3 font-bold text-white">
+          <ExternalLink className="h-4 w-4" /> Buksan ang Firebase Authentication
+        </a>
+        <Button variant="ghost" full onClick={onClose}>Isara</Button>
+      </div>
+    );
+  }
+
   const resetPassword = async () => {
     if (!u.email) return toast("Walang email ang account na ito (Google login?).", "error");
     try {
@@ -125,6 +174,13 @@ function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; o
               {u.suspended ? <><Undo2 className="h-4 w-4" /> Alisin ang suspend</> : <><Ban className="h-4 w-4" /> I-suspend</>}
             </Button>
             <Button variant="outline" onClick={resetPassword}><KeyRound className="h-4 w-4" /> Reset password</Button>
+          </div>
+          <div className="space-y-2 rounded-xl border border-red-100 bg-red-50 p-3">
+            <label className="flex items-center gap-2 text-sm text-red-900">
+              <input type="checkbox" checked={alsoPosts} onChange={(e) => setAlsoPosts(e.target.checked)} className="h-4 w-4 accent-red-600" />
+              Burahin din ang mga paninda, trabaho at post niya
+            </label>
+            <Button variant="danger" full loading={busy} onClick={deleteAccount}><Trash2 className="h-4 w-4" /> Burahin ang account</Button>
           </div>
         </>
       )}

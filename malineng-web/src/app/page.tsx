@@ -36,6 +36,7 @@ import { formatDate, sortNewest, telHref } from "@/lib/format";
 import type { AmbulanceRequest, Appointment, Listing } from "@/lib/types";
 import { LinkButton, SectionTitle, Spinner } from "@/components/ui";
 import { AdminShieldLink } from "@/components/AdminShieldLink";
+import { LogoButton, LogoMark } from "@/components/BarangayLogo";
 
 type Tint = "green" | "gold" | "red" | "blue" | "purple" | "orange" | "teal" | "pink";
 const TINT: Record<Tint, string> = {
@@ -187,7 +188,10 @@ export default function HomePage() {
           </div>
           <AdminShieldLink />
         </div>
-        <p className="mt-3 text-xs text-white/70">Barangay Malineng · {BARANGAY_CITY}</p>
+        <LogoButton className="mt-3 flex items-center gap-2 text-xs text-white/80">
+          <LogoMark size="h-6 w-6" textClass="text-[0.65rem]" />
+          <span>Barangay Malineng · {BARANGAY_CITY}</span>
+        </LogoButton>
       </section>
 
       {/* Summary card */}
@@ -246,7 +250,12 @@ export default function HomePage() {
               <div className="overflow-hidden rounded-2xl bg-white shadow-card">
                 {punong && (
                   <div className="flex items-center gap-3 border-b border-gray-100 p-3.5">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-sm font-bold text-gold">{initials(punong.name)}</span>
+                    {punong.photoURL ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={punong.photoURL} alt={punong.name} className="h-12 w-12 rounded-full object-cover ring-2 ring-gold" />
+                    ) : (
+                      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand text-sm font-bold text-gold">{initials(punong.name)}</span>
+                    )}
                     <div>
                       <p className="font-bold">{punong.name}</p>
                       <p className="text-xs text-gray-500">{punong.position}</p>
@@ -257,9 +266,14 @@ export default function HomePage() {
                   <div className="no-scrollbar flex gap-4 overflow-x-auto p-3.5">
                     {others.map((o, i) => (
                       <div key={`${o.name}-${i}`} className="flex w-16 shrink-0 flex-col items-center text-center">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-light text-brand">
-                          <UserRound className="h-5 w-5" />
-                        </span>
+                        {o.photoURL ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={o.photoURL} alt={o.name} className="h-12 w-12 rounded-full object-cover" />
+                        ) : (
+                          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-brand">
+                            <UserRound className="h-5 w-5" />
+                          </span>
+                        )}
                         <p className="mt-1 line-clamp-2 text-[0.7rem] font-semibold leading-tight">{o.name}</p>
                         <p className="text-[0.65rem] text-gray-500">{o.position}</p>
                       </div>

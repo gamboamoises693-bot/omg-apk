@@ -8,7 +8,7 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024; // raw file limit before compression
  * Resize + compress an image in the browser using canvas.
  * Phones take 4-12MB photos; this brings them down to ~100-300KB.
  */
-async function compressImage(file: File, maxSize: number, quality: number): Promise<Blob> {
+async function compressImage(file: File, maxSize: number, quality: number, type: "image/jpeg" | "image/png" = "image/jpeg"): Promise<Blob> {
   const bitmapUrl = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -24,10 +24,15 @@ async function compressImage(file: File, maxSize: number, quality: number): Prom
     canvas.height = Math.round(img.height * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Hindi suportado ng browser ang pag-compress ng larawan.");
+    // JPEG has no transparency: paint white first so transparent PNGs don't turn black.
+    if (type === "image/jpeg") {
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     return await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Pumalya ang pag-compress."))), "image/jpeg", quality),
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Pumalya ang pag-compress."))), type, quality),
     );
   } finally {
     URL.revokeObjectURL(bitmapUrl);
@@ -44,12 +49,26 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 /** Compress an image to a small JPEG data URL (stored directly in Firestore). */
-export async function compressToDataUrl(file: File, maxSize = 600, quality = 0.7): Promise<string> {
+export async function compressToDataUrl(file: File, maxSize = 600, quality = 0.7, maxChars = 380_000): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("Larawan lang ang pwedeng i-upload.");
   if (file.size > MAX_FILE_BYTES) throw new Error("Masyadong malaki ang larawan (max 10MB).");
   const dataUrl = await blobToDataUrl(await compressImage(file, maxSize, quality));
-  if (dataUrl.length > 380_000) throw new Error("Masyadong malaki pa rin ang larawan. Kumuha ulit.");
+  if (dataUrl.length > maxChars) throw new Error("Masyadong malaki pa rin ang larawan. Pumili ng iba.");
   return dataUrl;
+}
+
+/**
+ * Logo: keeps transparency (PNG). Falls back to JPEG on white if the PNG is too big
+ * for the settings document (Firestore docs are capped at 1MB in total).
+ */
+export async function compressLogo(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("Larawan lang ang pwedeng i-upload.");
+  if (file.size > MAX_FILE_BYTES) throw new Error("Masyadong malaki ang larawan (max 10MB).");
+  const png = await blobToDataUrl(await compressImage(file, 256, 1, "image/png"));
+  if (png.length <= 200_000) return png;
+  const jpg = await blobToDataUrl(await compressImage(file, 256, 0.85));
+  if (jpg.length > 200_000) throw new Error("Masyadong malaki ang logo. Pumili ng mas simpleng larawan.");
+  return jpg;
 }
 
 /**
