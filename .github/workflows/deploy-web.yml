@@ -1,6 +1,7 @@
 name: Deploy Barangay Malineng Website
 
-# Auto-deploy to Firebase Hosting + Firestore rules every time
+# Auto-deploy to Firebase Hosting (both sites listed in firebase.json:
+# barangay-malineng.web.app and the default project URL) + Firestore rules every time
 # something inside malineng-web/ changes on main.
 #
 # Auth uses Workload Identity Federation (keyless): GitHub proves its
@@ -26,9 +27,6 @@ env:
   FIREBASE_PROJECT_ID: project-a682ecac-e2d1-469c-bc7
   WIF_PROVIDER: projects/879724247614/locations/global/workloadIdentityPools/github/providers/github-repo
   WIF_SERVICE_ACCOUNT: firebase-adminsdk-fbsvc@project-a682ecac-e2d1-469c-bc7.iam.gserviceaccount.com
-  # Optional: custom Hosting site name (e.g. "barangay-malineng" -> barangay-malineng.web.app).
-  # Set it in Settings > Secrets and variables > Actions > Variables. Leave unset for the default site.
-  FIREBASE_HOSTING_SITE: ${{ vars.FIREBASE_HOSTING_SITE }}
 
 jobs:
   deploy:
@@ -59,17 +57,6 @@ jobs:
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
-
-      - name: Use custom Hosting site (optional)
-        if: env.FIREBASE_HOSTING_SITE != ''
-        run: |
-          node -e '
-            const fs = require("fs");
-            const cfg = JSON.parse(fs.readFileSync("firebase.json", "utf8"));
-            cfg.hosting.site = process.env.FIREBASE_HOSTING_SITE.trim();
-            fs.writeFileSync("firebase.json", JSON.stringify(cfg, null, 2));
-            console.log("Deploying to site:", cfg.hosting.site);
-          '
 
       - name: Deploy Hosting + Firestore rules
         run: npx --yes firebase-tools@14 deploy --only hosting,firestore --project "$FIREBASE_PROJECT_ID" --non-interactive

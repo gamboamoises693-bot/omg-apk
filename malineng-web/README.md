@@ -1,5 +1,7 @@
 # Barangay Malineng Website
 
+**Live:** https://barangay-malineng.web.app
+
 Opisyal na community website ng **Barangay Malineng, Cuyapo, Nueva Ecija**.
 Next.js + Tailwind + Firebase (Auth, Firestore, Storage, Hosting). Mobile-first, Tagalog/Taglish.
 
