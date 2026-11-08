@@ -209,6 +209,16 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && existing().sellerId == request.auth.uid);
     }
 
+    // ---------- listingPhotos (full-size photo; the listing itself keeps a small thumbnail) ----------
+    match /listingPhotos/{listingId} {
+      allow read: if true;
+      allow create: if verifiedPoster()
+        && incoming().sellerId == request.auth.uid
+        && incoming().photo is string && incoming().photo.size() < 900000;
+      allow update: if false;
+      allow delete: if isAdmin() || (signedIn() && existing().sellerId == request.auth.uid);
+    }
+
     // ---------- jobs (Trabaho) ----------
     match /jobs/{jobId} {
       allow read: if existing().status == 'approved'

@@ -3,12 +3,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { addDoc, collection, serverTimestamp, Timestamp } from "firebase/firestore";
+import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { uploadImage } from "@/lib/upload";
-import { LISTING_CATEGORIES, LISTING_DURATION_DAYS } from "@/lib/constants";
+import { compressToDataUrl, uploadImage } from "@/lib/upload";
+import { LISTING_CATEGORIES } from "@/lib/constants";
+import { LISTING_DURATION_HOURS, newExpiry } from "@/lib/listings";
 import { friendlyError, safeMessengerLink } from "@/lib/format";
 import { Button, Card, ErrorText, Input, PageHeader, Select, Textarea, LinkButton } from "@/components/ui";
 import { ImagePicker } from "@/components/ImagePicker";
@@ -47,23 +48,28 @@ function SellForm() {
 
     setLoading(true);
     try {
-      const photoURL = file ? await uploadImage(file, user.uid) : "";
-      const expiresAt = Timestamp.fromMillis(Date.now() + LISTING_DURATION_DAYS * 24 * 60 * 60 * 1000);
-      await addDoc(collection(db, "listings"), {
+      // Small thumbnail on the listing (loaded in the grid); full photo in listingPhotos (detail page only).
+      const thumb = file ? await compressToDataUrl(file, 360, 0.6, 80_000) : "";
+      const full = file ? await uploadImage(file, user.uid) : "";
+      const ref = doc(collection(db, "listings"));
+      const batch = writeBatch(db);
+      batch.set(ref, {
         sellerId: user.uid,
         sellerName: profile?.fullName ?? user.displayName ?? "Residente",
         title: form.title.trim().slice(0, 120),
         price,
         category: form.category,
         description: form.description.trim().slice(0, 2000),
-        photoURL,
+        photoURL: thumb,
         contact: form.contact.trim(),
         messengerLink: form.messengerLink.trim(),
         purok: profile?.purok ?? "",
         status: "pending",
-        expiresAt,
+        expiresAt: newExpiry(), // reset again when the admin approves
         createdAt: serverTimestamp(),
       });
+      if (full) batch.set(doc(db, "listingPhotos", ref.id), { sellerId: user.uid, photo: full, createdAt: serverTimestamp() });
+      await batch.commit();
       logActivity("Tindahan", `Nag-post ng paninda: “${form.title.trim()}” ₱${price}`);
       setDone(true);
     } catch (err) {
@@ -78,7 +84,7 @@ function SellForm() {
       <Card className="text-center">
         <CheckCircle2 className="mx-auto mb-2 h-16 w-16 text-brand" />
         <p className="text-lg font-bold">Naipadala na ang paninda mo!</p>
-        <p className="mt-1 text-gray-600">Ire-review ito ng admin. Lalabas sa Tindahan kapag na-approve. Tatagal ito ng {LISTING_DURATION_DAYS} araw.</p>
+        <p className="mt-1 text-gray-600">Ire-review ito ng admin. Lalabas sa Tindahan kapag na-approve, at tatagal ito ng {LISTING_DURATION_HOURS} oras. Pwede mo itong i-post ulit sa Account pagkatapos.</p>
         <div className="mt-4 grid gap-2">
           <Button full onClick={() => { setDone(false); setFile(null); setForm((f) => ({ ...f, title: "", price: "", description: "" })); }}>Magbenta pa ng iba</Button>
           <LinkButton href="/account" variant="outline" full>Tingnan ang mga paninda ko</LinkButton>

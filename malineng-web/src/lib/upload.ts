@@ -8,7 +8,11 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024; // raw file limit before compression
  * Resize + compress an image in the browser using canvas.
  * Phones take 4-12MB photos; this brings them down to ~100-300KB.
  */
-async function compressImage(file: File, maxSize: number, quality: number, type: "image/jpeg" | "image/png" = "image/jpeg"): Promise<Blob> {
+/**
+ * Resize + compress. With square=true the image is center-cropped to a square first
+ * (for round avatars and logos, so they fill the circle).
+ */
+async function compressImage(file: File, maxSize: number, quality: number, type: "image/jpeg" | "image/png" = "image/jpeg", square = false): Promise<Blob> {
   const bitmapUrl = URL.createObjectURL(file);
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -18,10 +22,17 @@ async function compressImage(file: File, maxSize: number, quality: number, type:
       image.src = bitmapUrl;
     });
 
-    const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+    // Source rectangle: whole image, or the centered square.
+    const side = Math.min(img.width, img.height);
+    const sx = square ? (img.width - side) / 2 : 0;
+    const sy = square ? (img.height - side) / 2 : 0;
+    const sw = square ? side : img.width;
+    const sh = square ? side : img.height;
+
+    const scale = Math.min(1, maxSize / Math.max(sw, sh));
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
+    canvas.width = Math.round(sw * scale);
+    canvas.height = Math.round(sh * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Hindi suportado ng browser ang pag-compress ng larawan.");
     // JPEG has no transparency: paint white first so transparent PNGs don't turn black.
@@ -29,7 +40,7 @@ async function compressImage(file: File, maxSize: number, quality: number, type:
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
     return await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Pumalya ang pag-compress."))), type, quality),
@@ -49,10 +60,10 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 /** Compress an image to a small JPEG data URL (stored directly in Firestore). */
-export async function compressToDataUrl(file: File, maxSize = 600, quality = 0.7, maxChars = 380_000): Promise<string> {
+export async function compressToDataUrl(file: File, maxSize = 600, quality = 0.7, maxChars = 380_000, square = false): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("Larawan lang ang pwedeng i-upload.");
   if (file.size > MAX_FILE_BYTES) throw new Error("Masyadong malaki ang larawan (max 10MB).");
-  const dataUrl = await blobToDataUrl(await compressImage(file, maxSize, quality));
+  const dataUrl = await blobToDataUrl(await compressImage(file, maxSize, quality, "image/jpeg", square));
   if (dataUrl.length > maxChars) throw new Error("Masyadong malaki pa rin ang larawan. Pumili ng iba.");
   return dataUrl;
 }
@@ -64,9 +75,9 @@ export async function compressToDataUrl(file: File, maxSize = 600, quality = 0.7
 export async function compressLogo(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("Larawan lang ang pwedeng i-upload.");
   if (file.size > MAX_FILE_BYTES) throw new Error("Masyadong malaki ang larawan (max 10MB).");
-  const png = await blobToDataUrl(await compressImage(file, 256, 1, "image/png"));
+  const png = await blobToDataUrl(await compressImage(file, 256, 1, "image/png", true));
   if (png.length <= 200_000) return png;
-  const jpg = await blobToDataUrl(await compressImage(file, 256, 0.85));
+  const jpg = await blobToDataUrl(await compressImage(file, 256, 0.85, "image/jpeg", true));
   if (jpg.length > 200_000) throw new Error("Masyadong malaki ang logo. Pumili ng mas simpleng larawan.");
   return jpg;
 }

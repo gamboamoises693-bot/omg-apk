@@ -8,6 +8,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopu
 import { db, googleProvider } from "@/lib/firebase";
 import { logActivity, roleLabel } from "@/lib/activity";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { deleteListing, isExpired, repostListing, timeLeft } from "@/lib/listings";
 import { ensureUserDoc, useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { usePuroks } from "@/lib/useSettings";
@@ -85,7 +86,7 @@ function MyListings() {
   const remove = async (id: string) => {
     if (!confirm("Burahin ang paninda na ito? (Hal. sold na)")) return;
     try {
-      await deleteDoc(doc(db, "listings", id));
+      await deleteListing(id);
       toast("Nabura na.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -104,7 +105,7 @@ function MyListings() {
       ) : (
         <div className="space-y-2">
           {items.map((l) => {
-            const expired = l.expiresAt && l.expiresAt.toMillis() < Date.now();
+            const expired = l.status === "approved" && isExpired(l);
             const badge = STATUS_BADGE[l.status];
             return (
               <Card key={l.id} className="flex items-center gap-3">
@@ -119,8 +120,25 @@ function MyListings() {
                   <p className="font-semibold text-brand">{formatPeso(l.price)}</p>
                   <div className="mt-1 flex gap-1">
                     <Badge color={badge.color}>{badge.label}</Badge>
-                    {expired && <Badge color="red">Expired</Badge>}
+                    {expired ? <Badge color="red">Expired</Badge> : l.status === "approved" && <Badge color="gray">⏱ {timeLeft(l)}</Badge>}
                   </div>
+                  {expired && (
+                    <button
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        try {
+                          await repostListing(l);
+                          logActivity("Tindahan", `Nag-post ulit ng paninda: “${l.title}”`);
+                          toast("Naipadala ulit! Lalabas ito kapag na-approve.");
+                        } catch (err) {
+                          toast(friendlyError(err), "error");
+                        }
+                      }}
+                      className="mt-1.5 rounded-lg bg-brand px-3 py-1 text-xs font-bold text-white"
+                    >
+                      ↻ I-post ulit
+                    </button>
+                  )}
                 </Link>
                 <button onClick={() => remove(l.id)} className="rounded-full p-2 text-gray-400" aria-label="Burahin">
                   <Trash2 className="h-5 w-5" />

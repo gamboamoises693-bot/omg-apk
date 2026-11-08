@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { collection, query, where } from "firebase/firestore";
+import { collection, limit, orderBy, query, where } from "firebase/firestore";
 import { Plus, Search, Store, ImageOff } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useCollection } from "@/lib/useCollection";
@@ -13,20 +13,38 @@ import { EmptyState, ErrorText, LinkButton, Spinner } from "@/components/ui";
 import { ContactButtons } from "@/components/ContactButtons";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useVerifiedSet } from "@/lib/useVerifiedSet";
+import { isExpired, timeLeft } from "@/lib/listings";
+
+/** Listings are loaded 20 at a time so the page stays light on mobile data. */
+const PAGE = 20;
 
 export default function TindahanPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("Lahat");
 
-  const q = useMemo(() => query(collection(db, "listings"), where("status", "==", "approved")), []);
+  const [count, setCount] = useState(PAGE);
+  // Newest first needs the (status, createdAt) index from firestore.indexes.json. While that index
+  // is still building right after a deploy, fall back to an unordered (but still limited) query.
+  const [fallback, setFallback] = useState(false);
+  const q = useMemo(
+    () =>
+      fallback
+        ? query(collection(db, "listings"), where("status", "==", "approved"), limit(count))
+        : query(collection(db, "listings"), where("status", "==", "approved"), orderBy("createdAt", "desc"), limit(count)),
+    [count, fallback],
+  );
   const { data, loading, error } = useCollection<Listing>(q);
+  useEffect(() => {
+    if (error && !fallback) setFallback(true);
+  }, [error, fallback]);
+  const hasMore = data.length >= count;
   const verified = useVerifiedSet();
 
   const listings = useMemo(() => {
     const now = Date.now();
     const term = search.trim().toLowerCase();
     return sortNewest(data).filter((l) => {
-      const notExpired = !l.expiresAt || l.expiresAt.toMillis() > now;
+      const notExpired = !isExpired(l) && now > 0;
       const matchCategory = category === "Lahat" || l.category === category;
       const matchSearch = !term || `${l.title} ${l.description} ${l.sellerName} ${l.purok}`.toLowerCase().includes(term);
       return notExpired && matchCategory && matchSearch;
@@ -86,7 +104,8 @@ export default function TindahanPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {listings.map((l) => (
             <div key={l.id} className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
-              <Link href={`/tindahan/item?id=${l.id}`} className="block">
+              <Link href={`/tindahan/item?id=${l.id}`} className="relative block">
+                <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[0.65rem] font-semibold text-white">⏱ {timeLeft(l)}</span>
                 {l.photoURL ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={l.photoURL} alt={l.title} loading="lazy" className="aspect-square w-full object-cover" />
@@ -108,6 +127,12 @@ export default function TindahanPage() {
           ))}
         </div>
       )}
+      {hasMore && !loading && (
+        <button onClick={() => setCount((c) => c + PAGE)} className="mt-4 w-full rounded-xl bg-white py-3 text-sm font-bold text-brand shadow-card active:bg-brand-light">
+          Magpakita pa ng paninda
+        </button>
+      )}
+      <p className="mt-4 text-center text-xs text-gray-400">Tumatagal ng 24 oras ang bawat paninda para laging bago ang Tindahan.</p>
     </div>
   );
 }
