@@ -328,6 +328,8 @@ export interface AmbulanceSlot {
 export interface Settings {
   /** Barangay seal/logo (data URL). Empty = default "M" mark. */
   logoURL: string;
+  /** Show the live heat index banner (El Niño monitoring). Default: on. */
+  showHeatIndex: boolean;
   ambulance: AmbulanceSettings;
   puroks: string[];
   alertBanner: string;

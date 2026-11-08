@@ -7,6 +7,7 @@ import { DEFAULT_PUROKS } from "./constants";
  */
 export const DEFAULT_SETTINGS: Settings = {
   logoURL: "",
+  showHeatIndex: true,
   puroks: DEFAULT_PUROKS,
   ambulance: {
     phone: "",

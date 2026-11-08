@@ -96,7 +96,7 @@ export function AlertsSettingsCard() {
 
       {!enabled ? (
         <>
-          <p className="text-sm text-gray-600">Tutunog, magva-vibrate at magpapakita ng notification ang phone na ito kapag may bagong ambulance request.</p>
+          <p className="text-sm text-gray-600">Tutunog, magva-vibrate at magpapakita ng notification ang phone na ito kapag may bagong ambulance request, paninda, post, trabaho, selfie o appointment. Sirena para sa emergency, maikling “ding” para sa iba.</p>
           <Button full onClick={turnOn}><BellRing className="h-5 w-5" /> I-on ang alerts</Button>
         </>
       ) : (

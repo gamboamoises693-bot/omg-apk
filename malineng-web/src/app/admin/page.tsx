@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useAdminPending } from "@/context/AdminPendingContext";
+import { AlertsSettingsCard } from "@/components/admin/AlertsSettingsCard";
 import { roleLabel } from "@/lib/activity";
 import { AdminGate } from "@/components/LoginGate";
 import { PageHeader } from "@/components/ui";
@@ -44,6 +46,7 @@ type TabKey = (typeof TABS)[number]["key"];
 
 export default function AdminPage() {
   const { isSuperAdmin, profile } = useAuth();
+  const { byTab } = useAdminPending();
   const tabs = useMemo(() => TABS.filter((t) => !t.superOnly || isSuperAdmin), [isSuperAdmin]);
   const [tab, setTab] = useState<TabKey>("approve");
 
@@ -74,9 +77,17 @@ export default function AdminPage() {
             className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === t.key ? "bg-gold text-brand-deep" : t.superOnly ? "bg-purple-50 text-purple-700 ring-1 ring-purple-200" : "bg-white text-gray-700 shadow-card"}`}
           >
             {t.label}
+            {byTab[t.key] > 0 && (
+              <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[0.7rem] font-black text-white">{byTab[t.key]}</span>
+            )}
           </button>
         ))}
       </div>
+      {tab === "approve" && (
+        <div className="mb-4">
+          <AlertsSettingsCard />
+        </div>
+      )}
       <Active />
     </AdminGate>
   );
