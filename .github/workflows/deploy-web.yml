@@ -1,7 +1,10 @@
 name: Deploy Barangay Malineng Website
 
-# Auto-deploy to Firebase Hosting + Firestore/Storage rules
-# every time something inside malineng-web/ changes on main.
+# Auto-deploy to Firebase Hosting + Firestore rules every time
+# something inside malineng-web/ changes on main.
+#
+# Auth uses Workload Identity Federation (keyless): GitHub proves its
+# identity to Google, so no service account .json key is stored anywhere.
 on:
   push:
     branches: [main, master]
@@ -14,17 +17,25 @@ concurrency:
   group: deploy-web
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write # required for keyless auth to Google Cloud
+
+env:
+  # These are identifiers, not secrets. Safe to keep in the repo.
+  FIREBASE_PROJECT_ID: project-a682ecac-e2d1-469c-bc7
+  WIF_PROVIDER: projects/879724247614/locations/global/workloadIdentityPools/github/providers/github-repo
+  WIF_SERVICE_ACCOUNT: firebase-adminsdk-fbsvc@project-a682ecac-e2d1-469c-bc7.iam.gserviceaccount.com
+  # Optional: custom Hosting site name (e.g. "barangay-malineng" -> barangay-malineng.web.app).
+  # Set it in Settings > Secrets and variables > Actions > Variables. Leave unset for the default site.
+  FIREBASE_HOSTING_SITE: ${{ vars.FIREBASE_HOSTING_SITE }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: malineng-web
-    env:
-      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-      # Optional: custom Hosting site name (e.g. "barangay-malineng" -> barangay-malineng.web.app).
-      # Leave unset to deploy to the project's default site.
-      FIREBASE_HOSTING_SITE: ${{ secrets.FIREBASE_HOSTING_SITE }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,15 +54,11 @@ jobs:
       - name: Build static site
         run: npm run build
 
-      - name: Write service account key
-        env:
-          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          if [ -z "$SA_JSON" ] || [ -z "$FIREBASE_PROJECT_ID" ]; then
-            echo "::error::Kulang ang GitHub Secrets: FIREBASE_SERVICE_ACCOUNT at FIREBASE_PROJECT_ID"
-            exit 1
-          fi
-          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+      - name: Authenticate to Google Cloud (keyless)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
 
       - name: Use custom Hosting site (optional)
         if: env.FIREBASE_HOSTING_SITE != ''
@@ -65,10 +72,4 @@ jobs:
           '
 
       - name: Deploy Hosting + Firestore rules
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
         run: npx --yes firebase-tools@14 deploy --only hosting,firestore --project "$FIREBASE_PROJECT_ID" --non-interactive
-
-      - name: Cleanup key
-        if: always()
-        run: rm -f "$RUNNER_TEMP/sa.json"
