@@ -6,6 +6,7 @@ import { sendPasswordResetEmail } from "firebase/auth";
 import { Ban, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2 } from "lucide-react";
 import { firebaseConfig } from "@/config/firebase.config";
 import { deleteListing } from "@/lib/listings";
+import { refreshPublicStatsQuietly } from "@/lib/stats";
 import { auth, db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
@@ -99,6 +100,7 @@ function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; o
       }
       await Promise.all(["verifications", "verifiedUsers", "households"].map((c) => deleteDoc(doc(db, c, u.id)).catch(() => undefined)));
       await deleteDoc(doc(db, "users", u.id));
+      refreshPublicStatsQuietly();
       logActivity("Roles", `Binura ang account ni ${u.fullName}${alsoPosts ? " (kasama ang mga post)" : ""}`, u.id);
       toast("Nabura ang data. Huling hakbang: burahin ang login sa Firebase.");
       setDeleted(true);

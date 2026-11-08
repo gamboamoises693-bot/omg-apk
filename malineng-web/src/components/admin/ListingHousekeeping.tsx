@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { deleteCutoff, deleteListing } from "@/lib/listings";
 import { logActivity } from "@/lib/activity";
+import { refreshPublicStatsQuietly } from "@/lib/stats";
 
 const SESSION_KEY = "malineng-listing-cleanup";
 
@@ -24,6 +25,8 @@ export function ListingHousekeeping() {
     } catch {
       /* storage blocked: may run more than once, which is harmless */
     }
+    // Keep the public member count on Home fresh.
+    refreshPublicStatsQuietly();
     (async () => {
       try {
         const old = await getDocs(query(collection(db, "listings"), where("expiresAt", "<", deleteCutoff()), limit(200)));
