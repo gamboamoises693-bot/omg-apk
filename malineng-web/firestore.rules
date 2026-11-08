@@ -1,0 +1,231 @@
+rules_version = '2';
+
+// =====================================================================
+// Barangay Malineng - Firestore Security Rules
+// - Guests (not logged in): read-only on public content
+// - Residents: can create posts/listings/etc. (status always "pending")
+// - Admins: users/{uid}.role == "admin" (set manually in Firebase Console)
+// =====================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helpers ----------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function changedOnly(fields) {
+      return incoming().diff(existing()).affectedKeys().hasOnly(fields);
+    }
+
+    function isNonEmptyString(value, maxLen) {
+      return value is string && value.size() > 0 && value.size() <= maxLen;
+    }
+
+    function validPurok(p) {
+      return p in ['Purok 1', 'Purok 2', 'Purok 3', 'Purok 4', 'Purok 5'];
+    }
+
+    function optionalPhoto() {
+      // photoURL is either empty, a Storage URL, or a small compressed data URL.
+      return incoming().photoURL is string && incoming().photoURL.size() < 900000;
+    }
+
+    // ---------- users ----------
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isAdmin();
+      allow create: if isSelf(uid)
+        && incoming().role == 'resident'
+        && isNonEmptyString(incoming().fullName, 120);
+      // Residents can edit their profile but NEVER their own role.
+      allow update: if (isSelf(uid) && incoming().role == existing().role) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ---------- posts (Community Board) ----------
+    match /posts/{postId} {
+      allow read: if existing().status == 'approved'
+        || isAdmin()
+        || (signedIn() && existing().authorId == request.auth.uid);
+
+      allow create: if signedIn()
+        && incoming().authorId == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().likes.size() == 0
+        && isNonEmptyString(incoming().content, 3000)
+        && optionalPhoto();
+
+      // Like toggle: a resident may only add/remove THEIR OWN uid in "likes".
+      allow update: if isAdmin()
+        || (signedIn()
+          && existing().status == 'approved'
+          && changedOnly(['likes'])
+          && incoming().likes.toSet().difference(existing().likes.toSet())
+               .union(existing().likes.toSet().difference(incoming().likes.toSet()))
+               .hasOnly([request.auth.uid]));
+
+      allow delete: if isAdmin() || (signedIn() && existing().authorId == request.auth.uid);
+    }
+
+    // ---------- comments ----------
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && incoming().authorId == request.auth.uid
+        && isNonEmptyString(incoming().text, 1000)
+        && get(/databases/$(database)/documents/posts/$(incoming().postId)).data.status == 'approved';
+      allow update: if false;
+      allow delete: if isAdmin() || (signedIn() && existing().authorId == request.auth.uid);
+    }
+
+    // ---------- listings (Tindahan) ----------
+    match /listings/{listingId} {
+      allow read: if existing().status == 'approved'
+        || isAdmin()
+        || (signedIn() && existing().sellerId == request.auth.uid);
+
+      allow create: if signedIn()
+        && incoming().sellerId == request.auth.uid
+        && incoming().status == 'pending'
+        && isNonEmptyString(incoming().title, 120)
+        && incoming().price is number && incoming().price >= 0
+        && incoming().category in ['Ulam', 'Pagkain', 'Ukay', 'Halaman', 'Homemade', 'Iba pa']
+        && incoming().expiresAt is timestamp
+        && optionalPhoto();
+
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && existing().sellerId == request.auth.uid);
+    }
+
+    // ---------- jobs (Trabaho) ----------
+    match /jobs/{jobId} {
+      allow read: if existing().status == 'approved'
+        || isAdmin()
+        || (signedIn() && existing().posterId == request.auth.uid);
+      allow create: if signedIn()
+        && incoming().posterId == request.auth.uid
+        && incoming().status == 'pending'
+        && isNonEmptyString(incoming().title, 120);
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && existing().posterId == request.auth.uid);
+    }
+
+    // ---------- skills (Skills Directory) ----------
+    match /skills/{skillId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && incoming().userId == request.auth.uid
+        && isNonEmptyString(incoming().name, 120)
+        && validPurok(incoming().purok);
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+    }
+
+    // ---------- lostFound ----------
+    match /lostFound/{itemId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && incoming().userId == request.auth.uid
+        && incoming().type in ['nawawala', 'nakita']
+        && incoming().status == 'open'
+        && isNonEmptyString(incoming().item, 120)
+        && optionalPhoto();
+      // Owner can only mark as "nakabalik".
+      allow update: if isAdmin()
+        || (signedIn() && existing().userId == request.auth.uid
+            && changedOnly(['status'])
+            && incoming().status in ['open', 'nakabalik']);
+      allow delete: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+    }
+
+    // ---------- ayuda (Ayuda Checker) ----------
+    match /ayuda/{ayudaId} {
+      // Lookup by doc id (control number) is allowed for everyone.
+      allow get: if true;
+      // Name search allowed but capped so nobody can dump the whole list.
+      allow list: if isAdmin() || request.query.limit <= 5;
+      allow write: if isAdmin();
+    }
+
+    // ---------- appointments ----------
+    match /appointments/{apptId} {
+      allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+      allow create: if signedIn()
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'natanggap'
+        && incoming()['service'] in ['Barangay Clearance', 'Indigency', 'Cedula', 'Blotter', 'Iba pa']
+        && isNonEmptyString(incoming().fullName, 120);
+      allow update: if isAdmin();
+      allow delete: if isAdmin()
+        || (signedIn() && existing().userId == request.auth.uid && existing().status == 'natanggap');
+    }
+
+    // ---------- registrations (Magparehistro: Ayuda/Clean-up/Fiesta/Event) ----------
+    match /registrations/{regId} {
+      allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+      allow create: if signedIn()
+        && incoming().userId == request.auth.uid
+        && incoming().purpose in ['Ayuda', 'Clean-up', 'Fiesta', 'Event']
+        && validPurok(incoming().purok);
+      allow update, delete: if isAdmin();
+    }
+
+    // ---------- polls (Botohan) ----------
+    match /polls/{pollId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      // One vote per resident: uid is appended to "voters" exactly once.
+      allow update: if isAdmin()
+        || (signedIn()
+          && existing().isActive == true
+          && changedOnly(['votes', 'voters'])
+          && !(request.auth.uid in existing().voters)
+          && request.auth.uid in incoming().voters
+          && incoming().voters.size() == existing().voters.size() + 1
+          && incoming().voters.hasAll(existing().voters)
+          && incoming().votes.size() == existing().votes.size() + 1
+          && incoming().votes.hasAll(existing().votes));
+    }
+
+    // ---------- events ----------
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------- purokPoints ----------
+    match /purokPoints/{purokId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------- settings (single doc: settings/main) ----------
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

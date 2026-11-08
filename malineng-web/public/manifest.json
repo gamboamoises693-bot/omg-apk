@@ -1,0 +1,9 @@
+{
+  "name": "Barangay Malineng",
+  "short_name": "Malineng",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F3F4F6",
+  "theme_color": "#0B5C3F",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
