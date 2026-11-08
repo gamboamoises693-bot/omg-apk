@@ -11,7 +11,7 @@ import { refreshPublicStatsQuietly } from "@/lib/stats";
 import { REJECT_REASONS } from "@/lib/constants";
 import { formatDate, friendlyError, telHref, timeAgo, tsToMillis } from "@/lib/format";
 import type { Verification, VerificationStatus } from "@/lib/types";
-import { Badge, Button, EmptyState, Modal, Select, Spinner } from "@/components/ui";
+import { Badge, Button, EmptyState, FilterTabs, Modal, Select, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
 const verificationsCollection = collection(db, "verifications");
@@ -118,13 +118,12 @@ export function AdminVerification() {
 
   return (
     <div>
-      <div className="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
-        {TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold ${tab === t.key ? "bg-brand text-white" : "bg-white text-gray-600 shadow-card"}`}>
-            {t.label} ({data.filter((v) => v.status === t.key).length})
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        label="Status ng verification"
+        value={tab}
+        onChange={setTab}
+        options={TABS.map((t) => ({ value: t.key, label: t.label, count: data.filter((v) => v.status === t.key).length, tone: t.key === "pending" ? "alert" : "neutral" }))}
+      />
       <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Hanapin ang pangalan o purok..." className="mb-3 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5" aria-label="Hanapin" />
 
       {list.length === 0 ? (

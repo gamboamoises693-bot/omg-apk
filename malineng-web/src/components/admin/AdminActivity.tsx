@@ -9,7 +9,7 @@ import { ACTIVITY_TYPES, roleLabel } from "@/lib/activity";
 import { downloadCsv } from "@/lib/csv";
 import { todayISO } from "@/lib/format";
 import type { ActivityLog } from "@/lib/types";
-import { Badge, Button, EmptyState, Spinner } from "@/components/ui";
+import { Badge, Button, EmptyState, FilterTabs, Spinner } from "@/components/ui";
 
 function dayRange(dateISO: string, days: number) {
   const start = new Date(`${dateISO}T00:00:00`);
@@ -66,20 +66,17 @@ export function AdminActivity() {
           <option value={30}>30 araw</option>
         </select>
       </div>
-      <div className="no-scrollbar mb-2 flex gap-2 overflow-x-auto">
-        {(["lahat", "admin", "resident"] as const).map((w) => (
-          <button key={w} onClick={() => setWho(w)} className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold ${who === w ? "bg-brand text-white" : "bg-white text-gray-600 shadow-card"}`}>
-            {w === "lahat" ? "Lahat ng tao" : w === "admin" ? "Admins" : "Residente"}
-          </button>
-        ))}
-      </div>
-      <div className="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
-        {["Lahat", ...ACTIVITY_TYPES].map((t) => (
-          <button key={t} onClick={() => setType(t)} className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${type === t ? "bg-gold text-brand-deep" : "bg-white text-gray-600 shadow-card"}`}>
-            {t}
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        label="Sino"
+        value={who}
+        onChange={setWho}
+        options={[
+          { value: "lahat", label: "Lahat" },
+          { value: "admin", label: "Admins" },
+          { value: "resident", label: "Residente" },
+        ]}
+      />
+      <FilterTabs label="Uri ng aktibidad" value={type} onChange={setType} options={["Lahat", ...ACTIVITY_TYPES].map((t) => ({ value: t, label: t }))} />
 
       {loading ? (
         <Spinner />

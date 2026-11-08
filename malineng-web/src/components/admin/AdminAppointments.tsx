@@ -12,7 +12,7 @@ import { useCollection } from "@/lib/useCollection";
 import { APPOINTMENT_STATUSES, APPOINTMENT_STATUS_LABEL, type AppointmentStatus } from "@/lib/constants";
 import { formatDate, friendlyError, telHref } from "@/lib/format";
 import type { Appointment } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, Input, Modal, Spinner } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, FilterTabs, Input, Modal, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
 const appointmentsCollection = collection(db, "appointments");
@@ -99,13 +99,17 @@ export function AdminAppointments() {
 
   return (
     <div>
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        {(["natanggap", "nasa_kagawad", "ready", "lahat"] as const).map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={`shrink-0 rounded-full px-4 py-2 font-semibold ${filter === s ? "bg-brand text-white" : "bg-white ring-1 ring-gray-200"}`}>
-            {s === "lahat" ? "Lahat" : APPOINTMENT_STATUS_LABEL[s].split(" —")[0]} ({s === "lahat" ? data.length : data.filter((a) => a.status === s).length})
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        label="Status ng appointment"
+        value={filter}
+        onChange={setFilter}
+        options={[
+          { value: "natanggap", label: "Bago", count: data.filter((a) => a.status === "natanggap").length },
+          { value: "nasa_kagawad", label: "Kagawad", count: data.filter((a) => a.status === "nasa_kagawad").length, tone: "neutral" },
+          { value: "ready", label: "Ready", count: data.filter((a) => a.status === "ready").length, tone: "neutral" },
+          { value: "lahat", label: "Lahat", count: data.length, tone: "neutral" },
+        ]}
+      />
       {loading ? (
         <Spinner />
       ) : items.length === 0 ? (

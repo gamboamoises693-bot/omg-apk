@@ -15,7 +15,7 @@ import { logActivity, roleLabel } from "@/lib/activity";
 import { ADMIN_POSITIONS } from "@/lib/constants";
 import { friendlyError, timeAgo } from "@/lib/format";
 import type { UserProfile } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, Modal, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, FilterTabs, Modal, Select, Spinner } from "@/components/ui";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useToast } from "@/components/Toast";
 
@@ -24,7 +24,7 @@ type Filter = "lahat" | "admins" | "unverified" | "suspended";
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "lahat", label: "Lahat" },
   { key: "admins", label: "Admins" },
-  { key: "unverified", label: "Hindi verified" },
+  { key: "unverified", label: "Di verified" },
   { key: "suspended", label: "Suspended" },
 ];
 
@@ -232,13 +232,17 @@ export function AdminUsers() {
           </div>
         ))}
       </div>
-      <div className="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
-        {FILTERS.map((f) => (
-          <button key={f.key} onClick={() => setFilter(f.key)} className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold ${filter === f.key ? "bg-brand text-white" : "bg-white text-gray-600 shadow-card"}`}>
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <FilterTabs
+        label="Uri ng user"
+        value={filter}
+        onChange={setFilter}
+        options={FILTERS.map((f) => ({
+          value: f.key,
+          label: f.label,
+          count: f.key === "suspended" ? data.filter((u) => u.suspended).length : undefined,
+          tone: "neutral" as const,
+        }))}
+      />
       <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Hanapin: pangalan, purok, email..." className="mb-3 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5" aria-label="Hanapin ang user" />
 
       {list.length === 0 ? (

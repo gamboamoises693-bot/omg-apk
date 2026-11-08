@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { forwardRef, useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { forwardRef, useEffect, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { ChevronLeft, Loader2, X } from "lucide-react";
 
 /* ---------------- Button ---------------- */
@@ -201,6 +201,69 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
         </div>
         {children}
       </div>
+    </div>
+  );
+}
+
+/* ---------------- Filter tabs (underline style) ---------------- */
+export interface FilterOption<T extends string> {
+  value: T;
+  label: string;
+  /** Optional count badge. */
+  count?: number;
+  /** "alert" = red badge when > 0 (things to act on); "neutral" = gray. Default "alert". */
+  tone?: "alert" | "neutral";
+}
+
+/**
+ * Underline tabs used for every filter row. Up to 4 options share the width equally;
+ * more options scroll sideways (no scrollbar) and the selected one is kept in view.
+ */
+export function FilterTabs<T extends string>({ options, value, onChange, label }: { options: FilterOption<T>[]; value: T; onChange: (v: T) => void; label: string }) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const fits = options.length <= 4;
+
+  useEffect(() => {
+    if (fits) return;
+    const el = rowRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    el?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  }, [value, fits]);
+
+  return (
+    <div
+      ref={rowRef}
+      role="tablist"
+      aria-label={label}
+      className={`mb-3 rounded-2xl bg-white px-1 shadow-card ${fits ? "grid" : "no-scrollbar flex overflow-x-auto"}`}
+      style={fits ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` } : undefined}
+    >
+      {options.map((o) => {
+        const on = o.value === value;
+        const badge =
+          o.count === undefined ? null : (
+            <span
+              className={`flex h-[1.1rem] min-w-[1.1rem] shrink-0 items-center justify-center rounded-full px-1 text-[0.65rem] font-black ${
+                o.count > 0 && (o.tone ?? "alert") === "alert" ? "bg-red-600 text-white" : "bg-gray-200 text-gray-600"
+              }`}
+            >
+              {o.count > 99 ? "99+" : o.count}
+            </span>
+          );
+        return (
+          <button
+            key={o.value}
+            role="tab"
+            aria-selected={on}
+            onClick={() => onChange(o.value)}
+            className={`flex min-w-0 items-center justify-center gap-1 border-b-[2.5px] py-2.5 text-[0.82rem] transition-colors ${fits ? "px-1" : "shrink-0 px-3"} ${
+              on ? "border-brand font-bold text-brand" : "border-transparent font-medium text-gray-500"
+            }`}
+          >
+            <span className="truncate">{o.label}</span>
+            {badge}
+          </button>
+        );
+      })}
     </div>
   );
 }

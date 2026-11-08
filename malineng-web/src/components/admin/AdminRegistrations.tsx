@@ -8,7 +8,7 @@ import { useCollection } from "@/lib/useCollection";
 import { REGISTRATION_PURPOSES } from "@/lib/constants";
 import { sortNewest, telHref, timeAgo } from "@/lib/format";
 import type { Registration } from "@/lib/types";
-import { Button, Card, EmptyState, Spinner } from "@/components/ui";
+import { Button, Card, EmptyState, FilterTabs, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
 const registrationsCollection = collection(db, "registrations");
@@ -32,11 +32,12 @@ export function AdminRegistrations() {
 
   return (
     <div>
-      <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
-        {["Lahat", ...REGISTRATION_PURPOSES].map((p) => (
-          <button key={p} onClick={() => setPurpose(p)} className={`shrink-0 rounded-full px-4 py-2 font-semibold ${purpose === p ? "bg-brand text-white" : "bg-white ring-1 ring-gray-200"}`}>{p}</button>
-        ))}
-      </div>
+      <FilterTabs
+        label="Layunin"
+        value={purpose}
+        onChange={setPurpose}
+        options={["Lahat", ...REGISTRATION_PURPOSES].map((p) => ({ value: p, label: p, count: p === "Lahat" ? data.length : data.filter((r) => r.purpose === p).length, tone: "neutral" as const }))}
+      />
       <Button variant="outline" full className="mb-3" onClick={copyCsv} disabled={!items.length}><Copy className="h-5 w-5" /> Kopyahin bilang CSV ({items.length})</Button>
       {loading ? (
         <Spinner />
