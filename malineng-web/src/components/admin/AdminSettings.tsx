@@ -19,7 +19,7 @@ function OfficialPhoto({ photo, name, onChange, onError }: { photo?: string; nam
   const pick = async (file?: File) => {
     if (!file) return;
     try {
-      onChange(await compressToDataUrl(file, 160, 0.72, 40_000));
+      onChange(await compressToDataUrl(file, 160, 0.72, 40_000, true));
     } catch (err) {
       onError(friendlyError(err));
     }

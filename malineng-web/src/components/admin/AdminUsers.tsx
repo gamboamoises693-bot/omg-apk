@@ -5,6 +5,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, wh
 import { sendPasswordResetEmail } from "firebase/auth";
 import { Ban, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2 } from "lucide-react";
 import { firebaseConfig } from "@/config/firebase.config";
+import { deleteListing } from "@/lib/listings";
 import { auth, db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
@@ -93,7 +94,7 @@ function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; o
         const owned: [string, string][] = [["listings", "sellerId"], ["jobs", "posterId"], ["posts", "authorId"], ["skills", "userId"], ["lostFound", "userId"]];
         for (const [col, field] of owned) {
           const snap = await getDocs(query(collection(db, col), where(field, "==", u.id)));
-          await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+          await Promise.all(snap.docs.map((d) => (col === "listings" ? deleteListing(d.id) : deleteDoc(d.ref))));
         }
       }
       await Promise.all(["verifications", "verifiedUsers", "households"].map((c) => deleteDoc(doc(db, c, u.id)).catch(() => undefined)));

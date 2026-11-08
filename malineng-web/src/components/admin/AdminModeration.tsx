@@ -10,6 +10,7 @@ import type { Job, Listing, Post } from "@/lib/types";
 import { Button, Card, EmptyState, SectionTitle, Spinner } from "@/components/ui";
 import { PostCard } from "@/components/PostCard";
 import { SellerInfo } from "./SellerInfo";
+import { deleteListing, isExpired, newExpiry } from "@/lib/listings";
 import { useToast } from "@/components/Toast";
 import { logActivity } from "@/lib/activity";
 
@@ -19,7 +20,8 @@ function useModerate(collectionName: "listings" | "jobs") {
   const setStatus = async (id: string, status: "approved" | "rejected", label = "") => {
     setBusyId(id);
     try {
-      await updateDoc(doc(db, collectionName, id), { status });
+      // The 24-hour clock of a listing starts when it is approved.
+      await updateDoc(doc(db, collectionName, id), collectionName === "listings" && status === "approved" ? { status, expiresAt: newExpiry() } : { status });
       logActivity(collectionName === "listings" ? "Tindahan" : "Trabaho", `${status === "approved" ? "Nag-approve" : "Nag-reject"} ng ${collectionName === "listings" ? "paninda" : "trabaho"}${label ? `: “${label}”` : ""}`, id);
       toast(status === "approved" ? "Na-approve!" : "Na-reject.");
     } catch (err) {
@@ -54,12 +56,12 @@ export function AdminModeration() {
   const listingMod = useModerate("listings");
   const jobMod = useModerate("jobs");
 
-  const expired = useMemo(() => approvedListings.data.filter((l) => l.expiresAt && l.expiresAt.toMillis() < Date.now()), [approvedListings.data]);
+  const expired = useMemo(() => approvedListings.data.filter((l) => isExpired(l)), [approvedListings.data]);
 
   const cleanupExpired = async () => {
     if (!confirm(`Burahin ang ${expired.length} expired na paninda?`)) return;
     try {
-      await Promise.all(expired.map((l) => deleteDoc(doc(db, "listings", l.id))));
+      await Promise.all(expired.map((l) => deleteListing(l.id)));
       logActivity("Tindahan", `Nagbura ng ${expired.length} expired na paninda`);
       toast("Nalinis na ang expired listings.");
     } catch (err) {

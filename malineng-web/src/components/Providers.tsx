@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "./Toast";
 import { AmbulanceAlertWatcher } from "./admin/AmbulanceAlertWatcher";
+import { ListingHousekeeping } from "./admin/ListingHousekeeping";
 import { isFirebaseConfigured } from "@/lib/firebase";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -16,6 +17,7 @@ export function Providers({ children }: { children: ReactNode }) {
           </div>
         )}
         <AmbulanceAlertWatcher />
+        <ListingHousekeeping />
         {children}
       </ToastProvider>
     </AuthProvider>

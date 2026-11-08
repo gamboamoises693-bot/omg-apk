@@ -22,6 +22,7 @@ function ListingDetail() {
   const id = params.get("id");
   const [listing, setListing] = useState<Listing | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "missing">("loading");
+  const [fullPhoto, setFullPhoto] = useState<string | null>(null);
   const verified = useVerifiedSet();
 
   useEffect(() => {
@@ -34,6 +35,10 @@ function ListingDetail() {
         if (!snap.exists()) return setState("missing");
         setListing({ id: snap.id, ...snap.data() } as Listing);
         setState("ok");
+        // Full-size photo lives in its own document (the listing only has a thumbnail).
+        getDoc(doc(db, "listingPhotos", snap.id))
+          .then((p) => p.exists() && setFullPhoto(p.data().photo as string))
+          .catch(() => undefined);
       })
       .catch(() => setState("missing")); // permission-denied = not approved / not owner
   }, [id]);
@@ -55,9 +60,9 @@ function ListingDetail() {
         <ArrowLeft className="h-5 w-5" /> Bumalik sa Tindahan
       </Link>
 
-      {listing.photoURL ? (
+      {fullPhoto || listing.photoURL ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={listing.photoURL} alt={listing.title} className="-mx-4 w-[calc(100%+2rem)] max-w-none bg-black object-contain sm:mx-0 sm:w-full sm:rounded-2xl" style={{ maxHeight: "70vh" }} />
+        <img src={fullPhoto ?? listing.photoURL} alt={listing.title} className="-mx-4 w-[calc(100%+2rem)] max-w-none bg-black object-contain sm:mx-0 sm:w-full sm:rounded-2xl" style={{ maxHeight: "70vh" }} />
       ) : (
         <div className="flex h-64 items-center justify-center rounded-2xl bg-white text-gray-300">
           <ImageOff className="h-16 w-16" aria-hidden />

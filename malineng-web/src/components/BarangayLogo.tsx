@@ -18,7 +18,7 @@ export function LogoMark({ size = "h-8 w-8", textClass = "text-sm" }: { size?: s
   const { settings } = useSettings();
   if (settings.logoURL) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={settings.logoURL} alt="Logo ng Barangay Malineng" className={`${size} shrink-0 rounded-full bg-white object-contain`} />;
+    return <img src={settings.logoURL} alt="Logo ng Barangay Malineng" className={`${size} shrink-0 rounded-full bg-white object-cover`} />;
   }
   return <span className={`flex ${size} shrink-0 items-center justify-center rounded-full bg-gold font-black text-brand-deep ${textClass}`}>M</span>;
 }
@@ -79,14 +79,14 @@ export function LogoButton({ children, className = "" }: { children: React.React
             <div className="relative">
               {shown ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={shown} alt="Preview ng logo" className="h-32 w-32 rounded-full bg-gray-50 object-contain ring-1 ring-gray-200" />
+                <img src={shown} alt="Preview ng logo" className="h-32 w-32 rounded-full bg-gray-50 object-cover ring-1 ring-gray-200" />
               ) : (
                 <span className="flex h-32 w-32 items-center justify-center rounded-full bg-gold text-5xl font-black text-brand-deep">M</span>
               )}
               <span className="absolute bottom-1 right-1 rounded-full bg-brand p-2 text-white"><Camera className="h-4 w-4" /></span>
             </div>
           </div>
-          <p className="text-center text-xs text-gray-500">Mas maganda kung parisukat (square) at may transparent o puting background. Lalabas ito sa itaas ng website at sa mga Clearance.</p>
+          <p className="text-center text-xs text-gray-500">Kusang ika-crop sa gitna para sakto sa bilog. I-save ulit ang dating logo para ma-crop din ito. Lalabas ito sa itaas ng website at sa mga Clearance.</p>
           <ErrorText>{error}</ErrorText>
           {preview ? (
             <div className="grid grid-cols-2 gap-2">
