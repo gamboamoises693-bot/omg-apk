@@ -20,7 +20,8 @@ export function useSettings() {
           ...DEFAULT_SETTINGS,
           ...data,
           emergencyNumbers: { ...DEFAULT_SETTINGS.emergencyNumbers, ...(data.emergencyNumbers ?? {}) },
-          projects: data.projects?.length ? data.projects : DEFAULT_SETTINGS.projects,
+          // An empty array is a valid admin choice (all projects removed); only fall back when never saved.
+          projects: Array.isArray(data.projects) ? data.projects : DEFAULT_SETTINGS.projects,
           puroks: data.puroks?.length ? data.puroks : DEFAULT_SETTINGS.puroks,
         });
         setLoading(false);
