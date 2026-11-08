@@ -58,6 +58,16 @@ export function AdminSettings() {
       await setDoc(doc(db, "settings", "main"), {
         ...draft,
         puroks,
+        ambulance: {
+          phone: draft.ambulance.phone.trim(),
+          drivers: draft.ambulance.drivers.map((d) => d.trim()).filter(Boolean).slice(0, 20),
+          fee: draft.ambulance.fee.trim().slice(0, 80),
+          // Status is changed live in the Ambulansya tab; keep the latest value, not the stale draft.
+          status: settings.ambulance.status,
+        },
+        hotlines: draft.hotlines
+          .map((h) => ({ name: h.name.trim().slice(0, 80), numbers: h.numbers.map((n) => n.trim()).filter(Boolean).slice(0, 5) }))
+          .filter((h) => h.name && h.numbers.length),
         officials: draft.officials.filter((o) => o.name.trim()),
         announcements: draft.announcements.filter((a) => a.title.trim()),
         projects: draft.projects
@@ -117,6 +127,45 @@ export function AdminSettings() {
         <Input label="Tanod" type="tel" value={draft.emergencyNumbers.tanod} onChange={(e) => set("emergencyNumbers", { ...draft.emergencyNumbers, tanod: e.target.value })} />
         <Input label="Health Center" type="tel" value={draft.emergencyNumbers.healthCenter} onChange={(e) => set("emergencyNumbers", { ...draft.emergencyNumbers, healthCenter: e.target.value })} />
         <Input label="BFP (Bumbero)" type="tel" value={draft.emergencyNumbers.bfp} onChange={(e) => set("emergencyNumbers", { ...draft.emergencyNumbers, bfp: e.target.value })} />
+      </Card>
+
+      <SectionTitle>Ambulansya</SectionTitle>
+      <Card className="space-y-3">
+        <Input label="Numero ng ambulansya / driver on duty" type="tel" placeholder="09171234567" value={draft.ambulance.phone} onChange={(e) => set("ambulance", { ...draft.ambulance, phone: e.target.value })} />
+        <Input
+          label="Mga driver"
+          hint="Paghiwalayin ng kuwit. Hal. Mang Ben, Mang Tonyo"
+          value={draft.ambulance.drivers.join(", ")}
+          onChange={(e) => set("ambulance", { ...draft.ambulance, drivers: e.target.value.split(",").map((d) => d.trimStart()) })}
+        />
+        <Input label="Bayad o donasyon" hint="Iwanang blangko para “Libre” ang lumabas." placeholder="Hal. ₱200 para sa gas" value={draft.ambulance.fee} onChange={(e) => set("ambulance", { ...draft.ambulance, fee: e.target.value })} />
+      </Card>
+
+      <SectionTitle>Cuyapo Hotlines</SectionTitle>
+      <Card className="space-y-4">
+        <p className="text-sm text-gray-500">Lalabas sa Home at sa Emergency page. Kung higit sa isa ang numero, paghiwalayin ng kuwit (,).</p>
+        {draft.hotlines.map((h, i) => (
+          <div key={i} className="space-y-2 rounded-xl bg-surface p-3">
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input label="Pangalan" value={h.name} maxLength={80} placeholder="Hal. Cuyapo MDRRMO" onChange={(e) => set("hotlines", draft.hotlines.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+              </div>
+              <button type="button" onClick={() => set("hotlines", draft.hotlines.filter((_, j) => j !== i))} className="mb-2 rounded-full p-2 text-red-600" aria-label={`Tanggalin ang ${h.name}`}>
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
+            <Input
+              label="Numero"
+              type="tel"
+              placeholder="09171234567, 09981234567"
+              value={h.numbers.join(", ")}
+              onChange={(e) => set("hotlines", draft.hotlines.map((x, j) => (j === i ? { ...x, numbers: e.target.value.split(",").map((n) => n.trimStart()) } : x)))}
+            />
+          </div>
+        ))}
+        <Button variant="outline" full onClick={() => set("hotlines", [...draft.hotlines, { name: "", numbers: [""] }])}>
+          <Plus className="h-5 w-5" /> Magdagdag ng Hotline
+        </Button>
       </Card>
 
       <SectionTitle>Mga Opisyal</SectionTitle>

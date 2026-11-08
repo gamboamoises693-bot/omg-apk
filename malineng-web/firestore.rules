@@ -189,6 +189,34 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // ---------- ambulanceRequests (private: owner + admin) ----------
+    match /ambulanceRequests/{reqId} {
+      allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+      allow create: if signedIn()
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().type in ['emergency', 'schedule']
+        && isNonEmptyString(incoming().patientName, 120)
+        && isNonEmptyString(incoming().contact, 40)
+        && isNonEmptyString(incoming().pickup, 200)
+        && incoming().date is string && incoming().date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && incoming().time is string && incoming().time.matches('^[0-9]{2}:[0-9]{2}$');
+      // Admin (Kapitan) manages everything; a resident may only cancel their own pending request.
+      allow update: if isAdmin()
+        || (signedIn()
+          && existing().userId == request.auth.uid
+          && existing().status == 'pending'
+          && incoming().status == 'cancelled'
+          && changedOnly(['status', 'updatedAt']));
+      allow delete: if isAdmin();
+    }
+
+    // ---------- ambulanceSchedule (public busy windows, no patient data) ----------
+    match /ambulanceSchedule/{slotId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // ---------- polls (Botohan) ----------
     match /polls/{pollId} {
       allow read: if true;
