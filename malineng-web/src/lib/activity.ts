@@ -35,6 +35,8 @@ export const ACTIVITY_TYPES = [
   "Purok Points",
   "Pamilya",
   "Botika",
+  "Hiraman",
+  "Mapa",
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 

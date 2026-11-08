@@ -38,14 +38,19 @@ service cloud.firestore {
       return hasProfile() && me().role in ['admin', 'superadmin'];
     }
 
-    // Full admin powers. A BHW is staff but only manages the Botika.
+    // Full admin powers. A BHW (or BHW Head) is staff but only manages the Botika.
     function isAdmin() {
-      return isStaff() && me().get('position', '') != 'BHW';
+      return isStaff() && !(me().get('position', '') in ['BHW', 'BHW Head']);
     }
 
-    // Botika (medicine inventory): BHW, Kapitan and the Super Admin.
+    // Botika (medicine inventory): BHW, BHW Head, Kapitan and the Super Admin.
     function isBotika() {
-      return isSuperAdmin() || (isStaff() && me().get('position', '') in ['BHW', 'Kapitan']);
+      return isSuperAdmin() || (isStaff() && me().get('position', '') in ['BHW', 'BHW Head', 'Kapitan']);
+    }
+
+    // Hiraman (borrowing barangay equipment): Kapitan, Secretary and the Super Admin approve.
+    function isBorrowAdmin() {
+      return isSuperAdmin() || (isAdmin() && me().get('position', '') in ['Kapitan', 'Secretary']);
     }
 
     function isSuperAdmin() {
@@ -104,7 +109,13 @@ service cloud.firestore {
       allow create: if isSelf(uid)
         && incoming().role == 'resident'
         && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'createdAt'])
-        && isNonEmptyString(incoming().fullName, 120);
+        && isNonEmptyString(incoming().fullName, 120)
+        // The Super Admin can also create accounts for officials (Kapitan, Secretary, BHW...).
+        || (isSuperAdmin()
+          && incoming().role in ['resident', 'admin']
+          && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'position', 'createdAt', 'createdBy'])
+          && incoming().uid == uid
+          && isNonEmptyString(incoming().fullName, 120));
       // A user edits their own profile but never role, position or suspension.
       // Only the Super Admin manages roles, and cannot demote themself (avoids lock-out).
       // Profile photo (photoURL) is for staff (admins and BHW) only.
@@ -148,6 +159,50 @@ service cloud.firestore {
     match /botikaPublic/{id} {
       allow read: if true;
       allow write: if isBotika();
+    }
+
+    // ---------- Hiraman (borrowing barangay equipment) ----------
+    match /borrowItems/{id} {
+      allow read: if true;
+      allow create, update: if isBorrowAdmin()
+        && isNonEmptyString(incoming().name, 80)
+        && incoming().total is int && incoming().total >= 0 && incoming().total <= 100000
+        && incoming().maxPerBorrow is int && incoming().maxPerBorrow >= 1
+        && incoming().fee is number && incoming().fee >= 0
+        && incoming().photo is string && incoming().photo.size() < 150000;
+      allow delete: if isBorrowAdmin();
+    }
+
+    function validBorrowRequest() {
+      return incoming().userId == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().items is list && incoming().items.size() > 0 && incoming().items.size() <= 10
+        && incoming().itemIds is list && incoming().itemIds.size() == incoming().items.size()
+        && incoming().start is timestamp && incoming().end is timestamp
+        && incoming().end > incoming().start
+        && isNonEmptyString(incoming().userName, 120)
+        && isNonEmptyString(incoming().purpose, 80)
+        && incoming().note is string && incoming().note.size() <= 300
+        && incoming().keys().hasOnly(['userId', 'userName', 'purok', 'contact', 'items', 'itemIds', 'start', 'end', 'purpose', 'note', 'status', 'createdAt']);
+    }
+
+    match /borrowRequests/{id} {
+      allow read: if (signedIn() && resource.data.userId == request.auth.uid) || isBorrowAdmin();
+      // Verified, not suspended residents only.
+      allow create: if verifiedPoster() && validBorrowRequest();
+      // The borrower can only cancel while still waiting.
+      allow update: if (signedIn() && existing().userId == request.auth.uid
+          && existing().status == 'pending'
+          && incoming().status == 'cancelled'
+          && changedOnly(['status']))
+        || isBorrowAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Public reservations (no names/contacts) so anyone can see what is available on a date.
+    match /borrowBookings/{id} {
+      allow read: if true;
+      allow write: if isBorrowAdmin();
     }
 
     // ---------- verifications (selfie; private to owner + admins) ----------
@@ -409,6 +464,46 @@ service cloud.firestore {
     match /purokPoints/{purokId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // ---------- Mapa (places pinned on the Malineng map) ----------
+    function validPlace() {
+      return isNonEmptyString(incoming().name, 80)
+        && incoming().category is string && incoming().category.size() <= 40
+        && incoming().lat is number && incoming().lat >= -90 && incoming().lat <= 90
+        && incoming().lng is number && incoming().lng >= -180 && incoming().lng <= 180
+        && incoming().photo is string && incoming().photo.size() < 150000
+        && incoming().description is string && incoming().description.size() <= 300;
+    }
+
+    match /places/{id} {
+      allow read: if resource.data.status == 'approved'
+        || (signedIn() && resource.data.ownerId == request.auth.uid)
+        || isAdmin();
+      // Verified residents submit for approval; evacuation centers are admin-only.
+      allow create: if validPlace() && (
+        isAdmin()
+        || (verifiedPoster()
+          && incoming().ownerId == request.auth.uid
+          && incoming().status == 'pending'
+          && incoming().category != 'Evacuation Center'));
+      // Owners may edit their own pin; it goes back to "pending" for review.
+      allow update: if isAdmin()
+        || (verifiedPoster() && validPlace()
+          && existing().ownerId == request.auth.uid
+          && incoming().ownerId == existing().ownerId
+          && incoming().status == 'pending'
+          && incoming().category != 'Evacuation Center');
+      allow delete: if isAdmin() || (signedIn() && existing().ownerId == request.auth.uid);
+    }
+
+    // ---------- who is online (logged-in users; Super Admin only) ----------
+    match /presenceUsers/{uid} {
+      allow read: if isSuperAdmin();
+      allow create, update: if isSelf(uid)
+        && incoming().keys().hasOnly(['lastSeen'])
+        && incoming().lastSeen == request.time;
+      allow delete: if isSuperAdmin();
     }
 
     // ---------- presence ("online now" counter) ----------

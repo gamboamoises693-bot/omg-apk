@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, where, writeBatch } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { Ban, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2 } from "lucide-react";
+import { Ban, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2, UserPlus } from "lucide-react";
 import { firebaseConfig } from "@/config/firebase.config";
 import { deleteListing } from "@/lib/listings";
 import { refreshPublicStatsQuietly } from "@/lib/stats";
@@ -17,6 +17,7 @@ import { friendlyError, timeAgo } from "@/lib/format";
 import type { UserProfile } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, FilterTabs, Modal, Select, Spinner } from "@/components/ui";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { AddAccountForm } from "./AddAccountForm";
 import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
 
@@ -202,6 +203,7 @@ export function AdminUsers() {
   const [filter, setFilter] = useState<Filter>("lahat");
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const isStaff = (u: UserRow) => u.role === "admin" || u.role === "superadmin";
   const list = useMemo(() => {
@@ -229,6 +231,12 @@ export function AdminUsers() {
 
   return (
     <div>
+      <Button variant="gold" full className="mb-3" onClick={() => setAdding(true)}>
+        <UserPlus className="h-4 w-4" /> Magdagdag ng account (Kapitan, Sec, BHW...)
+      </Button>
+      <Modal open={adding} onClose={() => setAdding(false)} title="Bagong account">
+        {adding && <AddAccountForm onDone={() => setAdding(false)} />}
+      </Modal>
       <div className="mb-3 grid grid-cols-4 gap-2">
         {stats.map((s) => (
           <div key={s.label} className="rounded-2xl bg-white p-2.5 text-center shadow-card">
