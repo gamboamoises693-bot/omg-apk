@@ -46,6 +46,7 @@ import { LogoButton, LogoMark } from "@/components/BarangayLogo";
 import type { PublicStats } from "@/lib/stats";
 import { useOnlineCount } from "@/lib/presence";
 import { OnlineUsers } from "@/components/OnlineUsers";
+import { MembersList } from "@/components/MembersList";
 
 type Tint = "green" | "gold" | "red" | "blue" | "purple" | "orange" | "teal" | "pink";
 // Bank-app look: one calm light-blue circle for every service; red only for emergencies.
@@ -174,6 +175,7 @@ export default function HomePage() {
   const [stats, setStats] = useState<PublicStats | null>(null);
   const online = useOnlineCount();
   const [showOnline, setShowOnline] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
   useEffect(
     () => onSnapshot(doc(db, "stats", "public"), (snap) => setStats(snap.exists() ? (snap.data() as PublicStats) : null), () => setStats(null)),
     [],
@@ -241,7 +243,18 @@ export default function HomePage() {
                 {isSuperAdmin && <ChevronRight className="-mr-1 h-3.5 w-3.5" aria-hidden />}
               </button>
             )}
-            {stats && stats.members > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">👥 {stats.members.toLocaleString("en-PH")} miyembro</span>}
+            {stats && stats.members > 0 && (
+              <button
+                type="button"
+                disabled={!isSuperAdmin}
+                onClick={() => setShowMembers(true)}
+                className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 enabled:active:bg-white/25"
+                aria-label={isSuperAdmin ? `${stats.members} miyembro. Tingnan ang listahan` : `${stats.members} miyembro`}
+              >
+                👥 {stats.members.toLocaleString("en-PH")} miyembro
+                {isSuperAdmin && <ChevronRight className="-mr-1 h-3.5 w-3.5" aria-hidden />}
+              </button>
+            )}
             {stats && stats.verified > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">✓ {stats.verified.toLocaleString("en-PH")} verified</span>}
             {stats && stats.households > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">🏠 {stats.households.toLocaleString("en-PH")} household</span>}
           </div>
@@ -440,6 +453,11 @@ export default function HomePage() {
       {isSuperAdmin && (
         <Modal open={showOnline} onClose={() => setShowOnline(false)} title="Sino ang online">
           {showOnline && <OnlineUsers totalDevices={online} />}
+        </Modal>
+      )}
+      {isSuperAdmin && (
+        <Modal open={showMembers} onClose={() => setShowMembers(false)} title="Mga miyembro">
+          {showMembers && <MembersList />}
         </Modal>
       )}
     </div>
