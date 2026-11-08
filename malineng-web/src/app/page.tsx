@@ -164,13 +164,14 @@ export default function HomePage() {
           {/* Transparency */}
           <SectionTitle>Transparency: Mga Proyekto</SectionTitle>
           <Card className="space-y-4">
-            {settings.projects.map((p) => {
+            {settings.projects.length === 0 && <p className="text-gray-500">Wala pang naka-post na proyekto.</p>}
+            {settings.projects.map((p, i) => {
               const pct = Math.min(100, Math.max(0, Number(p.progress) || 0));
               return (
-                <div key={p.name}>
-                  <div className="mb-1 flex justify-between font-semibold">
+                <div key={`${p.name}-${i}`}>
+                  <div className="mb-1 flex justify-between gap-2 font-semibold">
                     <span>{p.name}</span>
-                    <span className="text-brand">{pct}%</span>
+                    <span className="shrink-0 text-brand">{pct === 100 ? "✅ Tapos na" : `${pct}%`}</span>
                   </div>
                   <div className="h-4 overflow-hidden rounded-full bg-gray-200" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={p.name}>
                     <div className="h-full rounded-full bg-gradient-to-r from-brand to-gold transition-all" style={{ width: `${pct}%` }} />
