@@ -247,6 +247,36 @@ export interface Hotline {
   numbers: string[];
 }
 
+export type InfraProjectStatus = "planned" | "ongoing" | "completed" | "delayed";
+
+export interface ProjectUpdate {
+  date: string; // YYYY-MM-DD
+  note: string;
+}
+
+/** Detailed transparency project (Full Disclosure). Full-size photos live in projectPhotos/{id}. */
+export interface InfraProject {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  location: string;
+  budget: number;
+  fundSource: string;
+  implementer: string;
+  startDate: string;
+  targetDate: string;
+  completedDate: string;
+  status: InfraProjectStatus;
+  progress: number; // 0-100
+  /** Small thumbnails for lists (data URLs). */
+  beforeThumb: string;
+  afterThumb: string;
+  updates: ProjectUpdate[];
+  createdAt?: import("firebase/firestore").Timestamp;
+  updatedAt?: import("firebase/firestore").Timestamp;
+}
+
 export interface EmergencyNumbers {
   tanod: string;
   healthCenter: string;

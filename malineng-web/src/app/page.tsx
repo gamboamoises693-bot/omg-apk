@@ -25,6 +25,7 @@ import {
   UserRound,
   Vote,
   Wrench,
+  HardHat,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -32,8 +33,9 @@ import { useSettings } from "@/lib/useSettings";
 import { useCollection } from "@/lib/useCollection";
 import { APPOINTMENT_STATUS_LABEL, BARANGAY_CITY } from "@/lib/constants";
 import { REQUEST_STATUS_LABEL, formatTime12 } from "@/lib/ambulance";
-import { formatDate, sortNewest, telHref } from "@/lib/format";
-import type { AmbulanceRequest, Appointment, Listing } from "@/lib/types";
+import { formatDate, sortNewest, telHref, tsToMillis } from "@/lib/format";
+import type { AmbulanceRequest, Appointment, InfraProject, Listing } from "@/lib/types";
+import { ProgressBar, ProjectStatusPill, projectSortKey } from "@/components/ProjectBits";
 import { LinkButton, SectionTitle, Spinner } from "@/components/ui";
 import { AdminShieldLink } from "@/components/AdminShieldLink";
 import { LogoButton, LogoMark } from "@/components/BarangayLogo";
@@ -58,6 +60,7 @@ const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[
   { href: "/ambulansya", label: "Ambulansya", icon: Ambulance, tint: "red" },
   { href: "/lost-found", label: "Lost & Found", icon: Search, tint: "pink" },
   { href: "/skills", label: "Skills", icon: Wrench, tint: "orange" },
+  { href: "/proyekto", label: "Proyekto", icon: HardHat, tint: "gold" },
   // Shown after "Lahat":
   { href: "/board", label: "Board", icon: MessagesSquare, tint: "blue" },
   { href: "/register-event", label: "Magpa-rehistro", icon: ClipboardList, tint: "teal" },
@@ -67,6 +70,7 @@ const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[
   { href: "/emergency", label: "Emergency", icon: Siren, tint: "red" },
 ];
 const PRIMARY_COUNT = 7;
+const projectsCollection = collection(db, "projects");
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -171,6 +175,11 @@ export default function HomePage() {
   ].filter((r) => r.number);
 
   const services = showAll ? SERVICES : SERVICES.slice(0, PRIMARY_COUNT);
+  const projects = useCollection<InfraProject>(projectsCollection);
+  const topProjects = useMemo(
+    () => [...projects.data].sort((a, b) => projectSortKey(a.status) - projectSortKey(b.status) || tsToMillis(b.updatedAt) - tsToMillis(a.updatedAt)).slice(0, 3),
+    [projects.data],
+  );
 
   return (
     <div>
@@ -285,7 +294,46 @@ export default function HomePage() {
           )}
 
           {/* Transparency */}
-          {settings.projects.length > 0 && (
+          {topProjects.length > 0 ? (
+            <>
+              <SectionTitle
+                action={
+                  <Link href="/proyekto" className="flex items-center text-xs font-semibold text-brand">
+                    Lahat ({projects.data.length}) <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                }
+              >
+                Transparency: Mga Proyekto
+              </SectionTitle>
+              <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white shadow-card">
+                {topProjects.map((p) => {
+                  const thumb = p.afterThumb || p.beforeThumb;
+                  return (
+                    <li key={p.id}>
+                      <Link href={`/proyekto/item?id=${p.id}`} className="flex items-center gap-3 px-3 py-3 active:bg-gray-50">
+                        {thumb ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={thumb} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
+                        ) : (
+                          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gold-light text-yellow-700"><HardHat className="h-5 w-5" /></span>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="truncate text-sm font-semibold">{p.name}</p>
+                            <ProjectStatusPill status={p.status} />
+                          </div>
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <div className="flex-1"><ProgressBar value={p.progress} /></div>
+                            <span className="text-xs font-bold text-brand">{p.progress}%</span>
+                          </div>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          ) : settings.projects.length > 0 ? (
             <>
               <SectionTitle>Transparency</SectionTitle>
               <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white shadow-card">
@@ -297,15 +345,13 @@ export default function HomePage() {
                         <span className="font-semibold">{p.name}</span>
                         <span className="shrink-0 font-bold text-brand">{pct === 100 ? "✅ Tapos na" : `${pct}%`}</span>
                       </div>
-                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={p.name}>
-                        <div className="h-full rounded-full bg-gradient-to-r from-brand to-gold" style={{ width: `${pct}%` }} />
-                      </div>
+                      <div className="mt-1.5"><ProgressBar value={pct} /></div>
                     </li>
                   );
                 })}
               </ul>
             </>
-          )}
+          ) : null}
 
           {/* Emergency */}
           <SectionTitle

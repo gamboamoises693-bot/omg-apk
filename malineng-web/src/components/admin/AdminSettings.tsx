@@ -102,9 +102,7 @@ export function AdminSettings() {
         logoURL: settings.logoURL,
         officials: draft.officials.filter((o) => o.name.trim()).map((o) => ({ name: o.name.trim(), position: o.position.trim(), photoURL: o.photoURL ?? "" })),
         announcements: draft.announcements.filter((a) => a.title.trim()),
-        projects: draft.projects
-          .filter((p) => p.name.trim())
-          .map((p) => ({ name: p.name.trim().slice(0, 80), progress: Math.min(100, Math.max(0, Number(p.progress) || 0)) })),
+        projects: settings.projects, // managed by the 🏗️ Proyekto tab now
       });
       logActivity("Settings", "Nag-update ng Settings (anunsyo, opisyal, hotlines, proyekto, purok, ambulansya)");
       toast("Na-save ang settings! Makikita na agad sa website.");
@@ -239,26 +237,10 @@ export function AdminSettings() {
         </Button>
       </Card>
 
-      <SectionTitle>Transparency: Progress ng Proyekto</SectionTitle>
-      <Card className="space-y-4">
-        {draft.projects.length === 0 && <p className="text-gray-500">Walang proyekto. Pindutin ang &quot;Magdagdag ng Proyekto&quot;.</p>}
-        {draft.projects.map((p, i) => (
-          <div key={i} className="rounded-xl bg-surface p-3">
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <Input label={`Proyekto #${i + 1}`} value={p.name} maxLength={80} placeholder="Hal. Pagsemento ng Purok 2 Road" onChange={(e) => set("projects", draft.projects.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
-              </div>
-              <span className="mb-3 w-14 text-right font-bold text-brand">{p.progress}%</span>
-              <button type="button" onClick={() => set("projects", draft.projects.filter((_, j) => j !== i))} className="mb-2 rounded-full p-2 text-red-600" aria-label={`Tanggalin ang ${p.name}`}>
-                <Trash2 className="h-5 w-5" />
-              </button>
-            </div>
-            <input type="range" min={0} max={100} step={5} value={p.progress} onChange={(e) => set("projects", draft.projects.map((x, j) => (j === i ? { ...x, progress: Number(e.target.value) } : x)))} className="mt-2 w-full accent-[#0B5C3F]" aria-label={`Progress ng ${p.name}`} />
-          </div>
-        ))}
-        <Button variant="outline" full onClick={() => set("projects", [...draft.projects, { name: "", progress: 0 }])}>
-          <Plus className="h-5 w-5" /> Magdagdag ng Proyekto
-        </Button>
+      <SectionTitle>Transparency: Mga Proyekto</SectionTitle>
+      <Card className="text-sm text-gray-600">
+        Nasa sariling tab na ang mga proyekto (may budget, pondo, before/after na litrato at updates):{" "}
+        <a href="#proyekto" className="font-bold text-brand underline">🏗️ Proyekto</a>
       </Card>
 
       <div className="sticky bottom-20 pt-4">
