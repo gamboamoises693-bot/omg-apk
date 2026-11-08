@@ -10,7 +10,7 @@ import { downloadCsv } from "@/lib/csv";
 import { ageFrom } from "@/lib/age";
 import { todayISO } from "@/lib/format";
 import type { Household } from "@/lib/types";
-import { Button, EmptyState, Spinner } from "@/components/ui";
+import { Button, EmptyState, FilterTabs, Spinner } from "@/components/ui";
 
 const householdsCollection = collection(db, "households");
 
@@ -63,13 +63,7 @@ export function AdminHouseholds() {
           </div>
         ))}
       </div>
-      <div className="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
-        {["Lahat", ...puroks].map((p) => (
-          <button key={p} onClick={() => setPurok(p)} className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold ${purok === p ? "bg-brand text-white" : "bg-white text-gray-600 shadow-card"}`}>
-            {p}
-          </button>
-        ))}
-      </div>
+      <FilterTabs label="Purok" value={purok} onChange={setPurok} options={["Lahat", ...puroks].map((p) => ({ value: p, label: p }))} />
       <Button variant="outline" full className="mb-3" onClick={exportCsv} disabled={!list.length}>
         <Download className="h-4 w-4" /> I-export bilang CSV (para sa census / ayuda)
       </Button>
