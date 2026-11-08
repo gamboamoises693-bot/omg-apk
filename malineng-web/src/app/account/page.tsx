@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { collection, deleteDoc, doc, query, updateDoc, where } from "firebase/firestore";
-import { BadgeCheck, Ban, Camera, CalendarCheck, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
+import { BadgeCheck, Ban, Camera, CalendarCheck, Pill, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
 import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup } from "firebase/auth";
 import { db, googleProvider } from "@/lib/firebase";
 import { logActivity, roleLabel } from "@/lib/activity";
@@ -194,8 +194,8 @@ function MyJobs() {
 
 /** Selfie verification status card. */
 function VerificationCard() {
-  const { isAdmin, isVerified, verification } = useAuth();
-  if (isAdmin) return null;
+  const { isStaff, isVerified, verification } = useAuth();
+  if (isStaff) return null;
   if (isVerified) {
     return (
       <Card className="mb-3 flex items-center gap-3">
@@ -320,7 +320,7 @@ function AdminPhoto({ uid, name, photo }: { uid: string; name: string; photo?: s
 }
 
 function AccountContent() {
-  const { user, profile, isAdmin, isVerified, isSuspended, logout, loading } = useAuth();
+  const { user, profile, isAdmin, isStaff, canBotika, isVerified, isSuspended, logout, loading } = useAuth();
   const toast = useToast();
 
   // Safety net: logged in but users/{uid} missing (e.g. write failed during signup).
@@ -335,13 +335,13 @@ function AccountContent() {
   return (
     <>
       <Card className="mb-4 flex items-center gap-4 bg-brand text-white">
-        {isAdmin && user ? (
+        {isStaff && user ? (
           <AdminPhoto uid={user.uid} name={profile.fullName} photo={profile.photoURL} />
         ) : (
           <span className="rounded-full bg-gold p-3 text-brand-dark"><UserRound className="h-8 w-8" /></span>
         )}
         <div className="min-w-0">
-          <p className="truncate text-lg font-bold">{profile.fullName} <VerifiedBadge show={isVerified && !isAdmin} className="text-white" /></p>
+          <p className="truncate text-lg font-bold">{profile.fullName} <VerifiedBadge show={isVerified && !isStaff} className="text-white" /></p>
           <p className="truncate text-white/80">{user?.email}</p>
           <p className="text-gold">{profile.purok || "Wala pang purok"} · {roleLabel(profile.role, profile.position)}</p>
         </div>
@@ -362,6 +362,9 @@ function AccountContent() {
       </div>
       {isAdmin && (
         <LinkButton href="/admin" variant="gold" full className="mb-2"><ShieldCheck className="h-5 w-5" /> Admin Dashboard</LinkButton>
+      )}
+      {canBotika && (
+        <LinkButton href="/botika/manage" variant={isAdmin ? "soft" : "gold"} full className="mb-2"><Pill className="h-5 w-5" /> Botika (BHW)</LinkButton>
       )}
 
       <SectionTitle>Profile Ko</SectionTitle>

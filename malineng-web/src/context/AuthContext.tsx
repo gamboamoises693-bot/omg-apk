@@ -11,8 +11,12 @@ interface AuthContextValue {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
-  /** Admin or Super Admin. */
+  /** Admin or Super Admin (full admin powers; a BHW is not included). */
   isAdmin: boolean;
+  /** Any staff account: admins, Super Admin and BHW. */
+  isStaff: boolean;
+  /** Can manage the Botika: BHW, Kapitan or Super Admin. */
+  canBotika: boolean;
   isSuperAdmin: boolean;
   /** Can approve ambulance trips: Kapitan or Super Admin. */
   isKapitan: boolean;
@@ -121,15 +125,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthContextValue>(() => {
     const isSuperAdmin = profile?.role === "superadmin";
-    const isAdmin = isSuperAdmin || profile?.role === "admin";
+    const isStaff = isSuperAdmin || profile?.role === "admin";
+    const isBhw = profile?.role === "admin" && profile?.position === "BHW";
+    const isAdmin = isStaff && !isBhw;
     return {
       user,
       profile,
       loading,
       isAdmin,
+      isStaff,
+      canBotika: isSuperAdmin || isBhw || (isAdmin && profile?.position === "Kapitan"),
       isSuperAdmin,
       isKapitan: isSuperAdmin || (isAdmin && profile?.position === "Kapitan"),
-      isVerified: isAdmin || verifiedFlag,
+      isVerified: isStaff || verifiedFlag,
       isSuspended: profile?.suspended === true,
       verification,
       needsProfile: !!user && !!profile && (!profile.purok || !profile.contact),
