@@ -8,8 +8,11 @@ import { useCollection } from "@/lib/useCollection";
 import { ACTIVITY_TYPES, roleLabel } from "@/lib/activity";
 import { downloadCsv } from "@/lib/csv";
 import { todayISO } from "@/lib/format";
-import type { ActivityLog } from "@/lib/types";
+import type { ActivityLog, UserProfile } from "@/lib/types";
+import { Avatar } from "@/components/Avatar";
 import { Badge, Button, EmptyState, FilterTabs, Spinner } from "@/components/ui";
+
+const staffQuery = query(collection(db, "users"), where("role", "in", ["admin", "superadmin"]));
 
 function dayRange(dateISO: string, days: number) {
   const start = new Date(`${dateISO}T00:00:00`);
@@ -36,6 +39,9 @@ export function AdminActivity() {
     return query(collection(db, "activityLogs"), where("createdAt", ">=", start), where("createdAt", "<", end), orderBy("createdAt", "desc"));
   }, [date, days]);
   const { data, loading, error } = useCollection<ActivityLog>(q);
+  // Admin profile photos for the log rows (residents never have one).
+  const { data: staff } = useCollection<UserProfile & { id: string }>(staffQuery);
+  const photos = useMemo(() => new Map(staff.filter((s) => s.photoURL).map((s) => [s.id, s.photoURL!])), [staff]);
 
   const list = data.filter((l) => {
     if (type !== "Lahat" && l.type !== type) return false;
@@ -97,6 +103,7 @@ export function AdminActivity() {
                 </time>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-1">
+                    <Avatar name={l.actorName} photo={photos.get(l.actorId)} size="h-5 w-5" textClass="text-[0.55rem]" fallbackClass="bg-gray-200 text-gray-600" />
                     <span className="text-sm font-bold">{l.actorName}</span>
                     <Badge color={r.role === "superadmin" ? "blue" : r.role === "admin" ? "green" : "gray"}>{roleLabel(r.role, r.position)}</Badge>
                     <Badge color="gold">{l.type}</Badge>

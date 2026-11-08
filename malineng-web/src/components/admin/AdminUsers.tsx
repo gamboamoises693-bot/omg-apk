@@ -17,6 +17,7 @@ import { friendlyError, timeAgo } from "@/lib/format";
 import type { UserProfile } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, FilterTabs, Modal, Select, Spinner } from "@/components/ui";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
 
 const usersCollection = collection(db, "users");
@@ -42,7 +43,8 @@ function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; o
     setBusy(true);
     try {
       const batch = writeBatch(db);
-      batch.update(doc(db, "users", u.id), role === "admin" ? { role, position } : { role, position: "" });
+      // Profile photos are admin-only, so a demoted user's photo is cleared too.
+      batch.update(doc(db, "users", u.id), role === "admin" ? { role, position } : { role, position: "", photoURL: "" });
       await batch.commit();
       logActivity("Roles", `Ginawang ${roleLabel(role, role === "admin" ? position : "")} si ${u.fullName}`, u.id);
       toast("Na-save ang role.");
@@ -142,7 +144,9 @@ function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; o
 
   return (
     <div className="space-y-4">
-      <div>
+      <div className="flex items-start gap-3">
+        <Avatar name={u.fullName} photo={u.role !== "resident" ? u.photoURL : undefined} size="h-14 w-14" textClass="text-lg" fallbackClass={u.role !== "resident" ? "bg-brand text-gold" : "bg-gray-300 text-white"} />
+        <div className="min-w-0 flex-1">
         <p className="text-lg font-bold">{u.fullName} <VerifiedBadge show={verified} /></p>
         <p className="text-sm text-gray-500">{u.purok || "Walang purok"} · {u.contact || "walang contact"}</p>
         <p className="break-all text-sm text-gray-500">{u.email}</p>
@@ -152,6 +156,7 @@ function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; o
           <Badge color={verified ? "blue" : "gold"}>{verified ? "✓ Verified" : "Hindi verified"}</Badge>
         </div>
         <p className="mt-1 text-xs text-gray-400">Nag-register {timeAgo(u.createdAt)}</p>
+        </div>
       </div>
 
       {isMe || u.role === "superadmin" ? (
@@ -252,9 +257,7 @@ export function AdminUsers() {
           {list.map((u) => (
             <li key={u.id}>
               <button onClick={() => setOpenId(u.id)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left active:bg-gray-50">
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${isStaff(u) ? "bg-brand" : "bg-gray-400"}`}>
-                  {u.fullName.split(" ").slice(0, 2).map((p) => p[0]).join("").toUpperCase()}
-                </span>
+                <Avatar name={u.fullName} photo={isStaff(u) ? u.photoURL : undefined} size="h-9 w-9" textClass="text-xs" fallbackClass={`text-white ${isStaff(u) ? "bg-brand" : "bg-gray-400"}`} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{u.fullName} <VerifiedBadge show={verified.has(u.id)} /></p>
                   <p className="truncate text-xs text-gray-500">{u.purok || "Walang purok"} · {timeAgo(u.createdAt)}</p>

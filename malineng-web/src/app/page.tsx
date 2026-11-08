@@ -38,6 +38,7 @@ import type { AmbulanceRequest, Appointment, InfraProject, Listing } from "@/lib
 import { ProgressBar, ProjectStatusPill, projectSortKey } from "@/components/ProjectBits";
 import { LinkButton, SectionTitle, Spinner } from "@/components/ui";
 import { AdminShieldLink } from "@/components/AdminShieldLink";
+import { Avatar } from "@/components/Avatar";
 import { LogoButton, LogoMark } from "@/components/BarangayLogo";
 import type { PublicStats } from "@/lib/stats";
 
@@ -193,9 +194,11 @@ export default function HomePage() {
       <section className="-mx-4 -mt-4 bg-gradient-to-br from-brand to-brand-deep px-4 pb-14 pt-5 text-white">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold text-sm font-black text-brand-deep">
-              {profile ? initials(profile.fullName) : "M"}
-            </span>
+            {profile ? (
+              <Avatar name={profile.fullName} photo={profile.photoURL} size="h-10 w-10" ring="ring-2 ring-white/40" />
+            ) : (
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold text-sm font-black text-brand-deep">M</span>
+            )}
             <div className="leading-tight">
               <p className="text-xs text-white/75">{hello},</p>
               <p className="text-base font-bold">{firstName ? `${firstName} 👋` : "Kabarangay 👋"}</p>

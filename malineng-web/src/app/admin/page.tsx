@@ -29,6 +29,7 @@ import { useAdminPending } from "@/context/AdminPendingContext";
 import { ALERTS_EVENT, getAlertsEnabled } from "@/lib/alerts";
 import { roleLabel } from "@/lib/activity";
 import { AdminGate } from "@/components/LoginGate";
+import { Avatar } from "@/components/Avatar";
 import { AlertsSettingsCard } from "@/components/admin/AlertsSettingsCard";
 import { AdminModeration } from "@/components/admin/AdminModeration";
 import { AdminAppointments } from "@/components/admin/AdminAppointments";
@@ -98,10 +99,6 @@ const GROUPS: Group[] = [
     ],
   },
 ];
-
-function initials(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "A";
-}
 
 function Badge({ n }: { n?: number }) {
   if (!n) return null;
@@ -201,7 +198,7 @@ export default function AdminPage() {
           <button className="absolute inset-0 h-full w-full cursor-default bg-black/40" onClick={() => setOpen(false)} aria-label="Isara ang menu" tabIndex={-1} />
           <nav className="absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col bg-white shadow-2xl motion-safe:animate-drawer-in">
             <div className="flex items-center gap-3 bg-gradient-to-br from-brand to-brand-deep px-4 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] text-white">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gold font-black text-brand-deep">{initials(profile?.fullName ?? "Admin")}</span>
+              <Avatar name={profile?.fullName ?? "Admin"} photo={profile?.photoURL} size="h-11 w-11" textClass="text-base" ring="ring-2 ring-white/40" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-bold">{profile?.fullName}</p>
                 <p className="truncate text-xs text-white/85">
