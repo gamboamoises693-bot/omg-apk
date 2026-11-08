@@ -31,6 +31,11 @@ Next.js + Tailwind + Firebase (Auth, Firestore, Storage, Hosting). Mobile-first,
 ### Step 1: Gumawa ng Firebase project
 1. Buksan ang **console.firebase.google.com** sa Chrome (i-check ang "Desktop site" kung masikip ang screen).
 2. **Add project** → pangalan: `barangay-malineng` → Create.
+
+> **"You've reached the project limit"?** Gumamit na lang ng project na hindi ginagamit (hal. "My First Project").
+> Para gumanda ang URL: **Hosting → Get started → Add another site** → `barangay-malineng`,
+> tapos idagdag ang GitHub Secret na `FIREBASE_HOSTING_SITE` = `barangay-malineng`.
+> Lalabas ang site sa `https://barangay-malineng.web.app`.
 3. **Build → Authentication → Get started**
    - I-enable ang **Email/Password**
    - I-enable ang **Google** (pumili ng support email)
@@ -56,6 +61,7 @@ GitHub repo → **Settings → Secrets and variables → Actions → New reposit
 |---|---|
 | `FIREBASE_PROJECT_ID` | project ID mo (hal. `barangay-malineng`) |
 | `FIREBASE_SERVICE_ACCOUNT` | buong laman ng `.json` file (buksan sa text viewer, i-copy lahat) |
+| `FIREBASE_HOSTING_SITE` *(optional)* | pangalan ng custom Hosting site, hal. `barangay-malineng` |
 
 ### Step 5: I-deploy
 - I-merge sa `main` ang branch na ito. Kusang tatakbo ang **Actions → Deploy Barangay Malineng Website**.

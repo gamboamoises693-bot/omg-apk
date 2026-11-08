@@ -22,6 +22,9 @@ jobs:
         working-directory: malineng-web
     env:
       FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      # Optional: custom Hosting site name (e.g. "barangay-malineng" -> barangay-malineng.web.app).
+      # Leave unset to deploy to the project's default site.
+      FIREBASE_HOSTING_SITE: ${{ secrets.FIREBASE_HOSTING_SITE }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,17 +53,21 @@ jobs:
           fi
           printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
 
+      - name: Use custom Hosting site (optional)
+        if: env.FIREBASE_HOSTING_SITE != ''
+        run: |
+          node -e '
+            const fs = require("fs");
+            const cfg = JSON.parse(fs.readFileSync("firebase.json", "utf8"));
+            cfg.hosting.site = process.env.FIREBASE_HOSTING_SITE.trim();
+            fs.writeFileSync("firebase.json", JSON.stringify(cfg, null, 2));
+            console.log("Deploying to site:", cfg.hosting.site);
+          '
+
       - name: Deploy Hosting + Firestore rules
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
         run: npx --yes firebase-tools@14 deploy --only hosting,firestore --project "$FIREBASE_PROJECT_ID" --non-interactive
-
-      # Storage is optional (may require Blaze plan on new projects). Failure here won't break the deploy.
-      - name: Deploy Storage rules (optional)
-        continue-on-error: true
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
-        run: npx --yes firebase-tools@14 deploy --only storage --project "$FIREBASE_PROJECT_ID" --non-interactive
 
       - name: Cleanup key
         if: always()
