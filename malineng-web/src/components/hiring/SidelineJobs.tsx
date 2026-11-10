@@ -8,9 +8,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { JOB_CATEGORIES } from "@/lib/constants";
 import { usePuroks } from "@/lib/useSettings";
-import { friendlyError, sortNewest, telHref, timeAgo } from "@/lib/format";
+import { friendlyError, sortNewest, telHref, timeAgo, withCustomOptions } from "@/lib/format";
 import type { Job } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, ErrorText, FilterTabs, Input, Modal, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorText, FilterTabs, Input, Modal, Select, Spinner, SelectOther } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 import { logActivity } from "@/lib/activity";
 import { useToast } from "@/components/Toast";
@@ -60,7 +60,7 @@ function JobForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input label="Anong trabaho?" required maxLength={120} placeholder="Hal. Kailangan ng helper sa karinderya" value={form.title} onChange={update("title")} />
-      <Select label="Category" required options={JOB_CATEGORIES} placeholder="-- Pumili --" value={form.category} onChange={update("category")} />
+      <SelectOther label="Category" required options={JOB_CATEGORIES} placeholder="-- Pumili --" value={form.category} onChange={(v) => update("category")({ target: { value: v } })} />
       <Select label="Purok" required options={puroks} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} />
       <Input label="Sahod" placeholder="Hal. ₱500/araw" value={form.salary} onChange={update("salary")} />
       <Input label="Contact Number" type="tel" required value={form.contact} onChange={update("contact")} />
@@ -84,7 +84,7 @@ export function SidelineJobs() {
       <p className="mb-3 text-sm text-gray-600">Mabilis na sideline na malapit lang sa bahay. Tawagan o i-text ang nag-post.</p>
       <Button full variant="soft" onClick={() => setFormOpen(true)} className="mb-3"><Plus className="h-5 w-5" /> Mag-post ng sideline</Button>
 
-      <FilterTabs label="Kategorya ng trabaho" value={filter} onChange={setFilter} options={["Lahat", ...JOB_CATEGORIES].map((c) => ({ value: c, label: c }))} />
+      <FilterTabs label="Kategorya ng trabaho" value={filter} onChange={setFilter} options={["Lahat", ...withCustomOptions(JOB_CATEGORIES, data.map((j) => j.category))].map((c) => ({ value: c, label: c }))} />
 
       {loading ? (
         <Spinner />

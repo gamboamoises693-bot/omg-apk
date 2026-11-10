@@ -349,7 +349,8 @@ service cloud.firestore {
         && incoming().status == 'pending'
         && isNonEmptyString(incoming().title, 120)
         && incoming().price is number && incoming().price >= 0
-        && incoming().category in ['Ulam', 'Pagkain', 'Ukay', 'Halaman', 'Homemade', 'Iba pa']
+        // A listed category, or one the seller wrote when choosing "Iba pa" (an admin approves every listing).
+        && isNonEmptyString(incoming().category, 40)
         && incoming().expiresAt is timestamp
         && optionalPhoto();
 
@@ -484,7 +485,8 @@ service cloud.firestore {
       allow create: if verifiedPoster()
         && incoming().userId == request.auth.uid
         && incoming().status == 'natanggap'
-        && incoming()['service'] in ['Barangay Clearance', 'Indigency', 'Cedula', 'Blotter', 'Iba pa']
+        // A listed service, or the one the resident wrote when choosing "Iba pa".
+        && isNonEmptyString(incoming()['service'], 60)
         && isNonEmptyString(incoming().fullName, 120);
       allow update: if isAdmin();
       allow delete: if isAdmin()
@@ -784,10 +786,60 @@ service cloud.firestore {
       allow write: if isAdmin() || (docId == 'birthdays' && isOfficer());
     }
 
-    // ---------- settings (single doc: settings/main) ----------
+    // ---------- settings (settings/main; settings/webAccess is Super Admin only) ----------
     match /settings/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if docId == 'webAccess' ? isSuperAdmin() : isAdmin();
+    }
+
+    // ---------- Presinto Finder (Posted Computerized Voters List) ----------
+    // Private list: only signed-in, non-suspended residents may search, and a query may return
+    // at most 20 documents, so the whole list cannot be downloaded in one go.
+    match /precinctVoters/{voterId} {
+      allow get: if isOfficer();
+      allow list: if isOfficer()
+        || (signedIn() && notSuspended() && request.query.limit <= 20);
+      // Kapitan, Secretary and Super Admin upload; only the Super Admin may wipe the list.
+      allow create, update: if isOfficer()
+        && incoming().keys().hasOnly(['name', 'nameKey', 'address', 'precinct', 'remarks', 'createdAt'])
+        && isNonEmptyString(incoming().name, 120)
+        && isNonEmptyString(incoming().nameKey, 120)
+        && incoming().address is string && incoming().address.size() <= 200
+        && isNonEmptyString(incoming().precinct, 8)
+        && incoming().remarks is string && incoming().remarks.size() <= 30
+        && incoming().createdAt == request.time;
+      allow delete: if isSuperAdmin();
+    }
+
+    // Election date, polling places and list size (not sensitive, shown on Home).
+    match /precinctMeta/{docId} {
+      allow read: if true;
+      allow write: if isOfficer() && docId == 'current'
+        && incoming().keys().hasOnly(['count', 'precincts', 'electionDate', 'electionName', 'defaultPlace', 'places', 'listDate', 'uploadedAt'])
+        && incoming().count is int && incoming().count >= 0
+        && incoming().precincts is list && incoming().precincts.size() <= 200
+        && incoming().electionDate is string && incoming().electionDate.size() <= 80
+        && incoming().electionName is string && incoming().electionName.size() <= 120
+        && incoming().defaultPlace is string && incoming().defaultPlace.size() <= 160
+        && incoming().places is map
+        && incoming().listDate is string && incoming().listDate.size() <= 80;
+      allow delete: if isSuperAdmin();
+    }
+
+    // Anonymous search counters: a search can only add exactly 1 to the right counters.
+    match /precinctStats/{docId} {
+      allow read: if isOfficer();
+      allow create: if isOfficer() && docId == 'current'
+        && incoming().keys().hasOnly(['searches', 'found', 'notFound'])
+        && incoming().searches == 0 && incoming().found == 0 && incoming().notFound == 0;
+      allow delete: if isSuperAdmin() && docId == 'current';
+      allow update: if docId == 'current' && (
+        isSuperAdmin()
+        || (signedIn() && notSuspended() && changedOnly(['searches', 'found', 'notFound'])
+            && incoming().searches == existing().searches + 1
+            && ((incoming().found == existing().found + 1 && incoming().notFound == existing().notFound)
+                || (incoming().notFound == existing().notFound + 1 && incoming().found == existing().found)))
+      );
     }
 
     // Deny everything else by default.

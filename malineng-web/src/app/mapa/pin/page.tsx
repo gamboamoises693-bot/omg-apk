@@ -12,7 +12,7 @@ import { compressToDataUrl } from "@/lib/upload";
 import { friendlyError } from "@/lib/format";
 import { DEFAULT_MAP_CENTER, EVACUATION, PLACE_CATEGORIES, type Place } from "@/lib/places";
 import { LeafletMap, type MapHandle } from "@/components/map/LeafletMap";
-import { Button, ErrorText, Input, PageHeader, Select, Spinner } from "@/components/ui";
+import { Button, ErrorText, Input, PageHeader, Select, Spinner, SelectOther } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 import { useToast } from "@/components/Toast";
 
@@ -145,7 +145,7 @@ function PinForm() {
       <div className="mt-4 space-y-3">
         <Input label="Pangalan ng lugar" placeholder="hal. Aling Nena Sari-sari Store" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
         <div className="grid grid-cols-2 gap-2">
-          <Select label="Kategorya" options={categories} value={category} onChange={(e) => setCategory(e.target.value)} />
+          <SelectOther label="Kategorya" options={categories} value={category} onChange={setCategory} maxLength={40} />
           <Select label="Purok" options={settings.puroks} placeholder="Piliin" value={purok} onChange={(e) => setPurok(e.target.value)} />
         </div>
         <div className="grid grid-cols-2 gap-2">

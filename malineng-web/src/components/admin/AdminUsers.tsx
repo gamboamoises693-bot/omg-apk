@@ -15,7 +15,7 @@ import { logActivity, roleLabel } from "@/lib/activity";
 import { ADMIN_POSITIONS } from "@/lib/constants";
 import { friendlyError, timeAgo } from "@/lib/format";
 import type { UserProfile } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, FilterTabs, Modal, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, FilterTabs, Modal, Select, Spinner, SelectOther } from "@/components/ui";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { AddAccountForm } from "./AddAccountForm";
 import { releasePhone } from "@/lib/phone";
@@ -176,7 +176,7 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
               ))}
             </div>
             {role === "admin" && (
-              <Select label="Posisyon" options={ADMIN_POSITIONS} value={position} onChange={(e) => setPosition(e.target.value)} hint="“Kapitan” lang ang makaka-approve ng ambulansya." />
+              <SelectOther label="Posisyon" options={ADMIN_POSITIONS} value={position} onChange={setPosition} maxLength={40} hint="“Kapitan” lang ang makaka-approve ng ambulansya." />
             )}
             <Button full loading={busy} onClick={saveRole}>I-save ang role</Button>
           </Card>

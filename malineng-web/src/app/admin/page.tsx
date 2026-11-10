@@ -31,6 +31,8 @@ import {
   Users,
   Vote,
   X,
+  Globe,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -60,6 +62,8 @@ import { AdminMapa } from "@/components/admin/AdminMapa";
 import { AdminDuplicates } from "@/components/admin/AdminDuplicates";
 import { AdminBlotter } from "@/components/admin/AdminBlotter";
 import { AdminSektor } from "@/components/admin/AdminSektor";
+import { AdminPresinto } from "@/components/admin/AdminPresinto";
+import { AdminWebAccess } from "@/components/admin/AdminWebAccess";
 
 interface Section {
   key: string;
@@ -105,6 +109,7 @@ const GROUPS: Group[] = [
       { key: "mapa", label: "Mapa", icon: MapPinned, Component: AdminMapa },
       { key: "events", label: "Events", icon: CalendarDays, Component: AdminEvents },
       { key: "polls", label: "Botohan", icon: Vote, Component: AdminPolls },
+      { key: "presinto", label: "Presinto", icon: ListChecks, Component: AdminPresinto, borrowOnly: true },
       { key: "purok", label: "Purok Points", icon: Trophy, Component: AdminPurok },
       { key: "report", label: "Report", icon: FileBarChart, Component: AdminReport },
       { key: "settings", label: "Settings", icon: SettingsIcon, Component: AdminSettings },
@@ -115,6 +120,7 @@ const GROUPS: Group[] = [
     superOnly: true,
     sections: [
       { key: "users", label: "Users at Roles", icon: Crown, Component: AdminUsers },
+      { key: "webaccess", label: "Web Access", icon: Globe, Component: AdminWebAccess },
       { key: "doble", label: "Posibleng Doble", icon: CopyCheck, Component: AdminDuplicates },
       { key: "activity", label: "Activity Log", icon: ScrollText, Component: AdminActivity },
     ],

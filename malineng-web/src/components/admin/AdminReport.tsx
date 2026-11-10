@@ -74,7 +74,9 @@ export function AdminReport() {
       add("Mga Residente", "Kabuuang household (sa ngayon)", households.size);
 
       const byService = countBy(appts, "service");
-      APPOINTMENT_SERVICES.forEach((s) => add("Appointments", s, byService[s] ?? 0));
+      // Services written under "Iba pa" are counted together with "Iba pa".
+      const listed = APPOINTMENT_SERVICES.filter((s) => s !== "Iba pa");
+      APPOINTMENT_SERVICES.forEach((s) => add("Appointments", s, s === "Iba pa" ? appts.filter((a) => !(listed as readonly string[]).includes(a.service)).length : byService[s] ?? 0));
       add("Appointments", "Kabuuan", appts.length);
       add("Dokumentong na-issue", "Barangay Clearance", docs.filter((d) => d.type === "Barangay Clearance").length);
       add("Dokumentong na-issue", "Indigency", docs.filter((d) => d.type === "Indigency").length);

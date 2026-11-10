@@ -12,7 +12,7 @@ import { logActivity } from "@/lib/activity";
 import { FUND_SOURCES, INFRA_CATEGORY, PROJECT_CATEGORIES, PROJECT_STATUS_LABEL } from "@/lib/constants";
 import { formatPeso, friendlyError, todayISO, tsToMillis } from "@/lib/format";
 import type { InfraProject, InfraProjectStatus, ProjectUpdate } from "@/lib/types";
-import { Button, Card, EmptyState, ErrorText, Input, Modal, Select, Spinner, Textarea } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorText, Input, Modal, Select, Spinner, Textarea, SelectOther } from "@/components/ui";
 import { ProgressBar, ProjectStatusPill, projectSortKey } from "@/components/ProjectBits";
 import { useToast } from "@/components/Toast";
 
@@ -154,7 +154,7 @@ function ProjectForm({ project, onClose }: { project: InfraProject | null; onClo
     <div className="space-y-4">
       <Input label="Pangalan ng proyekto" placeholder="Hal. Pagsemento ng Purok 2 Road" value={d.name} onChange={(e) => set("name", e.target.value)} maxLength={120} />
       <div className="grid grid-cols-2 gap-2">
-        <Select label="Uri" options={PROJECT_CATEGORIES} value={d.category} onChange={(e) => set("category", e.target.value)} />
+        <SelectOther label="Uri" options={PROJECT_CATEGORIES} value={d.category} onChange={(v) => set("category", v)} />
         <Input label="Lokasyon" placeholder="Hal. Purok 2" value={d.location} onChange={(e) => set("location", e.target.value)} />
       </div>
       <Textarea label="Paglalarawan" placeholder="Ano ang ginagawa, gaano kahaba/kalaki, sino ang makikinabang..." value={d.description} onChange={(e) => set("description", e.target.value)} maxLength={2000} />
@@ -162,7 +162,7 @@ function ProjectForm({ project, onClose }: { project: InfraProject | null; onClo
       <Card className="space-y-3 bg-gray-50 shadow-none">
         <p className="text-sm font-bold">💰 Pondo</p>
         <Input label="Budget (₱)" type="number" inputMode="decimal" min={0} value={d.budget || ""} onChange={(e) => set("budget", Number(e.target.value))} />
-        <Select label="Pinagmulan ng pondo" options={FUND_SOURCES} value={d.fundSource} onChange={(e) => set("fundSource", e.target.value)} />
+        <SelectOther label="Pinagmulan ng pondo" options={FUND_SOURCES} value={d.fundSource} onChange={(v) => set("fundSource", v)} />
         <Input label="Contractor / Nagpatupad" placeholder="Hal. Barangay Council, ABC Construction" value={d.implementer} onChange={(e) => set("implementer", e.target.value)} />
       </Card>
 

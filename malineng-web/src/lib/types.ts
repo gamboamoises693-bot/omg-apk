@@ -1,9 +1,7 @@
 import type { Timestamp } from "firebase/firestore";
 import type {
   AlertType,
-  AppointmentService,
   AppointmentStatus,
-  ListingCategory,
 } from "./constants";
 
 export type ModerationStatus = "pending" | "approved" | "rejected";
@@ -110,7 +108,8 @@ export interface Listing {
   sellerName: string;
   title: string;
   price: number;
-  category: ListingCategory;
+  /** A listed category, or the text the seller wrote under "Iba pa". */
+  category: string;
   description: string;
   photoURL: string;
   contact: string;
@@ -173,7 +172,8 @@ export interface Appointment {
   id: string;
   userId: string;
   fullName: string;
-  service: AppointmentService;
+  /** A listed service, or the text the resident wrote under "Iba pa". */
+  service: string;
   date: string; // YYYY-MM-DD
   contact: string;
   notes?: string;

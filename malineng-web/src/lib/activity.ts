@@ -45,6 +45,8 @@ export const ACTIVITY_TYPES = [
   "Sektor",
   "Kalusugan",
   "Liga",
+  "Presinto",
+  "Web Access",
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 

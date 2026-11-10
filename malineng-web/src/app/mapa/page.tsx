@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { useSettings } from "@/lib/useSettings";
 import { logActivity } from "@/lib/activity";
-import { friendlyError, telHref } from "@/lib/format";
+import { friendlyError, telHref, withCustomOptions } from "@/lib/format";
 import { DEFAULT_MAP_CENTER, EVACUATION, PLACE_CATEGORIES, categoryColor, directionsUrl, type Place } from "@/lib/places";
 import { LeafletMap, type MapHandle } from "@/components/map/LeafletMap";
 import { Badge, Modal, Spinner } from "@/components/ui";
@@ -170,7 +170,7 @@ function MapaContent() {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Hanapin sa Malineng..." aria-label="Hanapin sa mapa" className="w-full bg-transparent py-2.5 outline-none" />
           </label>
           <div className="no-scrollbar pointer-events-auto flex gap-1.5 overflow-x-auto pb-1">
-            {["Lahat", ...PLACE_CATEGORIES.map((c) => c.name)].map((c) => {
+            {["Lahat", ...withCustomOptions(PLACE_CATEGORIES.map((c) => c.name), places.map((p) => p.category))].map((c) => {
               const on = c === category;
               return (
                 <button

@@ -7,7 +7,7 @@ import { Plus, Search, Store, ImageOff } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useCollection } from "@/lib/useCollection";
 import { LISTING_CATEGORIES } from "@/lib/constants";
-import { formatPeso, sortNewest } from "@/lib/format";
+import { formatPeso, sortNewest, withCustomOptions } from "@/lib/format";
 import type { Listing } from "@/lib/types";
 import { EmptyState, ErrorText, FilterTabs, LinkButton, Spinner } from "@/components/ui";
 import { ContactButtons } from "@/components/ContactButtons";
@@ -77,7 +77,7 @@ export default function TindahanPage() {
       </div>
 
       {/* Categories: same underline tabs as the rest of the site (scrolls sideways, no scrollbar) */}
-      <FilterTabs label="Kategorya ng paninda" value={category} onChange={setCategory} options={["Lahat", ...LISTING_CATEGORIES].map((c) => ({ value: c, label: c }))} />
+      <FilterTabs label="Kategorya ng paninda" value={category} onChange={setCategory} options={["Lahat", ...withCustomOptions(LISTING_CATEGORIES, data.map((l) => l.category))].map((c) => ({ value: c, label: c }))} />
 
       <LinkButton href="/tindahan/magbenta" variant="primary" full className="mb-4">
         <Plus className="h-5 w-5" /> Magbenta (Libre!)
