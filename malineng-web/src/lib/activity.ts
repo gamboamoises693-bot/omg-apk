@@ -40,6 +40,8 @@ export const ACTIVITY_TYPES = [
   "Pabatid",
   "Survey",
   "Transparency",
+  "Blotter",
+  "Sektor",
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 

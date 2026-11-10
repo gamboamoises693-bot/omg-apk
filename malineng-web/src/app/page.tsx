@@ -5,6 +5,9 @@ import Link from "next/link";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import {
   Pill,
+  Cake,
+  IdCard,
+  FileWarning,
   Landmark,
   MapPinned,
   Package,
@@ -37,7 +40,7 @@ import { useSettings } from "@/lib/useSettings";
 import { useCollection } from "@/lib/useCollection";
 import { APPOINTMENT_STATUS_LABEL, BARANGAY_CITY } from "@/lib/constants";
 import { REQUEST_STATUS_LABEL, formatTime12 } from "@/lib/ambulance";
-import { formatDate, sortNewest, telHref, tsToMillis } from "@/lib/format";
+import { formatDate, sortNewest, telHref, todayISO, tsToMillis } from "@/lib/format";
 import type { AmbulanceRequest, Appointment, InfraProject, Listing } from "@/lib/types";
 import { ProgressBar, ProjectStatusPill, projectSortKey } from "@/components/ProjectBits";
 import { LinkButton, Modal, SectionTitle, Spinner } from "@/components/ui";
@@ -76,6 +79,8 @@ const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[
   { href: "/pabatid", label: "Pabatid", icon: Megaphone, tint: "blue" },
   { href: "/survey", label: "Survey", icon: Vote, tint: "blue" },
   { href: "/pondo", label: "Pondo", icon: Landmark, tint: "blue" },
+  { href: "/barangay-id", label: "Barangay ID", icon: IdCard, tint: "blue" },
+  { href: "/reklamo", label: "Reklamo", icon: FileWarning, tint: "blue" },
   { href: "/lost-found", label: "Lost & Found", icon: Search, tint: "pink" },
   { href: "/skills", label: "Skills", icon: Wrench, tint: "orange" },
   { href: "/proyekto", label: "Proyekto", icon: HardHat, tint: "gold" },
@@ -185,6 +190,20 @@ export default function HomePage() {
     () => onSnapshot(doc(db, "stats", "public"), (snap) => setStats(snap.exists() ? (snap.data() as PublicStats) : null), () => setStats(null)),
     [],
   );
+  // Today's senior birthdays (published by officers from the Senior registry).
+  const [birthdays, setBirthdays] = useState<string[]>([]);
+  useEffect(
+    () =>
+      onSnapshot(
+        doc(db, "stats", "birthdays"),
+        (snap) => {
+          const d = snap.data();
+          setBirthdays(d && d.date === todayISO() && Array.isArray(d.seniors) ? (d.seniors as string[]) : []);
+        },
+        () => setBirthdays([]),
+      ),
+    [],
+  );
   // Computed on the client: the static build would otherwise freeze the build-time hour.
   useEffect(() => setHello(greeting()), []);
 
@@ -273,6 +292,15 @@ export default function HomePage() {
       <section className="relative z-10 -mt-10 rounded-2xl bg-white p-4 shadow-float">
         <SummaryCard />
       </section>
+
+      {birthdays.length > 0 && (
+        <section className="mt-3 flex items-center gap-3 rounded-2xl bg-gold-light p-3 text-yellow-900">
+          <Cake className="h-6 w-6 shrink-0" aria-hidden />
+          <p className="text-sm">
+            <b>Maligayang kaarawan</b> sa ating mga lolo at lola: {birthdays.join(", ")}! 🎉
+          </p>
+        </section>
+      )}
 
       {/* Services grid */}
       <SectionTitle>Mga Serbisyo</SectionTitle>

@@ -19,6 +19,7 @@ export const PENDING_TAB = {
   appointment: "appointments",
   borrow: "hiraman",
   place: "mapa",
+  blotter: "blotter",
   borrowLate: "hiraman",
 } as const;
 
@@ -54,6 +55,9 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
     [canBorrowAdmin],
   );
   const borrow = useCollection<BorrowRequest>(borrowQ);
+  // New complaints (officers only).
+  const blotterQ = useMemo(() => (canBorrowAdmin ? query(collection(db, "blotters"), where("status", "==", "natanggap")) : null), [canBorrowAdmin]);
+  const blotters = useCollection<{ id: string; caseNo: string; type: string; purok: string }>(blotterQ);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 60_000);
@@ -95,6 +99,7 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       ...jobs.data.map((j) => ({ key: `job:${j.id}`, kind: "job" as const, emergency: false, title: "💼 Bagong trabaho", body: `${j.posterName}: ${j.title}` })),
       ...ver.data.map((v) => ({ key: `verification:${v.id}`, kind: "verification" as const, emergency: false, title: "✓ Bagong selfie para i-verify", body: `${v.fullName} · ${v.purok || "walang purok"}` })),
       ...appts.data.map((a) => ({ key: `appointment:${a.id}`, kind: "appointment" as const, emergency: false, title: `📅 Bagong ${a.service}`, body: `${a.fullName} · ${a.date}` })),
+      ...blotters.data.map((b) => ({ key: `blotter:${b.id}`, kind: "blotter" as const, emergency: false, title: "📝 Bagong reklamo", body: `${b.caseNo} · ${b.type} · ${b.purok || "—"}` })),
       ...places.data.map((p) => ({ key: `place:${p.id}`, kind: "place" as const, emergency: false, title: "📍 Bagong pin sa Mapa", body: `${p.ownerName}: ${p.name} (${p.category})` })),
       ...borrow.data
         .filter((r) => r.status === "pending")
@@ -112,9 +117,9 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       items,
       total: items.length,
       byTab,
-      loading: places.loading || borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
+      loading: blotters.loading || places.loading || borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
     };
-  }, [isAdmin, amb, listings, posts, jobs, ver, appts, places, borrow, now]);
+  }, [isAdmin, amb, listings, posts, jobs, ver, appts, places, borrow, blotters, now]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

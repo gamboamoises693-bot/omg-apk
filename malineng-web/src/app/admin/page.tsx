@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import {
   Pill,
+  FileWarning,
+  HeartHandshake,
   Megaphone,
   Landmark,
   CopyCheck,
@@ -55,13 +57,15 @@ import { AdminProjects } from "@/components/admin/AdminProjects";
 import { AdminHiraman } from "@/components/admin/AdminHiraman";
 import { AdminMapa } from "@/components/admin/AdminMapa";
 import { AdminDuplicates } from "@/components/admin/AdminDuplicates";
+import { AdminBlotter } from "@/components/admin/AdminBlotter";
+import { AdminSektor } from "@/components/admin/AdminSektor";
 
 interface Section {
   key: string;
   label: string;
   icon: LucideIcon;
   Component: ComponentType;
-  /** Kapitan, Secretary and Super Admin only (Hiraman approvals). */
+  /** Officers only: Kapitan, Secretary and Super Admin (Hiraman, Blotter, Sektor). */
   borrowOnly?: boolean;
 }
 
@@ -81,6 +85,7 @@ const GROUPS: Group[] = [
       { key: "ambulansya", label: "Ambulansya", icon: Ambulance, Component: AdminAmbulance },
       { key: "appointments", label: "Appointments", icon: CalendarCheck, Component: AdminAppointments },
       { key: "hiraman", label: "Hiraman", icon: Package, Component: AdminHiraman, borrowOnly: true },
+      { key: "blotter", label: "Blotter / Reklamo", icon: FileWarning, Component: AdminBlotter, borrowOnly: true },
     ],
   },
   {
@@ -88,6 +93,7 @@ const GROUPS: Group[] = [
     sections: [
       { key: "ayuda", label: "Ayuda", icon: HandCoins, Component: AdminAyuda },
       { key: "households", label: "Households", icon: Users, Component: AdminHouseholds },
+      { key: "sektor", label: "Senior / PWD / Solo", icon: HeartHandshake, Component: AdminSektor, borrowOnly: true },
       { key: "registrations", label: "Registrations", icon: ClipboardList, Component: AdminRegistrations },
     ],
   },
