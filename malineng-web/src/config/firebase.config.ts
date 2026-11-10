@@ -10,7 +10,10 @@
  */
 export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "AIzaSyCnW_dhNhbvVpEwS8lci1Arz_TSgd7jVQM",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "project-a682ecac-e2d1-469c-bc7.firebaseapp.com",
+  // Google login screen says "to continue to <authDomain>". Using our own short address instead of
+  // project-...firebaseapp.com. Needs https://barangay-malineng.web.app/__/auth/handler added as an
+  // authorized redirect URI of the Google OAuth web client (see the PR description).
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "barangay-malineng.web.app",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "project-a682ecac-e2d1-469c-bc7",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "project-a682ecac-e2d1-469c-bc7.firebasestorage.app",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "879724247614",

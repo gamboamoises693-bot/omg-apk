@@ -10,7 +10,7 @@ import { JOB_CATEGORIES } from "@/lib/constants";
 import { usePuroks } from "@/lib/useSettings";
 import { friendlyError, sortNewest, telHref, timeAgo } from "@/lib/format";
 import type { Job } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, ErrorText, Input, Modal, PageHeader, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorText, FilterTabs, Input, Modal, PageHeader, Select, Spinner } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 import { logActivity } from "@/lib/activity";
 import { useToast } from "@/components/Toast";
@@ -83,13 +83,7 @@ export default function TrabahoPage() {
       <PageHeader title="Trabaho at Sideline" subtitle="Trabaho na malapit lang sa bahay" />
       <Button full onClick={() => setFormOpen(true)} className="mb-4"><Plus className="h-5 w-5" /> Mag-post ng Trabaho</Button>
 
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        {["Lahat", ...JOB_CATEGORIES].map((c) => (
-          <button key={c} onClick={() => setFilter(c)} className={`shrink-0 rounded-full px-4 py-2 font-semibold ${filter === c ? "bg-brand text-white" : "bg-white text-gray-700 ring-1 ring-gray-200"}`}>
-            {c}
-          </button>
-        ))}
-      </div>
+      <FilterTabs label="Kategorya ng trabaho" value={filter} onChange={setFilter} options={["Lahat", ...JOB_CATEGORIES].map((c) => ({ value: c, label: c }))} />
 
       {loading ? (
         <Spinner />

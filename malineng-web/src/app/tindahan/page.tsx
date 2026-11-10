@@ -9,7 +9,7 @@ import { useCollection } from "@/lib/useCollection";
 import { LISTING_CATEGORIES } from "@/lib/constants";
 import { formatPeso, sortNewest } from "@/lib/format";
 import type { Listing } from "@/lib/types";
-import { EmptyState, ErrorText, LinkButton, Spinner } from "@/components/ui";
+import { EmptyState, ErrorText, FilterTabs, LinkButton, Spinner } from "@/components/ui";
 import { ContactButtons } from "@/components/ContactButtons";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useVerifiedSet } from "@/lib/useVerifiedSet";
@@ -53,13 +53,15 @@ export default function TindahanPage() {
 
   return (
     <div>
-      <div className="-mx-4 -mt-4 mb-4 bg-gold px-4 pb-4 pt-5">
-        <div className="mb-3 flex items-center justify-between">
+      <div className="-mx-4 -mt-4 mb-3 bg-gradient-to-br from-brand to-brand-deep px-4 pb-4 pt-4 text-white">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-extrabold text-brand-dark">Tindahan ng Malineng</h1>
-            <p className="text-sm font-semibold text-brand-dark/80">Libre mag-benta. Walang bayad, walang commission.</p>
+            <h1 className="text-xl font-extrabold">Tindahan ng Malineng</h1>
+            <p className="text-[0.85rem] text-white/85">Libre mag-benta. Walang bayad, walang commission.</p>
           </div>
-          <Store className="h-10 w-10 text-brand-dark" aria-hidden />
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15">
+            <Store className="h-6 w-6" aria-hidden />
+          </span>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" aria-hidden />
@@ -74,19 +76,8 @@ export default function TindahanPage() {
         </div>
       </div>
 
-      {/* Category chips */}
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        {["Lahat", ...LISTING_CATEGORIES].map((c) => (
-          <button
-            key={c}
-            onClick={() => setCategory(c)}
-            className={`shrink-0 rounded-full px-4 py-2 font-semibold ${category === c ? "bg-brand text-white" : "bg-white text-gray-700 ring-1 ring-gray-200"}`}
-            aria-pressed={category === c}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
+      {/* Categories: same underline tabs as the rest of the site (scrolls sideways, no scrollbar) */}
+      <FilterTabs label="Kategorya ng paninda" value={category} onChange={setCategory} options={["Lahat", ...LISTING_CATEGORIES].map((c) => ({ value: c, label: c }))} />
 
       <LinkButton href="/tindahan/magbenta" variant="primary" full className="mb-4">
         <Plus className="h-5 w-5" /> Magbenta (Libre!)
