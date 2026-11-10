@@ -70,7 +70,7 @@ export default function TindahanPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Hanapin: adobo, halaman, damit..."
-            className="w-full rounded-2xl border-0 bg-white py-3 pl-10 pr-4 outline-none ring-2 ring-transparent focus:ring-gold"
+            className="w-full rounded-2xl border-0 bg-white py-3 pl-10 pr-4 text-gray-900 outline-none ring-2 ring-transparent placeholder:text-gray-400 focus:ring-gold"
             aria-label="Hanapin sa Tindahan"
           />
         </div>
