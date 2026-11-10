@@ -102,11 +102,16 @@ export function ms(ts?: Timestamp | null): number {
 
 /**
  * Bookings that hold an item during [start, end). A picked-up ("borrowed") booking
- * keeps holding the item past its end date until it is actually returned.
+ * holds the item from the moment it was picked up and keeps holding it past its end date
+ * until it is actually returned.
  */
 function overlaps(b: BorrowBooking, start: number, end: number, now: number): boolean {
-  const bEnd = b.status === "borrowed" ? Math.max(ms(b.end), now) : ms(b.end);
-  return ms(b.start) < end && bEnd > start;
+  const borrowed = b.status === "borrowed";
+  // Past its end date and not returned yet: still holding the items right now.
+  const bEnd = borrowed ? Math.max(ms(b.end), now + 1) : ms(b.end);
+  // Picked up early (before the booked start)? The items are physically out from that moment.
+  const bStart = borrowed ? Math.min(ms(b.start), now) : ms(b.start);
+  return bStart < end && bEnd > start;
 }
 
 /** How many of an item are free for the whole range (worst moment counts). */
@@ -247,4 +252,27 @@ export async function rejectRequest(r: BorrowRequest, reason: string, actor: Act
   // Also frees the dates if an approved request is being cancelled by the barangay.
   batch.delete(doc(db, "borrowBookings", r.id));
   await batch.commit();
+}
+
+/** One row per request for the history export. */
+export function historyRows(list: BorrowRequest[]): (string | number)[][] {
+  const when = (t?: Timestamp) => (t ? t.toDate().toLocaleString("fil-PH") : "");
+  return [
+    ["Humiram", "Purok", "Contact", "Gamit", "Layunin", "Mula", "Hanggang", "Status", "Naibalik", "Sira o nawala", "Singil (₱)", "Bayad", "Tala"],
+    ...list.map((r) => [
+      r.userName,
+      r.purok,
+      r.contact,
+      linesText(r.items),
+      r.purpose,
+      when(r.start),
+      when(r.end),
+      BORROW_STATUS_LABEL[r.status],
+      when(r.returnedAt),
+      reportSummary(r.returnReport),
+      r.damageFee ?? 0,
+      r.feeStatus === "paid" ? "Bayad na" : r.feeStatus === "unpaid" ? "Hindi pa bayad" : r.feeStatus === "waived" ? "Pinatawad" : "",
+      r.returnNote ?? "",
+    ]),
+  ];
 }
