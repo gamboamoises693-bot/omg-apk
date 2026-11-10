@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { ensureVerifiedSet, verifiedSetAdd, verifiedSetRef, verifiedSetRemove } from "@/lib/verified";
+import { useEffect, useMemo, useState } from "react";
 import { collection, doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { BadgeCheck, Phone, XCircle } from "lucide-react";
 import { db } from "@/lib/firebase";
@@ -53,6 +54,7 @@ function Review({ v, onClose }: { v: Verification; onClose: () => void }) {
       const flag = doc(db, "verifiedUsers", v.uid);
       if (status === "verified") batch.set(flag, { name: v.fullName, verifiedAt: serverTimestamp(), verifiedBy: profile.fullName });
       else batch.delete(flag);
+      batch.set(verifiedSetRef(), status === "verified" ? verifiedSetAdd(v.uid) : verifiedSetRemove(v.uid), { merge: true });
       await batch.commit();
       refreshPublicStatsQuietly();
       logActivity("Verification", status === "verified" ? `Nag-verify ng account ni ${v.fullName} (${v.purok})` : `Nag-reject ng selfie ni ${v.fullName}: ${reason}`, v.uid);
@@ -105,6 +107,10 @@ export function AdminVerification() {
   const [tab, setTab] = useState<VerificationStatus>("pending");
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  // One-time: build stats/verifiedSet (the single document every badge reads) if it does not exist yet.
+  useEffect(() => {
+    ensureVerifiedSet().catch((err) => console.warn("[verified] could not build the set:", err));
+  }, []);
 
   const list = useMemo(() => {
     const t = search.trim().toLowerCase();

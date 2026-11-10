@@ -1,7 +1,8 @@
 "use client";
 
+import { verifiedSetAdd, verifiedSetRef, verifiedSetRemove } from "@/lib/verified";
 import { useMemo, useState } from "react";
-import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, where, writeBatch } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, where, writeBatch, setDoc } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { Ban, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2, UserPlus } from "lucide-react";
 import { firebaseConfig } from "@/config/firebase.config";
@@ -69,9 +70,13 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
       const flag = doc(db, "verifiedUsers", u.id);
       if (next) {
         batch.delete(flag);
+        batch.set(verifiedSetRef(), verifiedSetRemove(u.id), { merge: true });
       } else {
         const ver = await getDoc(doc(db, "verifications", u.id));
-        if (ver.exists() && ver.data().status === "verified") batch.set(flag, { name: u.fullName, verifiedAt: serverTimestamp(), verifiedBy: "restored" });
+        if (ver.exists() && ver.data().status === "verified") {
+          batch.set(flag, { name: u.fullName, verifiedAt: serverTimestamp(), verifiedBy: "restored" });
+          batch.set(verifiedSetRef(), verifiedSetAdd(u.id), { merge: true });
+        }
       }
       await batch.commit();
       logActivity("Roles", `${next ? "Sinuspend" : "Inalis ang suspension ni"} ${u.fullName}`, u.id);
@@ -103,6 +108,7 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
         }
       }
       await Promise.all(["verifications", "verifiedUsers", "households"].map((c) => deleteDoc(doc(db, c, u.id)).catch(() => undefined)));
+      await setDoc(verifiedSetRef(), verifiedSetRemove(u.id), { merge: true }).catch(() => undefined);
       await releasePhone(u.contact ?? "", u.id);
       await deleteDoc(doc(db, "users", u.id));
       refreshPublicStatsQuietly();

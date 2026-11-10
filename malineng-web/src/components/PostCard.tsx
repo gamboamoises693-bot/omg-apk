@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { addDoc, collection, deleteDoc, doc, getCountFromServer, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { Check, Link2, MessageCircle, MoreHorizontal, Send, Share2, Trash2, X } from "lucide-react";
@@ -157,13 +157,32 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
     save: (uid, key) => updateDoc(doc(db, "posts", post.id), reactionPatch(uid, key)),
   });
 
-  // Cheap one-time count so the card can say "3 comments" without loading them all.
+  // Cheap count so the card can say "3 comments" without loading them all. It is only asked for
+  // when the card scrolls into view (each count costs one read on the free plan).
+  const cardRef = useRef<HTMLElement>(null);
+  const [seen, setSeen] = useState(false);
   useEffect(() => {
-    if (post.status !== "approved") return;
+    const el = cardRef.current;
+    if (!el || seen) return;
+    if (typeof IntersectionObserver === "undefined") return setSeen(true);
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setSeen(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [seen]);
+  useEffect(() => {
+    if (post.status !== "approved" || !seen) return;
     getCountFromServer(query(collection(db, "comments"), where("postId", "==", post.id)))
       .then((s) => setCommentCount(s.data().count))
       .catch(() => {});
-  }, [post.id, post.status]);
+  }, [post.id, post.status, seen]);
 
   const share = async () => {
     setMenu(false);
@@ -209,7 +228,7 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
   const long = post.content.length > LONG_TEXT;
 
   return (
-    <article className="overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-gray-100">
+    <article ref={cardRef} className="overflow-hidden rounded-2xl bg-white shadow-card ring-1 ring-gray-100">
       <header className="flex items-center gap-3 px-4 pt-4">
         <Avatar name={post.authorName} size="h-11 w-11" textClass="text-base" fallbackClass={avatarClass(post.authorName)} />
         <div className="min-w-0 flex-1 leading-tight">

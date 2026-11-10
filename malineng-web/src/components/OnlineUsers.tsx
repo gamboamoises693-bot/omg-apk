@@ -103,7 +103,7 @@ export function OnlineUsers({ totalDevices }: { totalDevices: number | null }) {
       <button onClick={load} disabled={busy} className="mx-auto flex items-center gap-1.5 text-sm font-semibold text-brand disabled:opacity-50">
         <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} /> I-refresh
       </button>
-      <p className="text-center text-[0.7rem] text-gray-400">Online = bukas ang website sa nakaraang 5 minuto.</p>
+      <p className="text-center text-[0.7rem] text-gray-400">Online = bukas ang website sa nakaraang 10 minuto.</p>
     </div>
   );
 }
