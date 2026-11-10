@@ -4,7 +4,7 @@ import { AuthHero } from "@/components/AuthHero";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { ensureUserDoc, useAuth } from "@/context/AuthContext";
 import { PHONE_TAKEN_MESSAGE, normalizePhone } from "@/lib/phone";
@@ -39,12 +39,14 @@ export default function RegisterPage() {
     if (form.fullName.trim().length < 3) return setError("Ilagay ang buong pangalan.");
     if (!form.purok) return setError("Pumili ng Purok.");
     if (!contact) return setError("Mali ang contact number. Halimbawa: 09171234567");
-    if (form.password.length < 6) return setError("Ang password ay dapat 6 characters pataas.");
+    if (form.password.length < 8) return setError("Ang password ay dapat 8 characters pataas.");
 
     setLoading(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
       await updateProfile(cred.user, { displayName: form.fullName.trim() });
+      // The confirmation email is needed before posting or sending the selfie; failing to send it must not stop registering.
+      sendEmailVerification(cred.user).catch((err) => console.warn("[register] verification email failed:", err));
       try {
         await ensureUserDoc(cred.user, {
           fullName: form.fullName.trim(),
@@ -59,7 +61,7 @@ export default function RegisterPage() {
       }
       setActivityActor({ uid: cred.user.uid, name: form.fullName.trim(), role: "resident" });
       logActivity("Account", `Nag-register (${form.purok})`, cred.user.uid);
-      toast("Na-register ka na! Huling hakbang: selfie para ma-verify.");
+      toast("Na-register ka na! Kumpirmahin ang email mo (may ipinadalang link), saka mag-selfie para ma-verify.");
       router.replace("/verify");
     } catch (err) {
       setError(friendlyError(err));
@@ -77,7 +79,7 @@ export default function RegisterPage() {
           <Input label="Contact Number" type="tel" inputMode="tel" required placeholder="09171234567" value={form.contact} onChange={update("contact")} />
           <Input label="Birthday" type="date" required value={form.birthday} onChange={update("birthday")} />
           <Input label="Email" type="email" required autoComplete="email" value={form.email} onChange={update("email")} />
-          <Input label="Password" type="password" required autoComplete="new-password" hint="Hindi bababa sa 6 characters" value={form.password} onChange={update("password")} />
+          <Input label="Password" type="password" required autoComplete="new-password" hint="Hindi bababa sa 8 characters" value={form.password} onChange={update("password")} />
           <ErrorText>{error}</ErrorText>
           <Button type="submit" full loading={loading}>Gumawa ng Account</Button>
         </form>

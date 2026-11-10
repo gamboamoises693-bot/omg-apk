@@ -90,6 +90,12 @@ service cloud.firestore {
       return request.resource.data;
     }
 
+    // Email/password accounts must confirm their email before posting or sending a selfie.
+    // Google accounts are already confirmed; staff are exempt (accounts made by the Super Admin).
+    function emailOk() {
+      return request.auth.token.email_verified == true || isStaff();
+    }
+
     // Chat rooms: "all" (whole barangay) or the exact Purok name. Verified residents read the
     // barangay room and their own Purok; staff read every room.
     function canReadRoom(room) {
@@ -273,6 +279,7 @@ service cloud.firestore {
       // Owner submits / re-submits (not after being verified). Kept until the account is deleted.
       allow create, update: if isSelf(uid)
         && notSuspended()
+        && emailOk()
         && (resource == null || existing().status != 'verified')
         && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'birthday', 'contact', 'email', 'selfie', 'status', 'submittedAt'])
         && incoming().uid == uid
@@ -334,7 +341,7 @@ service cloud.firestore {
         || isAdmin()
         || (signedIn() && existing().authorId == request.auth.uid);
 
-      allow create: if notSuspended()
+      allow create: if notSuspended() && emailOk()
         && incoming().authorId == request.auth.uid
         && incoming().status == 'pending'
         && incoming().likes.size() == 0
@@ -361,7 +368,7 @@ service cloud.firestore {
     // ---------- comments ----------
     match /comments/{commentId} {
       allow read: if true;
-      allow create: if notSuspended()
+      allow create: if notSuspended() && emailOk()
         && incoming().authorId == request.auth.uid
         && isNonEmptyString(incoming().text, 1000)
         && get(/databases/$(database)/documents/posts/$(incoming().postId)).data.status == 'approved';
@@ -371,9 +378,10 @@ service cloud.firestore {
 
     // ---------- listings (Tindahan) ----------
     match /listings/{listingId} {
-      allow read: if existing().status == 'approved'
+      // Contact numbers are inside, so only signed-in people can read listings.
+      allow read: if signedIn() && (existing().status == 'approved'
         || isAdmin()
-        || (signedIn() && existing().sellerId == request.auth.uid);
+        || existing().sellerId == request.auth.uid);
 
       allow create: if verifiedPoster()
         && incoming().sellerId == request.auth.uid
@@ -401,9 +409,9 @@ service cloud.firestore {
 
     // ---------- jobs (Trabaho) ----------
     match /jobs/{jobId} {
-      allow read: if existing().status == 'approved'
+      allow read: if signedIn() && (existing().status == 'approved'
         || isAdmin()
-        || (signedIn() && existing().posterId == request.auth.uid);
+        || existing().posterId == request.auth.uid);
       allow create: if verifiedPoster()
         && incoming().posterId == request.auth.uid
         && incoming().status == 'pending'
@@ -436,9 +444,9 @@ service cloud.firestore {
     }
 
     match /openings/{id} {
-      allow read: if resource.data.status == 'approved'
+      allow read: if signedIn() && (resource.data.status == 'approved'
         || isAdmin()
-        || (signedIn() && resource.data.posterId == request.auth.uid);
+        || resource.data.posterId == request.auth.uid);
       allow create: if validOpening() && incoming().posterId == request.auth.uid && (
         // Verified residents wait for approval; the Barangay officers publish "OPISYAL" openings directly.
         (verifiedPoster() && incoming().status == 'pending' && incoming().official == false)
@@ -489,7 +497,8 @@ service cloud.firestore {
 
     // ---------- skills (Skills Directory) ----------
     match /skills/{skillId} {
-      allow read: if true;
+      // Names and phone numbers: signed-in people only.
+      allow read: if signedIn();
       // `skill` may be any text the resident wrote (e.g. "Welder", "Gumagawa ng pugon").
       allow create: if notSuspended()
         && incoming().userId == request.auth.uid
@@ -502,7 +511,7 @@ service cloud.firestore {
 
     // ---------- lostFound ----------
     match /lostFound/{itemId} {
-      allow read: if true;
+      allow read: if signedIn();
       allow create: if notSuspended()
         && incoming().userId == request.auth.uid
         && incoming().type in ['nawawala', 'nakita']

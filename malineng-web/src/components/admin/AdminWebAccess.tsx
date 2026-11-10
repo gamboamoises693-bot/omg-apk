@@ -5,7 +5,7 @@ import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
-import { ACCESS_LABEL, ACCESS_LEVELS, PRESETS, WEB_FEATURES, levelOf, presetLevels, useWebAccess, type AccessLevel, type PresetKey } from "@/lib/webAccess";
+import { ACCESS_LABEL, ACCESS_LEVELS, LOGIN_ONLY, PRESETS, WEB_FEATURES, levelOf, presetLevels, useWebAccess, type AccessLevel, type PresetKey } from "@/lib/webAccess";
 import { Button, Card, ErrorText, Spinner } from "@/components/ui";
 
 /** Super Admin: choose what residents can see and who may open each service. */
@@ -80,8 +80,8 @@ export function AdminWebAccess() {
         {WEB_FEATURES.map((f) => (
           <div key={f.key} className="flex items-center gap-2 px-3 py-2.5">
             <span className="min-w-0 flex-1 text-sm font-bold">{f.label}</span>
-            <div className="grid shrink-0 grid-cols-4 overflow-hidden rounded-lg border border-gray-300 text-[0.68rem] font-bold" role="radiogroup" aria-label={`Access ng ${f.label}`}>
-              {ACCESS_LEVELS.map((lv) => {
+            <div className="flex shrink-0 overflow-hidden rounded-lg border border-gray-300 text-[0.68rem] font-bold" role="radiogroup" aria-label={`Access ng ${f.label}`}>
+              {ACCESS_LEVELS.filter((lv) => lv !== "all" || !LOGIN_ONLY.includes(f.key)).map((lv) => {
                 const on = levels[f.key] === lv;
                 return (
                   <button
@@ -90,7 +90,7 @@ export function AdminWebAccess() {
                     role="radio"
                     aria-checked={on}
                     onClick={() => setLevel(f.key, lv)}
-                    className={`px-1.5 py-1.5 ${on ? (lv === "off" ? "bg-gray-500 text-white" : "bg-brand text-white") : "text-gray-600"}`}
+                    className={`px-2 py-1.5 ${on ? (lv === "off" ? "bg-gray-500 text-white" : "bg-brand text-white") : "text-gray-600"}`}
                   >
                     {ACCESS_LABEL[lv]}
                   </button>

@@ -44,7 +44,7 @@ export const WEB_FEATURES: WebFeature[] = [
 ];
 
 /** The voters list is private, so it needs a login even before a Super Admin touches Web Access. */
-const DEFAULT_LEVEL: Record<string, AccessLevel> = { presinto: "login", chat: "verified" };
+const DEFAULT_LEVEL: Record<string, AccessLevel> = { presinto: "login", chat: "verified", tindahan: "login", hiring: "login", skills: "login", "lost-found": "login" };
 
 export type PresetKey = "lahat" | "pangunahin" | "eleksyon" | "custom";
 
@@ -72,9 +72,13 @@ export function presetLevels(preset: Exclude<PresetKey, "custom">): Record<strin
   return out;
 }
 
+/** These pages show people's phone numbers, so the database only gives them to signed-in people ("Lahat" is not allowed). */
+export const LOGIN_ONLY = ["tindahan", "hiring", "skills", "lost-found"];
+
 export function levelOf(doc: Pick<WebAccessDoc, "features"> | null, key: string): AccessLevel {
   const v = doc?.features?.[key];
-  return v === "all" || v === "login" || v === "verified" || v === "off" ? v : (DEFAULT_LEVEL[key] ?? "all");
+  const level: AccessLevel = v === "all" || v === "login" || v === "verified" || v === "off" ? v : (DEFAULT_LEVEL[key] ?? "all");
+  return level === "all" && LOGIN_ONLY.includes(key) ? "login" : level;
 }
 
 /** Live settings/webAccess (guests can read it too). `null` while loading or never saved. */
