@@ -16,7 +16,7 @@ export function BottomNav() {
   const pathname = usePathname() ?? "/";
 
   return (
-    <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-gray-100 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur" aria-label="Main">
+    <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur" aria-label="Main">
       <ul className="mx-auto grid max-w-3xl grid-cols-5 items-end">
         {NAV.map(({ href, label, icon: Icon, ...rest }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);

@@ -29,6 +29,13 @@ textarea {
   font-size: max(16px, 1rem);
 }
 
+/* Every white card gets the same hairline as <Card> (utilities such as border-* still win). */
+@layer components {
+  .shadow-card {
+    border: 1px solid #e3e8f0;
+  }
+}
+
 /* Hide scrollbars on horizontal chip/carousel rows (still scrollable). */
 .no-scrollbar {
   scrollbar-width: none;

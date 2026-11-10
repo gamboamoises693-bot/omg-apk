@@ -215,7 +215,7 @@ export default function AdminPage() {
           <p className="truncate text-[0.7rem] font-semibold text-gray-500">
             Admin Dashboard{profile ? ` · ${profile.fullName.split(" ")[0]} · ${roleLabel(profile.role, profile.position)}` : ""}
           </p>
-          <p className="flex items-center gap-1.5 text-base font-bold">
+          <p className="flex items-center gap-1.5 text-base font-extrabold text-brand-deep">
             <ActiveIcon className="h-4 w-4 text-brand" aria-hidden /> {active.label}
             <Badge n={byTab[active.key]} />
           </p>

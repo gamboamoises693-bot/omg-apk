@@ -1,5 +1,6 @@
 "use client";
 
+import { AuthHero } from "@/components/AuthHero";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -68,9 +69,8 @@ export default function RegisterPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="mb-1 text-xl font-extrabold text-gray-900">Mag-register</h1>
-      <p className="mb-4 text-gray-600">Para sa mga residente ng Barangay Malineng. Libre ito.</p>
-      <Card>
+      <AuthHero title="Mag-register" subtitle="Para sa mga residente ng Barangay Malineng. Libre ito." />
+      <Card className="relative -mt-10">
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Buong Pangalan" required autoComplete="name" placeholder="Juan Dela Cruz" value={form.fullName} onChange={update("fullName")} />
           <Select label="Purok" required options={puroks} placeholder="-- Pumili ng Purok --" value={form.purok} onChange={update("purok")} />
