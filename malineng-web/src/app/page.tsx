@@ -53,6 +53,7 @@ import type { PublicStats } from "@/lib/stats";
 import { useOnlineCount } from "@/lib/presence";
 import { OnlineUsers } from "@/components/OnlineUsers";
 import { MembersList } from "@/components/MembersList";
+import { InstallBanner } from "@/components/InstallApp";
 
 type Tint = "green" | "gold" | "red" | "blue" | "purple" | "orange" | "teal" | "pink";
 // Bank-app look: one calm light-blue circle for every service; red only for emergencies.
@@ -295,6 +296,8 @@ export default function HomePage() {
       <section className="relative z-10 -mt-10 rounded-2xl bg-white p-4 shadow-float">
         <SummaryCard />
       </section>
+
+      <InstallBanner />
 
       {birthdays.length > 0 && (
         <section className="mt-3 flex items-center gap-3 rounded-2xl bg-gold-light p-3 text-yellow-900">

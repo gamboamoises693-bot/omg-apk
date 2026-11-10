@@ -1,8 +1,12 @@
 /* Barangay Malineng service worker.
- * Only used to show admin notifications (Android Chrome requires a service worker for that).
- * It does NOT cache pages, so the site is always fresh after each deploy. */
+ * 1. Lets the phone offer "Install app" (browsers require a service worker with a fetch handler).
+ * 2. Shows notifications (Android Chrome requires a service worker for that).
+ * It does NOT cache anything: the fetch handler does nothing, so every page is always fresh after a deploy. */
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+
+// Required for installability. No respondWith(): the browser handles every request normally.
+self.addEventListener("fetch", () => {});
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

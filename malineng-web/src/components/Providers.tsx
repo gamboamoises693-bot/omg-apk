@@ -9,6 +9,7 @@ import { ListingHousekeeping } from "./admin/ListingHousekeeping";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { PresenceBeat } from "@/lib/presence";
 import { PabatidWatcher } from "./PabatidBell";
+import { RegisterServiceWorker } from "./InstallApp";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -21,6 +22,7 @@ export function Providers({ children }: { children: ReactNode }) {
               Hindi pa naka-set ang Firebase config. I-edit ang src/config/firebase.config.ts
             </div>
           )}
+          <RegisterServiceWorker />
           <PresenceBeat />
           <PabatidWatcher />
           <AdminAlertWatcher />
