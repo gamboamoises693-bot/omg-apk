@@ -1,6 +1,6 @@
 import type { Timestamp } from "firebase/firestore";
 
-export type VideoKind = "youtube" | "facebook" | "file";
+export type VideoKind = "youtube" | "facebook" | "file" | "upload";
 
 export interface Video {
   id: string;
@@ -13,6 +13,11 @@ export interface Video {
   /** Lower = earlier. New videos get a negative timestamp so they start first. */
   order: number;
   views: number;
+  /** Uploaded videos only: number of chunk documents, mime type, size in bytes and a JPEG thumbnail. */
+  chunks?: number;
+  mime?: string;
+  size?: number;
+  thumb?: string;
   createdAt?: Timestamp;
 }
 
@@ -54,6 +59,7 @@ export function youtubeThumb(id: string): string {
 }
 
 export function embedUrl(v: Pick<Video, "kind" | "videoId" | "url">): string {
+  if (v.kind === "upload") return "";
   if (v.kind === "youtube") return `https://www.youtube-nocookie.com/embed/${v.videoId}?autoplay=1&rel=0&playsinline=1`;
   if (v.kind === "facebook") return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(v.url)}&show_text=false&autoplay=true`;
   return v.url;
