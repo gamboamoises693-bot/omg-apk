@@ -13,6 +13,8 @@ export interface Video {
   /** Lower = earlier. New videos get a negative timestamp so they start first. */
   order: number;
   views: number;
+  /** Hidden videos are not shown on Home (only the Super Admin sees them in Admin). */
+  hidden?: boolean;
   /** Uploaded videos only: number of chunk documents, mime type, size in bytes and a JPEG thumbnail. */
   chunks?: number;
   mime?: string;
@@ -80,5 +82,31 @@ export function markCounted(id: string): void {
     localStorage.setItem(SEEN_KEY, JSON.stringify([...seen.slice(-200), id]));
   } catch {
     // Private mode: the view simply may count again next time.
+  }
+}
+
+/* ---- Resume where the viewer stopped (per device) ---- */
+const POS_KEY = "malineng-video-pos";
+type Positions = Record<string, number>;
+function readPositions(): Positions {
+  try {
+    return JSON.parse(localStorage.getItem(POS_KEY) ?? "{}") as Positions;
+  } catch {
+    return {};
+  }
+}
+export function getSavedPosition(id: string): number {
+  return readPositions()[id] ?? 0;
+}
+/** Pass 0 to forget (video finished). Keeps only the 50 most recent videos. */
+export function savePosition(id: string, seconds: number): void {
+  try {
+    const all = readPositions();
+    delete all[id];
+    if (seconds > 0) all[id] = Math.floor(seconds);
+    const entries = Object.entries(all).slice(-50);
+    localStorage.setItem(POS_KEY, JSON.stringify(Object.fromEntries(entries)));
+  } catch {
+    // Storage blocked: playback just starts from the beginning next time.
   }
 }

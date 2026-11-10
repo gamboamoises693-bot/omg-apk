@@ -795,38 +795,36 @@ service cloud.firestore {
     // ---------- Home videos (links only; no file storage) ----------
     match /videos/{videoId} {
       allow read: if true;
-      // Links: any admin. Uploaded files (kept as chunks, see below): Super Admin only.
-      allow create: if (isAdmin()
-          && incoming().keys().hasOnly(['title', 'url', 'kind', 'videoId', 'order', 'views', 'createdAt'])
+      // Everything about videos (links, uploads, hide, delete) belongs to the Super Admin.
+      allow create: if isSuperAdmin()
+        && incoming().keys().hasOnly(['title', 'url', 'kind', 'videoId', 'order', 'views', 'hidden', 'chunks', 'mime', 'size', 'thumb', 'createdAt'])
+        && isNonEmptyString(incoming().title, 100)
+        && incoming().order is number
+        && incoming().views == 0
+        && incoming().get('hidden', false) is bool
+        && incoming().createdAt == request.time
+        && (
+          (incoming().kind in ['youtube', 'facebook', 'file']
+            && isNonEmptyString(incoming().url, 500)
+            && incoming().videoId is string && incoming().videoId.size() <= 20)
+          || (incoming().kind == 'upload'
+            && incoming().url == '' && incoming().videoId == ''
+            && incoming().chunks is int && incoming().chunks >= 1 && incoming().chunks <= 30
+            && isNonEmptyString(incoming().mime, 60)
+            && incoming().size is int && incoming().size > 0 && incoming().size <= 14000000
+            && incoming().thumb is string && incoming().thumb.size() <= 60000)
+        );
+      allow update: if (isSuperAdmin() && changedOnly(['title', 'order', 'hidden'])
           && isNonEmptyString(incoming().title, 100)
-          && isNonEmptyString(incoming().url, 500)
-          && incoming().kind in ['youtube', 'facebook', 'file']
-          && incoming().videoId is string && incoming().videoId.size() <= 20
-          && incoming().order is number
-          && incoming().views == 0
-          && incoming().createdAt == request.time)
-        || (isSuperAdmin()
-          && incoming().keys().hasOnly(['title', 'url', 'kind', 'videoId', 'order', 'views', 'chunks', 'mime', 'size', 'thumb', 'createdAt'])
-          && isNonEmptyString(incoming().title, 100)
-          && incoming().kind == 'upload'
-          && incoming().url == '' && incoming().videoId == ''
-          && incoming().order is number
-          && incoming().views == 0
-          && incoming().chunks is int && incoming().chunks >= 1 && incoming().chunks <= 30
-          && isNonEmptyString(incoming().mime, 60)
-          && incoming().size is int && incoming().size > 0 && incoming().size <= 14000000
-          && incoming().thumb is string && incoming().thumb.size() <= 60000
-          && incoming().createdAt == request.time);
-      allow update: if (isAdmin() && changedOnly(['title', 'order']) && isNonEmptyString(incoming().title, 100))
-        || (isAdmin() && existing().kind != 'upload' && changedOnly(['title', 'url', 'kind', 'videoId', 'order'])
+          && incoming().get('hidden', false) is bool)
+        || (isSuperAdmin() && existing().kind != 'upload' && changedOnly(['title', 'url', 'kind', 'videoId', 'order'])
           && isNonEmptyString(incoming().title, 100)
           && isNonEmptyString(incoming().url, 500)
           && incoming().kind in ['youtube', 'facebook', 'file']
           && incoming().videoId is string && incoming().videoId.size() <= 20)
         // Anyone watching adds exactly one view.
         || (changedOnly(['views']) && incoming().views == existing().views + 1);
-      // An uploaded video has chunk documents, so only the Super Admin (who uploads them) removes it.
-      allow delete: if isAdmin() && (existing().kind != 'upload' || isSuperAdmin());
+      allow delete: if isSuperAdmin();
 
       // Pieces of an uploaded video (about 700 KB each).
       match /chunks/{chunkId} {

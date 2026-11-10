@@ -111,7 +111,6 @@ const GROUPS: Group[] = [
       { key: "mapa", label: "Mapa", icon: MapPinned, Component: AdminMapa },
       { key: "events", label: "Events", icon: CalendarDays, Component: AdminEvents },
       { key: "polls", label: "Botohan", icon: Vote, Component: AdminPolls },
-      { key: "videos", label: "Videos", icon: Clapperboard, Component: AdminVideos },
       { key: "presinto", label: "Presinto", icon: ListChecks, Component: AdminPresinto, borrowOnly: true },
       { key: "purok", label: "Purok Points", icon: Trophy, Component: AdminPurok },
       { key: "report", label: "Report", icon: FileBarChart, Component: AdminReport },
@@ -123,6 +122,7 @@ const GROUPS: Group[] = [
     superOnly: true,
     sections: [
       { key: "users", label: "Users at Roles", icon: Crown, Component: AdminUsers },
+      { key: "videos", label: "Videos", icon: Clapperboard, Component: AdminVideos },
       { key: "webaccess", label: "Web Access", icon: Globe, Component: AdminWebAccess },
       { key: "doble", label: "Posibleng Doble", icon: CopyCheck, Component: AdminDuplicates },
       { key: "activity", label: "Activity Log", icon: ScrollText, Component: AdminActivity },
