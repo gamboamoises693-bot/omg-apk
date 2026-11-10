@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: "Barangay Malineng | Cuyapo, Nueva Ecija",
   description: "Opisyal na community website ng Barangay Malineng: serbisyo, tindahan, trabaho, ayuda checker at iba pa.",
   manifest: "/manifest.json",
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: { icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }, { url: "/icon.svg", type: "image/svg+xml" }], apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
