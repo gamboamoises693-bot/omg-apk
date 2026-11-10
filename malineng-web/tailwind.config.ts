@@ -5,19 +5,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Bank-app style blue theme.
+        // Executive theme: navy and gold on a cool light ground.
         brand: {
           DEFAULT: "#1F5FAE",
-          dark: "#174C8E",
-          deep: "#0F3A70",
-          light: "#E1EDFB",
+          dark: "#123F7A",
+          deep: "#0B2B57",
+          light: "#E8F0FB",
         },
         gold: {
-          DEFAULT: "#F2B705",
-          dark: "#C99600",
-          light: "#FFF6D6",
+          DEFAULT: "#D4AF37",
+          dark: "#9A7B12",
+          light: "#F7EBC3",
         },
-        surface: "#F5F8FC",
+        line: "#E3E8F0",
+        surface: "#F4F6FA",
       },
       // Everything is rem-based; the root font size (14/16/18px) is set by the "Aa" text-size setting.
       keyframes: {
@@ -29,7 +30,7 @@ const config: Config = {
         "like-pop": "like-pop 0.3s ease-out",
       },
       boxShadow: {
-        card: "0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06)",
+        card: "0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px -8px rgba(15, 23, 42, 0.10)",
         float: "0 12px 28px -14px rgba(15, 58, 112, 0.45)",
       },
     },
