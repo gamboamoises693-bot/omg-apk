@@ -79,3 +79,7 @@ export const PROJECT_STATUS_LABEL = {
 } as const;
 
 export const HOUSEHOLD_RELATIONS = ["Asawa", "Anak", "Magulang", "Kapatid", "Apo", "Lolo/Lola", "Kamag-anak", "Iba pa"] as const;
+
+/** Shown in the footer of Home and Login. Put the Facebook profile link in DEVELOPER_URL (https://...). */
+export const DEVELOPER_NAME = "Moises Gamboa";
+export const DEVELOPER_URL = "";
