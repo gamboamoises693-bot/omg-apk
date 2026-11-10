@@ -237,6 +237,8 @@ service cloud.firestore {
         && incoming().total is int && incoming().total >= 0 && incoming().total <= 100000
         && incoming().maxPerBorrow is int && incoming().maxPerBorrow >= 1
         && incoming().fee is number && incoming().fee >= 0
+        // Units that came back broken: out of use, but still part of the total.
+        && incoming().get('damaged', 0) is int && incoming().get('damaged', 0) >= 0 && incoming().get('damaged', 0) <= incoming().total
         && incoming().photo is string && incoming().photo.size() < 150000;
       allow delete: if isBorrowAdmin();
     }

@@ -1,4 +1,4 @@
-import { Timestamp, doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { Timestamp, doc, increment, serverTimestamp, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 
 /* ---------------- Types ---------------- */
@@ -14,6 +14,8 @@ export interface BorrowItem {
   fee: number;
   note: string;
   hidden: boolean;
+  /** Units that came back broken and are out of use until repaired (they stay inside `total`). */
+  damaged?: number;
   createdAt?: Timestamp;
 }
 
@@ -22,6 +24,17 @@ export interface BorrowLine {
   name: string;
   qty: number;
 }
+
+/** What came back for one line of a request. good + damaged + lost = the quantity borrowed. */
+export interface ReturnLine {
+  itemId: string;
+  name: string;
+  good: number;
+  damaged: number;
+  lost: number;
+}
+
+export type FeeStatus = "unpaid" | "paid" | "waived";
 
 export type BorrowStatus = "pending" | "approved" | "borrowed" | "returned" | "rejected" | "cancelled";
 
@@ -41,6 +54,11 @@ export interface BorrowRequest {
   rejectReason?: string;
   decidedByName?: string;
   returnNote?: string;
+  /** Set when the items were returned: how many came back fine, damaged or lost. */
+  returnReport?: ReturnLine[];
+  /** Charge for damaged or lost items (₱), and whether it was paid. */
+  damageFee?: number;
+  feeStatus?: FeeStatus;
   createdAt?: Timestamp;
   borrowedAt?: Timestamp;
   returnedAt?: Timestamp;
@@ -103,13 +121,32 @@ export function availableQty(item: BorrowItem, bookings: BorrowBooking[], start:
       .reduce((sum, b) => sum + (b.items.find((i) => i.itemId === item.id)?.qty ?? 0), 0);
     peak = Math.max(peak, used);
   }
-  return Math.max(0, item.total - peak);
+  // Broken units are out of use until the Barangay repairs or discards them.
+  return Math.max(0, item.total - (item.damaged ?? 0) - peak);
 }
 
 /** When the next unit of a fully-booked item comes back (earliest end among bookings holding it now). */
 export function nextReturn(item: BorrowItem, bookings: BorrowBooking[], now = Date.now()): number | null {
   const ends = bookings.filter((b) => b.itemIds.includes(item.id) && overlaps(b, now, now + 1, now)).map((b) => ms(b.end));
   return ends.length ? Math.min(...ends) : null;
+}
+
+/** Reservations that start later (approved, not picked up yet): shown on the card so a booked item is not a surprise. */
+export function upcomingReservations(item: BorrowItem, bookings: BorrowBooking[], now = Date.now()): { start: number; end: number; qty: number }[] {
+  return bookings
+    .filter((b) => b.itemIds.includes(item.id) && b.status === "approved" && ms(b.start) > now)
+    .map((b) => ({ start: ms(b.start), end: ms(b.end), qty: b.items.find((i) => i.itemId === item.id)?.qty ?? 0 }))
+    .sort((a, b) => a.start - b.start);
+}
+
+export function reportSummary(report?: ReturnLine[]): string {
+  if (!report) return "";
+  const parts: string[] = [];
+  for (const l of report) {
+    if (l.damaged > 0) parts.push(`${l.damaged} ${l.name} na may sira`);
+    if (l.lost > 0) parts.push(`${l.lost} ${l.name} na nawala`);
+  }
+  return parts.join(", ");
 }
 
 export function isLate(r: Pick<BorrowRequest, "status" | "end">, now = Date.now()): boolean {
@@ -165,10 +202,42 @@ export async function markBorrowed(r: BorrowRequest): Promise<void> {
   await batch.commit();
 }
 
-export async function markReturned(r: BorrowRequest, returnNote: string, actor: Actor): Promise<void> {
+/**
+ * Return a request with what really came back. Damaged units stay in the item's stock but are marked out of use
+ * (`damaged`), lost units leave the stock, and a charge can be recorded for the borrower.
+ */
+export async function markReturned(r: BorrowRequest, report: ReturnLine[], returnNote: string, damageFee: number, actor: Actor): Promise<void> {
   const batch = writeBatch(db);
-  batch.update(doc(db, "borrowRequests", r.id), { status: "returned", returnedAt: serverTimestamp(), returnNote: returnNote.slice(0, 300), returnedToName: actor.name });
+  const fee = Math.max(0, Math.round(damageFee));
+  batch.update(doc(db, "borrowRequests", r.id), {
+    status: "returned",
+    returnedAt: serverTimestamp(),
+    returnNote: returnNote.slice(0, 300),
+    returnedToName: actor.name,
+    returnReport: report,
+    damageFee: fee,
+    feeStatus: fee > 0 ? "unpaid" : "waived",
+  });
   batch.delete(doc(db, "borrowBookings", r.id));
+  for (const l of report) {
+    if (l.damaged > 0 || l.lost > 0) {
+      batch.update(doc(db, "borrowItems", l.itemId), { total: increment(-l.lost), damaged: increment(l.damaged) });
+    }
+  }
+  await batch.commit();
+}
+
+/** A damaged unit was repaired (back in use) or discarded (leaves the stock). */
+export async function settleDamaged(item: BorrowItem, qty: number, action: "repair" | "discard"): Promise<void> {
+  const n = Math.min(Math.max(1, Math.floor(qty)), item.damaged ?? 0);
+  const batch = writeBatch(db);
+  batch.update(doc(db, "borrowItems", item.id), action === "repair" ? { damaged: increment(-n) } : { damaged: increment(-n), total: increment(-n) });
+  await batch.commit();
+}
+
+export async function setFeeStatus(r: BorrowRequest, status: FeeStatus): Promise<void> {
+  const batch = writeBatch(db);
+  batch.update(doc(db, "borrowRequests", r.id), { feeStatus: status });
   await batch.commit();
 }
 

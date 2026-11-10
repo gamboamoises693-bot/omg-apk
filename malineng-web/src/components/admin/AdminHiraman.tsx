@@ -22,9 +22,13 @@ import {
   markReturned,
   ms,
   rejectRequest,
+  reportSummary,
+  setFeeStatus,
+  settleDamaged,
   type BorrowBooking,
   type BorrowItem,
   type BorrowRequest,
+  type ReturnLine,
 } from "@/lib/hiraman";
 import { Badge, Button, EmptyState, FilterTabs, Input, Modal, Select, Spinner } from "@/components/ui";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
@@ -47,6 +51,62 @@ function useNow(): number {
   return now;
 }
 
+/* ---------------- Return dialog ---------------- */
+
+/** Count what came back: fine, damaged or lost, per item. A charge can be recorded for damage or loss. */
+function ReturnDialog({ r, onClose, onSave }: { r: BorrowRequest; onClose: () => void; onSave: (report: ReturnLine[], note: string, fee: number) => Promise<void> }) {
+  const [rows, setRows] = useState(() => r.items.map((l) => ({ itemId: l.itemId, name: l.name, qty: l.qty, damaged: "0", lost: "0" })));
+  const [note, setNote] = useState("");
+  const [fee, setFee] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const n = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
+  const bad = rows.some((x) => n(x.damaged) + n(x.lost) > x.qty);
+  const anyProblem = rows.some((x) => n(x.damaged) + n(x.lost) > 0);
+
+  const save = async () => {
+    if (bad) return setError("Hindi pwedeng lampas sa hiniram ang sira at nawala.");
+    setBusy(true);
+    setError("");
+    try {
+      const report: ReturnLine[] = rows.map((x) => ({ itemId: x.itemId, name: x.name, damaged: n(x.damaged), lost: n(x.lost), good: x.qty - n(x.damaged) - n(x.lost) }));
+      await onSave(report, note, anyProblem ? Number(fee) || 0 : 0);
+    } catch (err) {
+      setError(friendlyError(err));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-gray-600">Bilangin ang ibinalik ni <b>{r.userName}</b>. Iwanang 0 kung walang sira o nawala.</p>
+      {rows.map((x, i) => (
+        <div key={x.itemId} className="space-y-1.5 rounded-xl border border-gray-200 p-3">
+          <p className="font-bold">{x.name} <span className="font-normal text-gray-500">· hiniram: {x.qty}</span></p>
+          <div className="grid grid-cols-2 gap-2">
+            <Input label="May sira" type="number" inputMode="numeric" min={0} max={x.qty} value={x.damaged} onChange={(e) => setRows((p) => p.map((y, k) => (k === i ? { ...y, damaged: e.target.value } : y)))} />
+            <Input label="Nawala" type="number" inputMode="numeric" min={0} max={x.qty} value={x.lost} onChange={(e) => setRows((p) => p.map((y, k) => (k === i ? { ...y, lost: e.target.value } : y)))} />
+          </div>
+          <p className="text-xs font-semibold text-emerald-700">Maayos: {Math.max(0, x.qty - n(x.damaged) - n(x.lost))}</p>
+        </div>
+      ))}
+      {anyProblem && (
+        <>
+          <Input label="Singil sa nakasira o nawala (₱)" type="number" inputMode="decimal" min={0} value={fee} onChange={(e) => setFee(e.target.value)} hint="Iwanang blangko kung walang singil. Makikita ito ng humiram." />
+          <p className="rounded-xl bg-gold-light p-2.5 text-xs text-yellow-900">Ang may sira ay <b>hindi na mabibilang na available</b> hanggang hindi naaayos (Gamit tab). Ang nawala ay aalisin sa bilang.</p>
+        </>
+      )}
+      <Input label="Tala (optional)" placeholder="hal. Nabali ang paa ng 2 upuan" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} />
+      {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" onClick={onClose}>Bumalik</Button>
+        <Button loading={busy} onClick={save}>I-save ang pagbabalik</Button>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- Request card ---------------- */
 
 function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; items: BorrowItem[]; bookings: BorrowBooking[]; now: number; verified: boolean }) {
@@ -54,6 +114,7 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [returning, setReturning] = useState(false);
   const [reason, setReason] = useState<string>(BORROW_REJECT_REASONS[0]);
   const actor = user && profile ? { uid: user.uid, name: profile.fullName } : null;
   const late = isLate(r, now);
@@ -117,6 +178,22 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
       </p>
       {r.status === "rejected" && r.rejectReason && <p className="text-xs text-gray-500">Dahilan: {r.rejectReason}</p>}
       {r.status === "returned" && <p className="text-xs text-gray-500">Naibalik {timeAgo(r.returnedAt)}{r.returnNote ? ` · ${r.returnNote}` : ""}</p>}
+      {r.status === "returned" && reportSummary(r.returnReport) && (
+        <div className="space-y-1.5 rounded-lg bg-red-50 p-2 text-xs text-red-800">
+          <p className="font-semibold">May problema: {reportSummary(r.returnReport)}</p>
+          {(r.damageFee ?? 0) > 0 && (
+            <div className="flex items-center justify-between gap-2">
+              <span>Singil: <b>₱{(r.damageFee ?? 0).toLocaleString("en-PH")}</b> · {r.feeStatus === "paid" ? "Bayad na" : r.feeStatus === "waived" ? "Pinatawad" : "Hindi pa bayad"}</span>
+              {r.feeStatus === "unpaid" && (
+                <span className="flex gap-1.5">
+                  <button className="rounded-lg bg-white px-2 py-1 font-bold text-emerald-800" onClick={() => run(() => setFeeStatus(r, "paid"), "Naitala: bayad na.", `Nabayaran ang singil ni ${r.userName}`)}>Bayad na</button>
+                  <button className="rounded-lg bg-white px-2 py-1 font-bold text-gray-700" onClick={() => run(() => setFeeStatus(r, "waived"), "Pinatawad ang singil.", `Pinatawad ang singil ni ${r.userName}`)}>Patawarin</button>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {shortages.length > 0 && <p className="rounded-lg bg-red-50 p-2 text-xs font-semibold text-red-700">{shortages.join(" · ")}</p>}
 
@@ -150,14 +227,7 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
           {r.status === "approved" ? (
             <Button loading={busy} onClick={() => run(() => markBorrowed(r), "Naitala: nakuha na ang gamit.", `Nakuha na ang hiram: ${what}`)}>Nakuha na</Button>
           ) : (
-            <Button
-              loading={busy}
-              onClick={() => {
-                const note = prompt("Naibalik na? Ilagay kung may sira o kulang (o iwanang blangko):", "") ;
-                if (note === null) return;
-                run(() => markReturned(r, note, actor!), "Naibalik na. Available ulit ang gamit.", `Naibalik ang hiram: ${what}${note ? ` (${note})` : ""}`);
-              }}
-            >
+            <Button loading={busy} onClick={() => setReturning(true)}>
               <CheckCircle2 className="h-4 w-4" /> Naibalik na
             </Button>
           )}
@@ -171,6 +241,21 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
           Kanselahin (hindi kinuha)
         </button>
       )}
+      <Modal open={returning} onClose={() => setReturning(false)} title="Pagbabalik ng gamit">
+        {returning && (
+          <ReturnDialog
+            r={r}
+            onClose={() => setReturning(false)}
+            onSave={async (report, note, fee) => {
+              await markReturned(r, report, note, fee, actor!);
+              const problem = reportSummary(report);
+              logActivity("Hiraman", `Naibalik ang hiram: ${what}${problem ? `. ${problem}` : ""}${fee ? ` (singil ₱${fee})` : ""}`, r.id);
+              toast(problem ? "Naibalik na. Na-update ang bilang ng gamit." : "Naibalik na. Available ulit ang gamit.");
+              setReturning(false);
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
@@ -260,6 +345,16 @@ function ItemsTab({ items, bookings, now }: { items: BorrowItem[]; bookings: Bor
   const [editing, setEditing] = useState<BorrowItem | null>(null);
   const [adding, setAdding] = useState(false);
 
+  const run = async (fn: () => Promise<void>, ok: string, log: string, id: string) => {
+    try {
+      await fn();
+      logActivity("Hiraman", log, id);
+      toast(ok);
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    }
+  };
+
   const toggleHidden = async (i: BorrowItem) => {
     try {
       await updateDoc(doc(db, "borrowItems", i.id), { hidden: !i.hidden });
@@ -305,6 +400,7 @@ function ItemsTab({ items, bookings, now }: { items: BorrowItem[]; bookings: Bor
                   <div className="min-w-0 flex-1">
                     <p className={`truncate text-sm font-bold ${i.hidden ? "text-gray-400 line-through" : ""}`}>{i.name}</p>
                     <p className="truncate text-xs text-gray-500">{free}/{i.total} available ngayon · {feeLabel(i.fee)}</p>
+                    {(i.damaged ?? 0) > 0 && <p className="text-xs font-bold text-red-700">May sira: {i.damaged}</p>}
                   </div>
                   <button onClick={() => toggleHidden(i)} className="rounded-lg p-2 text-gray-500 active:bg-gray-100" aria-label={i.hidden ? `Ipakita ang ${i.name}` : `Itago ang ${i.name}`}>
                     <EyeOff className={`h-4 w-4 ${i.hidden ? "text-red-600" : ""}`} />
@@ -313,6 +409,22 @@ function ItemsTab({ items, bookings, now }: { items: BorrowItem[]; bookings: Bor
                     <Pencil className="h-4 w-4" />
                   </button>
                 </div>
+                {(i.damaged ?? 0) > 0 && (
+                  <div className="mt-1.5 flex gap-2 pl-14">
+                    <button
+                      className="rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-800 active:bg-emerald-100"
+                      onClick={() => run(() => settleDamaged(i, 1, "repair"), `Naayos ang 1 ${i.name}.`, `Naayos ang 1 ${i.name}`, i.id)}
+                    >
+                      1 ang naayos na
+                    </button>
+                    <button
+                      className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-700 active:bg-red-100"
+                      onClick={() => confirm(`Itapon ang 1 sirang ${i.name}? Mababawasan ang kabuuang bilang.`) && run(() => settleDamaged(i, 1, "discard"), `Tinanggal ang 1 ${i.name}.`, `Itinapon ang 1 sirang ${i.name}`, i.id)}
+                    >
+                      Itapon ang 1
+                    </button>
+                  </div>
+                )}
                 {sched.length > 0 && (
                   <ul className="mt-1.5 space-y-0.5 pl-14 text-xs text-gray-600">
                     {sched.slice(0, 4).map((b) => (

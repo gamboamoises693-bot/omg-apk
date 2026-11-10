@@ -17,6 +17,8 @@ import {
   isLate,
   linesText,
   nextReturn,
+  reportSummary,
+  upcomingReservations,
   type BorrowBooking,
   type BorrowItem,
   type BorrowRequest,
@@ -47,7 +49,11 @@ function MyRequests() {
   const { data } = useCollection<BorrowRequest>(q);
 
   const active = sortNewest(data).filter(
-    (r) => ["pending", "approved", "borrowed"].includes(r.status) || (r.status === "rejected" && now - (r.createdAt?.toMillis() ?? 0) < 7 * 86_400_000),
+    (r) =>
+      ["pending", "approved", "borrowed"].includes(r.status) ||
+      (r.status === "rejected" && now - (r.createdAt?.toMillis() ?? 0) < 7 * 86_400_000) ||
+      // A returned request stays visible while a charge for damage is unpaid.
+      (r.status === "returned" && (r.damageFee ?? 0) > 0 && r.feeStatus === "unpaid"),
   );
   if (active.length === 0) return null;
 
@@ -74,14 +80,20 @@ function MyRequests() {
                 <p className="font-extrabold">{linesText(r.items)}</p>
               </div>
               <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[0.7rem] font-extrabold ${late ? "bg-red-500 text-white" : r.status === "rejected" ? "bg-white/20" : "bg-gold text-brand-deep"}`}>
-                {late ? "LATE" : r.status === "approved" ? "Aprubado" : r.status === "borrowed" ? "Nakahiram" : r.status === "pending" ? "Naghihintay" : "Hindi aprubado"}
+                {late ? "LATE" : r.status === "approved" ? "Aprubado" : r.status === "borrowed" ? "Nakahiram" : r.status === "pending" ? "Naghihintay" : r.status === "returned" ? "May singil" : "Hindi aprubado"}
               </span>
             </div>
             <p className="mt-1 text-xs text-white/85">
               {formatWhen(r.start)} → {formatWhen(r.end)}
             </p>
             <p className={`mt-0.5 text-xs font-semibold ${late ? "text-red-200" : "text-gold"}`}>
-              {late ? "Lampas na sa oras. Ibalik agad sa Barangay Hall." : r.status === "rejected" ? `Dahilan: ${r.rejectReason ?? "—"}` : BORROW_STATUS_LABEL[r.status]}
+              {late
+                ? "Lampas na sa oras. Ibalik agad sa Barangay Hall."
+                : r.status === "rejected"
+                  ? `Dahilan: ${r.rejectReason ?? "—"}`
+                  : r.status === "returned"
+                    ? `Naibalik na, pero ${reportSummary(r.returnReport)}. Singil: ₱${(r.damageFee ?? 0).toLocaleString("en-PH")}. Magbayad sa Barangay Hall.`
+                    : BORROW_STATUS_LABEL[r.status]}
             </p>
             {r.status === "pending" && (
               <button onClick={() => cancel(r)} className="mt-2 text-xs font-semibold text-white/85 underline">
@@ -107,7 +119,7 @@ export default function HiramanPage() {
       items.data
         .filter((i) => !i.hidden)
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map((item) => ({ item, free: availableQty(item, bookings.data, now, now + 1, now), back: nextReturn(item, bookings.data, now) })),
+        .map((item) => ({ item, free: availableQty(item, bookings.data, now, now + 1, now), back: nextReturn(item, bookings.data, now), reserved: upcomingReservations(item, bookings.data, now) })),
     [items.data, bookings.data, now],
   );
   const list = rows.filter((r) => (filter === "available" ? r.free > 0 : filter === "nakahiram" ? r.free < r.item.total : true));
@@ -139,7 +151,7 @@ export default function HiramanPage() {
         <EmptyState icon={<Package />} title={rows.length === 0 ? "Wala pang nakalistang gamit" : "Walang tugma"} />
       ) : (
         <div className="grid grid-cols-2 gap-2.5">
-          {list.map(({ item, free, back }) => (
+          {list.map(({ item, free, back, reserved }) => (
             <div key={item.id} className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-card">
               {item.photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -152,12 +164,18 @@ export default function HiramanPage() {
               <div className="flex flex-1 flex-col gap-1 p-2.5">
                 <p className="text-sm font-bold leading-tight">{item.name}</p>
                 {free > 0 ? (
-                  <p className="text-xs font-bold text-emerald-700">{item.total > 1 ? `${free} sa ${item.total} available` : "Available"}</p>
+                  <p className="text-xs font-bold text-emerald-700">{item.total > 1 ? `${free} sa ${item.total} available ngayon` : "Available ngayon"}</p>
                 ) : (
                   <>
                     <p className="text-xs font-bold text-amber-700">Nakahiram lahat</p>
                     {back && <p className="text-[0.7rem] text-gray-500">Babalik: {formatWhen(back)}</p>}
                   </>
+                )}
+                {reserved.length > 0 && (
+                  <p className="text-[0.7rem] font-semibold text-brand-dark">
+                    May reserba: {reserved[0].qty} sa {formatWhen(reserved[0].start)}
+                    {reserved.length > 1 ? ` (+${reserved.length - 1} pa)` : ""}
+                  </p>
                 )}
                 <p className="text-[0.7rem] text-gray-500">{feeLabel(item.fee)}</p>
                 <Link
