@@ -333,17 +333,22 @@ service cloud.firestore {
         && incoming().authorId == request.auth.uid
         && incoming().status == 'pending'
         && incoming().likes.size() == 0
+        && incoming().get('reactions', {}).size() == 0
         && isNonEmptyString(incoming().content, 3000)
         && optionalPhoto();
 
-      // Like toggle: a resident may only add/remove THEIR OWN uid in "likes".
+      // Reactions: a resident may only add/remove/change THEIR OWN uid in "likes" (everyone who reacted)
+      // and in "reactions" (uid -> 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'pray').
       allow update: if isAdmin()
         || (signedIn()
           && existing().status == 'approved'
-          && changedOnly(['likes'])
+          && changedOnly(['likes', 'reactions'])
           && incoming().likes.toSet().difference(existing().likes.toSet())
                .union(existing().likes.toSet().difference(incoming().likes.toSet()))
-               .hasOnly([request.auth.uid]));
+               .hasOnly([request.auth.uid])
+          && incoming().get('reactions', {}).diff(existing().get('reactions', {})).affectedKeys().hasOnly([request.auth.uid])
+          && (!(request.auth.uid in incoming().get('reactions', {}))
+              || incoming().reactions[request.auth.uid] in ['like', 'love', 'haha', 'wow', 'sad', 'pray']));
 
       allow delete: if isAdmin() || (signedIn() && existing().authorId == request.auth.uid);
     }

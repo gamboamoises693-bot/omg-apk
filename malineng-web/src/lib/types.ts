@@ -89,7 +89,10 @@ export interface Post {
   content: string;
   photoURL: string;
   status: ModerationStatus;
+  /** Everyone who reacted (kept for older posts). */
   likes: string[];
+  /** uid -> reaction key. A uid in `likes` without an entry here counts as a plain Like. */
+  reactions?: Record<string, string>;
   createdAt?: Timestamp;
 }
 

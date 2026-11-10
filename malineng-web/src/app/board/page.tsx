@@ -11,6 +11,7 @@ import { friendlyError, sortNewest } from "@/lib/format";
 import type { Post } from "@/lib/types";
 import { Button, EmptyState, ErrorText, FilterTabs, Modal, PageHeader, SectionTitle, Spinner, Textarea } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
+import { EmojiBar } from "@/components/PostCard";
 import { ImagePicker } from "@/components/ImagePicker";
 import { LoginGate } from "@/components/LoginGate";
 import { PostCard } from "@/components/PostCard";
@@ -87,6 +88,7 @@ function Composer() {
             </div>
           </div>
           <Textarea label="" placeholder={`Ano ang gusto mong ibahagi, ${first}?`} value={content} onChange={(e) => setContent(e.target.value)} maxLength={3000} autoFocus aria-label="Mensahe ng post" />
+          <EmojiBar onPick={(e) => setContent((t) => (t + e).slice(0, 3000))} />
           <ImagePicker file={file} onChange={setFile} />
           <ErrorText>{error}</ErrorText>
           <Button type="submit" full loading={loading}>
