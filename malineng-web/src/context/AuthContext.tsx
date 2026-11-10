@@ -22,6 +22,8 @@ interface AuthContextValue {
   canBorrowAdmin: boolean;
   /** Officers (Kapitan, Secretary, Super Admin): Pabatid, Survey, Transparency. */
   isOfficer: boolean;
+  /** Liga managers: officers + SK Chairman. */
+  canLiga: boolean;
   isSuperAdmin: boolean;
   /** Can approve ambulance trips: Kapitan or Super Admin. */
   isKapitan: boolean;
@@ -169,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       canBotika: isSuperAdmin || isBhw || (isAdmin && profile?.position === "Kapitan"),
       canBorrowAdmin: isSuperAdmin || (isAdmin && (profile?.position === "Kapitan" || profile?.position === "Secretary")),
       isOfficer: isSuperAdmin || (isAdmin && (profile?.position === "Kapitan" || profile?.position === "Secretary")),
+      canLiga: isSuperAdmin || (isAdmin && ["Kapitan", "Secretary", "SK Chairman"].includes(profile?.position ?? "")),
       isSuperAdmin,
       isKapitan: isSuperAdmin || (isAdmin && profile?.position === "Kapitan"),
       isVerified: isStaff || verifiedFlag,

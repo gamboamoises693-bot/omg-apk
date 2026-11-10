@@ -5,6 +5,7 @@ import Link from "next/link";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import {
   Pill,
+  HeartPulse,
   Cake,
   IdCard,
   FileWarning,
@@ -81,6 +82,8 @@ const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[
   { href: "/pondo", label: "Pondo", icon: Landmark, tint: "blue" },
   { href: "/barangay-id", label: "Barangay ID", icon: IdCard, tint: "blue" },
   { href: "/reklamo", label: "Reklamo", icon: FileWarning, tint: "blue" },
+  { href: "/kalusugan", label: "Kalusugan", icon: HeartPulse, tint: "blue" },
+  { href: "/liga", label: "Liga", icon: Trophy, tint: "blue" },
   { href: "/lost-found", label: "Lost & Found", icon: Search, tint: "pink" },
   { href: "/skills", label: "Skills", icon: Wrench, tint: "orange" },
   { href: "/proyekto", label: "Proyekto", icon: HardHat, tint: "gold" },
