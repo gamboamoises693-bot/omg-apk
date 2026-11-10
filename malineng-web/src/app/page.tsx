@@ -30,6 +30,7 @@ import { AdminShieldLink } from "@/components/AdminShieldLink";
 import { PabatidBell } from "@/components/PabatidBell";
 import { Avatar } from "@/components/Avatar";
 import { LogoButton, LogoMark } from "@/components/BarangayLogo";
+import { roleLabel } from "@/lib/activity";
 import type { PublicStats } from "@/lib/stats";
 import { useOnlineCount } from "@/lib/presence";
 import { OnlineUsers } from "@/components/OnlineUsers";
@@ -139,7 +140,7 @@ function SummaryCard() {
 }
 
 export default function HomePage() {
-  const { profile, isSuperAdmin } = useAuth();
+  const { profile, isSuperAdmin, isVerified } = useAuth();
   const { settings, loading } = useSettings();
   const [hello, setHello] = useState("Magandang araw");
   const [stats, setStats] = useState<PublicStats | null>(null);
@@ -196,47 +197,62 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Greeting header */}
-      <section className="-mx-4 -mt-4 bg-gradient-to-br from-brand to-brand-deep px-4 pb-14 pt-5 text-white">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            {profile ? (
-              <Avatar name={profile.fullName} photo={profile.photoURL} size="h-10 w-10" ring="ring-2 ring-white/40" />
-            ) : (
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gold text-sm font-black text-brand-deep">M</span>
-            )}
-            <div className="leading-tight">
-              <p className="text-xs text-white/75">{hello},</p>
-              <p className="text-base font-bold">{firstName ? `${firstName} 👋` : "Kabarangay 👋"}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <ServicesMenu pinPresinto={electionOn} />
-            <PabatidBell />
-            <AdminShieldLink />
+      {/* Header: barangay identity, greeting, community numbers */}
+      <section className="-mx-4 -mt-4 bg-gradient-to-br from-brand via-brand to-brand-deep px-4 pb-16 pt-4 text-white">
+        <div className="flex items-center gap-2.5">
+          <ServicesMenu pinPresinto={electionOn} />
+          <LogoButton className="flex min-w-0 flex-1 items-center gap-2.5">
+            <LogoMark size="h-9 w-9" textClass="text-sm" />
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-[0.95rem] font-extrabold uppercase tracking-wide">Barangay Malineng</span>
+              <span className="block truncate text-[0.7rem] text-white/70">{BARANGAY_CITY}</span>
+            </span>
+          </LogoButton>
+          <PabatidBell />
+          <AdminShieldLink />
+        </div>
+
+        <div className="mt-5 flex items-center gap-3.5">
+          {profile ? (
+            <Avatar name={profile.fullName} photo={profile.photoURL} size="h-14 w-14" textClass="text-lg" ring="ring-2 ring-gold/80" />
+          ) : (
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gold text-lg font-black text-brand-deep ring-2 ring-white/30">M</span>
+          )}
+          <div className="min-w-0 leading-tight">
+            <p className="text-xs text-white/70">{hello},</p>
+            <p className="truncate text-2xl font-extrabold tracking-tight">{firstName ?? "Kabarangay"}</p>
+            <p className="mt-1 flex items-center gap-1.5 text-[0.7rem] font-semibold text-white/80">
+              {profile ? (
+                <>
+                  <span className="rounded-full bg-white/15 px-2 py-0.5">{isSuperAdmin ? "👑 " : ""}{roleLabel(profile.role, profile.position)}</span>
+                  {isVerified && <span className="rounded-full bg-gold/90 px-2 py-0.5 text-brand-deep">✓ Verified</span>}
+                </>
+              ) : (
+                <span className="rounded-full bg-white/15 px-2 py-0.5">Bisita</span>
+              )}
+            </p>
           </div>
         </div>
-        <LogoButton className="mt-3 flex items-center gap-2 text-xs text-white/80">
-          <LogoMark size="h-6 w-6" textClass="text-[0.65rem]" />
-          <span>Barangay Malineng · {BARANGAY_CITY}</span>
-        </LogoButton>
-        {(online !== null || (stats && stats.members > 0)) && (
-          <div className="mt-2.5 flex flex-wrap gap-1.5 text-xs font-semibold">
+
+        {(online !== null || (stats && (stats.members > 0 || stats.verified > 0 || stats.households > 0))) && (
+          <div className="mt-5 flex divide-x divide-white/15 rounded-2xl bg-white/10 py-2.5 ring-1 ring-white/15">
             {online !== null && (
               <button
                 type="button"
                 disabled={!isSuperAdmin}
                 onClick={() => setShowOnline(true)}
-                className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 enabled:active:bg-white/25"
+                className="flex flex-1 flex-col items-center gap-0.5 px-1 enabled:active:opacity-70"
                 title="Bukas ang website sa nakaraang 5 minuto"
                 aria-label={isSuperAdmin ? `${online} online ngayon. Tingnan kung sino` : `${online} online ngayon`}
               >
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75 motion-reduce:hidden" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                <span className="flex items-center gap-1.5 text-lg font-extrabold leading-none">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75 motion-reduce:hidden" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                  </span>
+                  {online.toLocaleString("en-PH")}
                 </span>
-                {online.toLocaleString("en-PH")} online ngayon
-                {isSuperAdmin && <ChevronRight className="-mr-1 h-3.5 w-3.5" aria-hidden />}
+                <span className="text-[0.65rem] font-medium uppercase tracking-wide text-white/70">Online</span>
               </button>
             )}
             {stats && stats.members > 0 && (
@@ -244,15 +260,25 @@ export default function HomePage() {
                 type="button"
                 disabled={!isSuperAdmin}
                 onClick={() => setShowMembers(true)}
-                className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 enabled:active:bg-white/25"
+                className="flex flex-1 flex-col items-center gap-0.5 px-1 enabled:active:opacity-70"
                 aria-label={isSuperAdmin ? `${stats.members} miyembro. Tingnan ang listahan` : `${stats.members} miyembro`}
               >
-                👥 {stats.members.toLocaleString("en-PH")} miyembro
-                {isSuperAdmin && <ChevronRight className="-mr-1 h-3.5 w-3.5" aria-hidden />}
+                <span className="text-lg font-extrabold leading-none">{stats.members.toLocaleString("en-PH")}</span>
+                <span className="text-[0.65rem] font-medium uppercase tracking-wide text-white/70">Miyembro</span>
               </button>
             )}
-            {stats && stats.verified > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">✓ {stats.verified.toLocaleString("en-PH")} verified</span>}
-            {stats && stats.households > 0 && <span className="rounded-full bg-white/15 px-2.5 py-1">🏠 {stats.households.toLocaleString("en-PH")} household</span>}
+            {stats && stats.verified > 0 && (
+              <div className="flex flex-1 flex-col items-center gap-0.5 px-1">
+                <span className="text-lg font-extrabold leading-none">{stats.verified.toLocaleString("en-PH")}</span>
+                <span className="text-[0.65rem] font-medium uppercase tracking-wide text-white/70">Verified</span>
+              </div>
+            )}
+            {stats && stats.households > 0 && (
+              <div className="flex flex-1 flex-col items-center gap-0.5 px-1">
+                <span className="text-lg font-extrabold leading-none">{stats.households.toLocaleString("en-PH")}</span>
+                <span className="text-[0.65rem] font-medium uppercase tracking-wide text-white/70">Household</span>
+              </div>
+            )}
           </div>
         )}
       </section>
