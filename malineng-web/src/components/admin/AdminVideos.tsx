@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { addDoc, collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { ArrowUpToLine, Clapperboard, Eye, Pencil, Trash2, Upload } from "lucide-react";
+import { ArrowUpToLine, Clapperboard, Eye, EyeOff, Pencil, Trash2, Upload } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { logActivity } from "@/lib/activity";
@@ -128,6 +128,15 @@ export function AdminVideos() {
     }
   }
 
+  async function toggleHidden(v: Video) {
+    try {
+      await updateDoc(doc(db, "videos", v.id), { hidden: !v.hidden });
+      logActivity("Videos", `${v.hidden ? "Ipinakita" : "Itinago"} ang video: ${v.title}`, v.id);
+    } catch (err) {
+      setError(friendlyError(err));
+    }
+  }
+
   async function remove(v: Video) {
     if (!window.confirm(`Burahin ang "${v.title}"?`)) return;
     try {
@@ -142,7 +151,7 @@ export function AdminVideos() {
   const formOpen = editing !== null;
   return (
     <div className="space-y-3">
-      <p className="text-sm text-gray-600">Dito ilagay ang lahat ng video na lalabas sa Home. Walang upload: i-paste lang ang link ({VIDEO_HELP}). Ang pinakauna sa listahan ang unang lalabas.</p>
+      <p className="text-sm text-gray-600">Super Admin lang ang makakapaglagay, makakapagtago at makakapagbura ng video. Ang pinakauna sa listahan ang unang lalabas sa Home. Ang naka-tago (👁️ na may guhit) ay hindi nakikita ng mga residente. Ang link ay {VIDEO_HELP}.</p>
 
       <form onSubmit={formOpen ? (ev) => ev.preventDefault() : submit} className="space-y-3 rounded-2xl bg-white p-4 shadow-card">
         <p className="text-xs font-bold tracking-wide text-gray-600">BAGONG VIDEO</p>
@@ -182,7 +191,7 @@ export function AdminVideos() {
       ) : (
         <div className="space-y-2">
           {videos.map((v, i) => (
-            <Card key={v.id} className="flex items-center gap-3 !p-2.5">
+            <Card key={v.id} className={`flex items-center gap-3 !p-2.5 ${v.hidden ? "opacity-60" : ""}`}>
               <span className="block h-14 w-24 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-brand to-brand-deep">
                 {v.kind === "upload" && v.thumb && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -197,6 +206,7 @@ export function AdminVideos() {
                 <p className="line-clamp-2 text-sm font-bold leading-tight">{v.title}</p>
                 <p className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
                   <span className="rounded bg-gray-100 px-1.5 font-semibold">{KIND_LABEL[v.kind]}</span>
+                  {v.hidden && <span className="rounded bg-amber-100 px-1.5 font-semibold text-amber-800">Nakatago</span>}
                   {v.kind === "upload" && v.size ? <span>{(v.size / 1048576).toFixed(1)} MB</span> : null}
                   <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" aria-hidden /> {(v.views ?? 0).toLocaleString("en-PH")}</span>
                 </p>
@@ -206,6 +216,9 @@ export function AdminVideos() {
                   {i > 0 && (
                     <button type="button" onClick={() => moveFirst(v)} aria-label="Ilagay sa una" className="rounded-lg bg-gray-100 p-2 text-gray-700 active:bg-gray-200"><ArrowUpToLine className="h-4 w-4" /></button>
                   )}
+                  <button type="button" onClick={() => toggleHidden(v)} aria-label={v.hidden ? "Ipakita sa Home" : "Itago sa Home"} className={`rounded-lg p-2 active:bg-gray-200 ${v.hidden ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-700"}`}>
+                    {v.hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                   <button type="button" onClick={() => startEdit(v)} aria-label="I-edit" className="rounded-lg bg-gray-100 p-2 text-gray-700 active:bg-gray-200"><Pencil className="h-4 w-4" /></button>
                   <button type="button" onClick={() => remove(v)} aria-label="Burahin" className="rounded-lg bg-red-50 p-2 text-red-600 active:bg-red-100"><Trash2 className="h-4 w-4" /></button>
                 </div>

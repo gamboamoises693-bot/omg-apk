@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { collection, doc, increment, updateDoc } from "firebase/firestore";
 import { Clapperboard, Eye, Play } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { loadVideoBlob } from "@/lib/videoUpload";
-import { alreadyCounted, embedUrl, markCounted, youtubeThumb, type Video } from "@/lib/videos";
+import { alreadyCounted, embedUrl, getSavedPosition, markCounted, savePosition, youtubeThumb, type Video } from "@/lib/videos";
 
 const videosRef = collection(db, "videos");
 
@@ -39,7 +39,7 @@ export function WatchVideos() {
   const [loadPct, setLoadPct] = useState<number | null>(null);
   const [loadError, setLoadError] = useState("");
 
-  const videos = useMemo(() => [...data].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [data]);
+  const videos = useMemo(() => data.filter((v) => !v.hidden).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [data]);
   const current = videos.find((v) => v.id === currentId) ?? videos[0];
 
   // If the playing video was deleted, go back to the first one.
@@ -49,6 +49,14 @@ export function WatchVideos() {
       setPlaying(false);
     }
   }, [videos, currentId]);
+
+  // Continue where the viewer stopped: skip tiny positions and the last few seconds.
+  const lastSaved = useRef(0);
+  function resume(el: HTMLVideoElement, id: string) {
+    const at = getSavedPosition(id);
+    lastSaved.current = at;
+    if (at > 3 && Number.isFinite(el.duration) && at < el.duration - 3) el.currentTime = at;
+  }
 
   // Free the memory of the previous uploaded video.
   useEffect(() => () => { if (blobUrl) URL.revokeObjectURL(blobUrl); }, [blobUrl]);
@@ -105,16 +113,32 @@ export function WatchVideos() {
                     preload="metadata"
                     className="h-full w-full"
                     onLoadedMetadata={(e) => {
-                      // Browser-recorded files have no length in the header: seek far once so the player learns it.
                       const el = e.currentTarget;
+                      // Browser-recorded files have no length in the header: seek far once so the player learns it.
                       if (current.kind === "upload" && el.duration === Infinity) {
+                        el.dataset.probe = "1";
                         el.currentTime = 1e101;
                         el.ontimeupdate = () => {
                           el.ontimeupdate = null;
                           el.currentTime = 0;
+                          delete el.dataset.probe;
+                          resume(el, current.id);
                         };
+                        return;
+                      }
+                      resume(el, current.id);
+                    }}
+                    onTimeUpdate={(e) => {
+                      // Remember where the viewer is (about every 3 seconds).
+                      const el = e.currentTarget;
+                      if (el.dataset.probe) return;
+                      if (Math.abs(el.currentTime - lastSaved.current) >= 3 && el.currentTime < 1e6) {
+                        lastSaved.current = el.currentTime;
+                        savePosition(current.id, el.currentTime);
                       }
                     }}
+                    onPause={(e) => !e.currentTarget.ended && !e.currentTarget.dataset.probe && savePosition(current.id, e.currentTarget.currentTime)}
+                    onEnded={() => savePosition(current.id, 0)}
                   />
                 ) : (
                   <iframe
