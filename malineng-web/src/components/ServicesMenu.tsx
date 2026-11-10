@@ -21,6 +21,7 @@ import {
   LogIn,
   Megaphone,
   Menu,
+  MessageCircle,
   MapPinned,
   MessagesSquare,
   Package,
@@ -51,6 +52,7 @@ interface Service {
 const BY_HREF: Record<string, Service> = Object.fromEntries(
   (
     [
+      { href: "/chat", label: "Chat", icon: MessageCircle },
       { href: "/presinto", label: "Presinto", icon: ListChecks },
       { href: "/tindahan", label: "Tindahan", icon: Store },
       { href: "/hiring", label: "Hiring", icon: Briefcase },
@@ -86,7 +88,7 @@ const GROUPS: { title: string; hrefs: string[] }[] = [
   { title: "Dokumento at tulong", hrefs: ["/appointment", "/barangay-id", "/ayuda", "/reklamo", "/hiraman"] },
   { title: "Eleksyon at boto", hrefs: ["/presinto", "/botohan", "/survey"] },
   { title: "Negosyo at trabaho", hrefs: ["/tindahan", "/hiring", "/skills"] },
-  { title: "Komunidad", hrefs: ["/pabatid", "/board", "/events", "/register-event", "/liga", "/purok", "/lost-found"] },
+  { title: "Komunidad", hrefs: ["/chat", "/pabatid", "/board", "/events", "/register-event", "/liga", "/purok", "/lost-found"] },
   { title: "Barangay", hrefs: ["/pondo", "/proyekto", "/mapa"] },
 ];
 

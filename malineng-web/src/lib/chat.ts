@@ -1,0 +1,73 @@
+import { Timestamp } from "firebase/firestore";
+
+export interface ChatMessage {
+  id: string;
+  text: string;
+  /** Compressed JPEG data URL, or "". */
+  photo: string;
+  authorId: string;
+  authorName: string;
+  /** "Kapitan", "Secretary", "Super Admin"... or "" for residents. Enforced by firestore.rules. */
+  authorRole: string;
+  createdAt?: Timestamp;
+}
+
+export interface ChatSettings {
+  enabled: boolean;
+  photos: boolean;
+}
+
+export const ROOM_ALL = "all";
+/** Messages older than this are hidden and cleaned up by the officers' Chat Moderation page. */
+export const CHAT_DAYS = 7;
+export const OWN_DELETE_MINUTES = 5;
+export const MAX_TEXT = 500;
+export const MESSAGE_LIMIT = 60;
+
+export function roomTitle(room: string): string {
+  return room === ROOM_ALL ? "Buong Barangay" : room;
+}
+
+export function cutoffTimestamp(): Timestamp {
+  return Timestamp.fromMillis(Date.now() - CHAT_DAYS * 24 * 60 * 60 * 1000);
+}
+
+export const MUTE_OPTIONS = [
+  { label: "1 oras", ms: 60 * 60 * 1000 },
+  { label: "1 araw", ms: 24 * 60 * 60 * 1000 },
+  { label: "7 araw", ms: 7 * 24 * 60 * 60 * 1000 },
+] as const;
+
+export const REPORT_REASONS = ["Bastos na salita", "Spam o patalastas", "Maling impormasyon", "Panliligalig", "Iba pa"] as const;
+
+/* ---- "Bago" marker: when this person last opened a room (kept on the device) ---- */
+const readKey = (room: string) => `malineng-chat-read-${room}`;
+export function getLastRead(room: string): number {
+  try {
+    return Number(localStorage.getItem(readKey(room)) ?? 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+export function setLastRead(room: string, millis: number): void {
+  try {
+    localStorage.setItem(readKey(room), String(millis));
+  } catch {
+    // Storage blocked: the "Bago" dot just shows again.
+  }
+}
+
+export function timeLabel(ts?: Timestamp | null): string {
+  if (!ts) return "";
+  return ts.toDate().toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" });
+}
+
+export function dayLabel(ts?: Timestamp | null): string {
+  if (!ts) return "Ngayon";
+  const d = ts.toDate();
+  const today = new Date();
+  const yesterday = new Date(Date.now() - 86_400_000);
+  if (d.toDateString() === today.toDateString()) return "Ngayon";
+  if (d.toDateString() === yesterday.toDateString()) return "Kahapon";
+  return d.toLocaleDateString("fil-PH", { month: "short", day: "numeric" });
+}
