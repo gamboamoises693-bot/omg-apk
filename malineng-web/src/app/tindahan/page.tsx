@@ -53,10 +53,10 @@ export default function TindahanPage() {
 
   return (
     <div>
-      <div className="-mx-4 -mt-4 mb-3 bg-gradient-to-br from-brand to-brand-deep px-4 pb-4 pt-4 text-white">
+      <div className="relative -mx-4 -mt-4 mb-3 rounded-b-[1.75rem] bg-gradient-to-br from-brand-dark to-brand-deep px-4 pb-6 pt-4 text-white">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-extrabold">Tindahan ng Malineng</h1>
+            <h1 className="text-[1.45rem] font-extrabold tracking-tight">Tindahan ng Malineng</h1>
             <p className="text-[0.85rem] text-white/85">Libre mag-benta. Walang bayad, walang commission.</p>
           </div>
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15">
@@ -70,10 +70,11 @@ export default function TindahanPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Hanapin: adobo, halaman, damit..."
-            className="w-full rounded-xl border-0 bg-white py-3 pl-10 pr-4 outline-none ring-2 ring-transparent focus:ring-brand"
+            className="w-full rounded-2xl border-0 bg-white py-3 pl-10 pr-4 outline-none ring-2 ring-transparent focus:ring-gold"
             aria-label="Hanapin sa Tindahan"
           />
         </div>
+        <div className="pointer-events-none absolute inset-x-6 bottom-0 h-[3px] rounded-full bg-gradient-to-r from-transparent via-gold to-transparent opacity-80" aria-hidden />
       </div>
 
       {/* Categories: same underline tabs as the rest of the site (scrolls sideways, no scrollbar) */}

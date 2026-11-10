@@ -1,5 +1,6 @@
 "use client";
 
+import { AuthHero } from "@/components/AuthHero";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -56,9 +57,8 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="mb-1 text-xl font-extrabold text-gray-900">Mag-login</h1>
-      <p className="mb-4 text-gray-600">Para makapag-post, makapagbenta at makapag-book ng appointment.</p>
-      <Card>
+      <AuthHero title="Mag-login" subtitle="Para makapag-post, makapagbenta at makapag-book ng appointment." />
+      <Card className="relative -mt-10">
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           <Input label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />

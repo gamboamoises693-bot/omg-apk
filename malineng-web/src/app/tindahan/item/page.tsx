@@ -56,7 +56,7 @@ function ListingDetail() {
 
   return (
     <div>
-      <Link href="/tindahan" className="mb-3 inline-flex items-center gap-1 font-semibold text-brand">
+      <Link href="/tindahan" className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-brand-dark shadow-card active:bg-gray-50">
         <ArrowLeft className="h-5 w-5" /> Bumalik sa Tindahan
       </Link>
 
