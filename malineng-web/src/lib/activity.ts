@@ -47,6 +47,7 @@ export const ACTIVITY_TYPES = [
   "Liga",
   "Presinto",
   "Web Access",
+  "Videos",
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 

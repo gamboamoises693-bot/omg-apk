@@ -31,6 +31,7 @@ import {
   Users,
   Vote,
   X,
+  Clapperboard,
   Globe,
   ListChecks,
   type LucideIcon,
@@ -64,6 +65,7 @@ import { AdminBlotter } from "@/components/admin/AdminBlotter";
 import { AdminSektor } from "@/components/admin/AdminSektor";
 import { AdminPresinto } from "@/components/admin/AdminPresinto";
 import { AdminWebAccess } from "@/components/admin/AdminWebAccess";
+import { AdminVideos } from "@/components/admin/AdminVideos";
 
 interface Section {
   key: string;
@@ -109,6 +111,7 @@ const GROUPS: Group[] = [
       { key: "mapa", label: "Mapa", icon: MapPinned, Component: AdminMapa },
       { key: "events", label: "Events", icon: CalendarDays, Component: AdminEvents },
       { key: "polls", label: "Botohan", icon: Vote, Component: AdminPolls },
+      { key: "videos", label: "Videos", icon: Clapperboard, Component: AdminVideos },
       { key: "presinto", label: "Presinto", icon: ListChecks, Component: AdminPresinto, borrowOnly: true },
       { key: "purok", label: "Purok Points", icon: Trophy, Component: AdminPurok },
       { key: "report", label: "Report", icon: FileBarChart, Component: AdminReport },
