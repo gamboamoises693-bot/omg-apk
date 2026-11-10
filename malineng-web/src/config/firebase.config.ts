@@ -28,3 +28,10 @@ export const firebaseConfig = {
  *                   Kapag pumalya ang Storage, babalik pa rin ito sa Firestore mode.
  */
 export const USE_FIREBASE_STORAGE = false;
+
+/**
+ * reCAPTCHA v3 SITE key for Firebase App Check (public, like the API key above).
+ * Leave "" until you have registered the site in Firebase Console > App Check. While it is empty
+ * App Check is simply not started, so nothing breaks. Never put the SECRET key here.
+ */
+export const APP_CHECK_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? "";
