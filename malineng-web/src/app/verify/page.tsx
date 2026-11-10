@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
 import { BadgeCheck, Camera, Clock, RotateCcw, XCircle } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -13,7 +13,7 @@ import { LoginGate } from "@/components/LoginGate";
 import { useToast } from "@/components/Toast";
 
 function SelfieStep() {
-  const { user, profile, verification, isStaff: isAdmin } = useAuth();
+  const { user, profile, verification, isStaff, isSuperAdmin } = useAuth();
   const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [selfie, setSelfie] = useState<string | null>(null);
@@ -26,10 +26,6 @@ function SelfieStep() {
 
   if (!profile) return <Spinner />;
   const status = verification?.status;
-
-  if (isAdmin) {
-    return <Card className="text-center text-sm"><BadgeCheck className="mx-auto mb-1 h-8 w-8 text-blue-600" /><p className="font-bold">Admin ka, kaya verified na ang account mo.</p></Card>;
-  }
 
   if (status === "verified") {
     return (
@@ -84,7 +80,17 @@ function SelfieStep() {
         submittedAt: serverTimestamp(),
       });
       logActivity("Verification", `Nagpadala ng selfie para sa verification (${profile.purok || "walang purok"})`, user.uid);
-      toast("Naipadala ang selfie! Susuriin ito ng Barangay.");
+      if (isSuperAdmin) {
+        // The Super Admin verifies their own account right away (the rules allow only the Super Admin to do this).
+        const batch = writeBatch(db);
+        batch.update(doc(db, "verifications", user.uid), { status: "verified", reason: "", reviewedBy: user.uid, reviewedByName: profile.fullName, reviewedAt: serverTimestamp() });
+        batch.set(doc(db, "verifiedUsers", user.uid), { name: profile.fullName, verifiedAt: serverTimestamp(), verifiedBy: profile.fullName });
+        await batch.commit();
+        logActivity("Verification", "Na-verify ang sariling account (Super Admin)", user.uid);
+        toast("Na-verify na ang account mo! Gumagana na ang QR ng Barangay ID.");
+      } else {
+        toast(isStaff ? "Naipadala ang selfie! Ang Super Admin ang magve-verify nito." : "Naipadala ang selfie! Susuriin ito ng Barangay.");
+      }
       setRetake(false);
       setSelfie(null);
     } catch (err) {
@@ -104,7 +110,11 @@ function SelfieStep() {
       )}
       <div>
         <p className="font-bold">Kumuha ng selfie</p>
-        <p className="text-sm text-gray-600">Para makumpirma ng Barangay na ikaw talaga ang may-ari ng account. Bubukas ang front camera.</p>
+        <p className="text-sm text-gray-600">
+          {isStaff
+            ? "Para sa litrato at QR ng Barangay ID mo. Bubukas ang front camera."
+            : "Para makumpirma ng Barangay na ikaw talaga ang may-ari ng account. Bubukas ang front camera."}
+        </p>
       </div>
 
       <button
