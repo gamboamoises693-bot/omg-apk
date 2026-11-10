@@ -337,6 +337,8 @@ export interface Settings {
   showHeatIndex: boolean;
   /** Center of the Malineng map (set by an admin from the map page). */
   mapCenter?: { lat: number; lng: number; zoom: number };
+  /** Corners of the Barangay Malineng boundary, drawn by the Super Admin on the map. */
+  mapBoundary?: { lat: number; lng: number }[];
   ambulance: AmbulanceSettings;
   puroks: string[];
   alertBanner: string;
