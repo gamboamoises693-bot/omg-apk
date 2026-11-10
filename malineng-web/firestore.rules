@@ -792,6 +792,28 @@ service cloud.firestore {
       allow write: if docId == 'webAccess' ? isSuperAdmin() : isAdmin();
     }
 
+    // ---------- Home videos (links only; no file storage) ----------
+    match /videos/{videoId} {
+      allow read: if true;
+      allow create: if isAdmin()
+        && incoming().keys().hasOnly(['title', 'url', 'kind', 'videoId', 'order', 'views', 'createdAt'])
+        && isNonEmptyString(incoming().title, 100)
+        && isNonEmptyString(incoming().url, 500)
+        && incoming().kind in ['youtube', 'facebook', 'file']
+        && incoming().videoId is string && incoming().videoId.size() <= 20
+        && incoming().order is number
+        && incoming().views == 0
+        && incoming().createdAt == request.time;
+      allow update: if (isAdmin() && changedOnly(['title', 'url', 'kind', 'videoId', 'order'])
+          && isNonEmptyString(incoming().title, 100)
+          && isNonEmptyString(incoming().url, 500)
+          && incoming().kind in ['youtube', 'facebook', 'file']
+          && incoming().videoId is string && incoming().videoId.size() <= 20)
+        // Anyone watching adds exactly one view.
+        || (changedOnly(['views']) && incoming().views == existing().views + 1);
+      allow delete: if isAdmin();
+    }
+
     // ---------- Presinto Finder (Posted Computerized Voters List) ----------
     // Private list: only signed-in, non-suspended residents may search, and a query may return
     // at most 20 documents, so the whole list cannot be downloaded in one go.

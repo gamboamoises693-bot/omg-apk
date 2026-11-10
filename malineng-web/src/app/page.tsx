@@ -4,37 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import {
-  Pill,
-  HeartPulse,
   Cake,
-  IdCard,
-  FileWarning,
-  Landmark,
   ListChecks,
-  Lock,
-  MapPinned,
-  Package,
   Ambulance,
-  Briefcase,
-  CalendarCheck,
-  CalendarDays,
   ChevronRight,
-  ChevronUp,
-  ClipboardList,
   FileText,
-  HandCoins,
-  LayoutGrid,
   Megaphone,
-  MessagesSquare,
   Phone,
-  Search,
   ShieldAlert,
   Siren,
-  Store,
-  Trophy,
   UserRound,
-  Vote,
-  Wrench,
   HardHat,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
@@ -56,7 +35,9 @@ import { useOnlineCount } from "@/lib/presence";
 import { OnlineUsers } from "@/components/OnlineUsers";
 import { MembersList } from "@/components/MembersList";
 import { InstallBanner } from "@/components/InstallApp";
-import { levelOf, useWebAccess } from "@/lib/webAccess";
+import { ServicesMenu } from "@/components/ServicesMenu";
+import { WatchVideos } from "@/components/WatchVideos";
+import { useWebAccess } from "@/lib/webAccess";
 import type { PrecinctMeta } from "@/lib/presinto";
 
 type Tint = "green" | "gold" | "red" | "blue" | "purple" | "orange" | "teal" | "pink";
@@ -73,35 +54,6 @@ const TINT: Record<Tint, string> = {
   pink: UNIFORM,
 };
 
-const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[] = [
-  { href: "/tindahan", label: "Tindahan", icon: Store, tint: "gold" },
-  { href: "/hiring", label: "Hiring", icon: Briefcase, tint: "green" },
-  { href: "/presinto", label: "Presinto", icon: ListChecks, tint: "blue" },
-  { href: "/ayuda", label: "Ayuda", icon: HandCoins, tint: "teal" },
-  { href: "/appointment", label: "Appointment", icon: CalendarCheck, tint: "purple" },
-  { href: "/ambulansya", label: "Ambulansya", icon: Ambulance, tint: "red" },
-  { href: "/botika", label: "Botika", icon: Pill, tint: "green" },
-  { href: "/hiraman", label: "Hiraman", icon: Package, tint: "blue" },
-  { href: "/mapa", label: "Mapa", icon: MapPinned, tint: "blue" },
-  { href: "/pabatid", label: "Pabatid", icon: Megaphone, tint: "blue" },
-  { href: "/survey", label: "Survey", icon: Vote, tint: "blue" },
-  { href: "/pondo", label: "Pondo", icon: Landmark, tint: "blue" },
-  { href: "/barangay-id", label: "Barangay ID", icon: IdCard, tint: "blue" },
-  { href: "/reklamo", label: "Reklamo", icon: FileWarning, tint: "blue" },
-  { href: "/kalusugan", label: "Kalusugan", icon: HeartPulse, tint: "blue" },
-  { href: "/liga", label: "Liga", icon: Trophy, tint: "blue" },
-  { href: "/lost-found", label: "Lost & Found", icon: Search, tint: "pink" },
-  { href: "/skills", label: "Skills", icon: Wrench, tint: "orange" },
-  { href: "/proyekto", label: "Proyekto", icon: HardHat, tint: "gold" },
-  // Shown after "Lahat":
-  { href: "/board", label: "Board", icon: MessagesSquare, tint: "blue" },
-  { href: "/register-event", label: "Magpa-rehistro", icon: ClipboardList, tint: "teal" },
-  { href: "/events", label: "Events", icon: CalendarDays, tint: "blue" },
-  { href: "/botohan", label: "Botohan", icon: Vote, tint: "purple" },
-  { href: "/purok", label: "Purok Points", icon: Trophy, tint: "gold" },
-  { href: "/emergency", label: "Emergency", icon: Siren, tint: "red" },
-];
-const PRIMARY_COUNT = 7;
 const projectsCollection = collection(db, "projects");
 
 function greeting(): string {
@@ -190,7 +142,6 @@ export default function HomePage() {
   const { profile, isSuperAdmin } = useAuth();
   const { settings, loading } = useSettings();
   const [hello, setHello] = useState("Magandang araw");
-  const [showAll, setShowAll] = useState(false);
   const [stats, setStats] = useState<PublicStats | null>(null);
   const online = useOnlineCount();
   const [showOnline, setShowOnline] = useState(false);
@@ -237,12 +188,6 @@ export default function HomePage() {
     [],
   );
   const electionOn = access?.electionMode === true && !!electionMeta && electionMeta.count > 0;
-  const ordered = useMemo(() => {
-    // Eleksyon mode pins Presinto to the very front.
-    if (!electionOn) return SERVICES;
-    return [...SERVICES.filter((s) => s.href === "/presinto"), ...SERVICES.filter((s) => s.href !== "/presinto")];
-  }, [electionOn]);
-  const services = showAll ? ordered : ordered.slice(0, PRIMARY_COUNT);
   const projects = useCollection<InfraProject>(projectsCollection);
   const topProjects = useMemo(
     () => [...projects.data].sort((a, b) => projectSortKey(a.status) - projectSortKey(b.status) || tsToMillis(b.updatedAt) - tsToMillis(a.updatedAt)).slice(0, 3),
@@ -266,6 +211,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ServicesMenu pinPresinto={electionOn} />
             <PabatidBell />
             <AdminShieldLink />
           </div>
@@ -338,28 +284,8 @@ export default function HomePage() {
         </Link>
       )}
 
-      {/* Services grid */}
-      <SectionTitle>Mga Serbisyo</SectionTitle>
-      <div className="grid grid-cols-4 gap-x-1 gap-y-4 rounded-2xl bg-white px-2 py-4 shadow-card">
-        {services.map(({ href, label, icon: Icon, tint }) => {
-          const off = levelOf(access, href.slice(1)) === "off";
-          return (
-            <Link key={href} href={href} className={`flex flex-col items-center gap-1.5 text-center active:scale-95 ${off && !isStaff ? "opacity-55" : ""}`}>
-              <span className={`relative flex h-12 w-12 items-center justify-center rounded-full ${off && !isStaff ? "bg-gray-100 text-gray-500" : TINT[tint]}`}>
-                {off && !isStaff ? <Lock className="h-5 w-5" aria-hidden /> : <Icon className="h-5 w-5" aria-hidden />}
-              </span>
-              <span className="text-[0.75rem] font-medium leading-tight text-gray-700">{label}</span>
-              {off && isStaff && <span className="-mt-1 rounded-full bg-gray-200 px-1.5 text-[0.55rem] font-bold text-gray-600">Patay sa residente</span>}
-            </Link>
-          );
-        })}
-        <button onClick={() => setShowAll((v) => !v)} className="flex flex-col items-center gap-1.5 text-center active:scale-95" aria-expanded={showAll}>
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-brand">
-            {showAll ? <ChevronUp className="h-5 w-5" /> : <LayoutGrid className="h-5 w-5" />}
-          </span>
-          <span className="text-[0.75rem] font-medium leading-tight text-gray-700">{showAll ? "Itago" : "Lahat"}</span>
-        </button>
-      </div>
+      {/* Every video of the barangay */}
+      <WatchVideos />
 
       {loading ? (
         <Spinner />
