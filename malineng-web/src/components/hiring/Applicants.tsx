@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { collection, doc, increment, query, where, writeBatch } from "firebase/firestore";
-import { Phone } from "lucide-react";
+import { Download, ExternalLink, FileText, Phone } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
@@ -90,6 +90,26 @@ export function Applicants({ opening }: { opening: Opening }) {
                 <Badge color={APPLICATION_STATUS[a.status].badge}>{APPLICATION_STATUS[a.status].label}</Badge>
               </div>
               {a.message ? <p className="rounded-xl bg-gray-50 p-2.5 text-[0.82rem] text-gray-700">“{a.message}”</p> : <p className="text-xs text-gray-400">Walang mensahe.</p>}
+              {(a.education || a.experience) && (
+                <div className="space-y-1 rounded-xl bg-gray-50 p-2.5 text-[0.82rem] text-gray-700">
+                  {a.education && <p><b>Edukasyon:</b> {a.education}</p>}
+                  {a.experience && <p><b>Karanasan:</b> {a.experience}</p>}
+                </div>
+              )}
+              {(a.resumeFile || a.resumeLink) && (
+                <div className="flex flex-wrap gap-1.5">
+                  {a.resumeFile && (
+                    <a href={a.resumeFile} download={a.resumeName || "resume"} className="flex items-center gap-1.5 rounded-xl bg-brand-light px-3 py-2 text-[0.8rem] font-bold text-brand-dark">
+                      <Download className="h-4 w-4" aria-hidden /> <FileText className="h-4 w-4" aria-hidden /> {a.resumeName || "Resume"}
+                    </a>
+                  )}
+                  {a.resumeLink && (
+                    <a href={a.resumeLink} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-1.5 rounded-xl bg-brand-light px-3 py-2 text-[0.8rem] font-bold text-brand-dark">
+                      <ExternalLink className="h-4 w-4" aria-hidden /> Link ng resume
+                    </a>
+                  )}
+                </div>
+              )}
               {a.skills.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {a.skills.map((s) => <span key={s} className="rounded-full bg-brand-light px-2.5 py-0.5 text-[0.7rem] font-bold text-brand">Skill: {s}</span>)}

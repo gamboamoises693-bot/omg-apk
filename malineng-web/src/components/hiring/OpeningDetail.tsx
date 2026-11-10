@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
-import { CheckCircle2, Phone } from "lucide-react";
+import { CheckCircle2, ExternalLink, FileText, Phone, X } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useVerifiedSet } from "@/lib/useVerifiedSet";
 import { logActivity } from "@/lib/activity";
 import { ageFrom } from "@/lib/age";
 import { friendlyError, telHref } from "@/lib/format";
-import { APPLICATION_STATUS, applicationId, deadlineLabel, isTakingApplications, slotsLabel, type Application, type Opening } from "@/lib/hiring";
-import { Badge, Button, ErrorText, Modal, Textarea } from "@/components/ui";
+import { APPLICATION_STATUS, applicationId, cleanUrl, deadlineLabel, isTakingApplications, openingPlace, slotsLabel, urlHost, type Application, type Opening } from "@/lib/hiring";
+import { readResume, type ResumeFile } from "@/lib/resume";
+import { Badge, Button, ErrorText, Input, Modal, Textarea } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 import { Applicants } from "./Applicants";
 import { useToast } from "@/components/Toast";
@@ -20,8 +21,13 @@ function ApplyBox({ o, mine }: { o: Opening; mine: Application | undefined }) {
   const verified = useVerifiedSet();
   const toast = useToast();
   const [message, setMessage] = useState("");
+  const [resume, setResume] = useState<ResumeFile | null>(null);
+  const [resumeLink, setResumeLink] = useState("");
+  const [education, setEducation] = useState("");
+  const [experience, setExperience] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const fileInput = useRef<HTMLInputElement>(null);
 
   if (mine) {
     const st = APPLICATION_STATUS[mine.status];
@@ -53,6 +59,9 @@ function ApplyBox({ o, mine }: { o: Opening; mine: Application | undefined }) {
   const apply = async () => {
     if (!user || !profile) return;
     setError("");
+    const link = cleanUrl(resumeLink);
+    if (resumeLink.trim() && !link) return setError("Hindi tamang web address ang link ng resume.");
+    if (o.resumeRequired && !resume && !link && !experience.trim()) return setError("Kailangan ng resume: magdagdag ng file, link, o isulat ang karanasan mo.");
     setBusy(true);
     try {
       // Skills the person already listed in the Skills Directory go along with the application.
@@ -70,6 +79,12 @@ function ApplyBox({ o, mine }: { o: Opening; mine: Application | undefined }) {
         verified: verified.has(user.uid) || profile.role !== "resident",
         skills,
         message: message.trim().slice(0, 500),
+        resumeFile: resume?.data ?? "",
+        resumeName: resume?.name ?? "",
+        resumeType: resume?.type ?? "",
+        resumeLink: link,
+        education: education.trim().slice(0, 400),
+        experience: experience.trim().slice(0, 600),
         status: "new",
         createdAt: serverTimestamp(),
       };
@@ -88,6 +103,42 @@ function ApplyBox({ o, mine }: { o: Opening; mine: Application | undefined }) {
     <RequireVerified feature="mag-apply sa trabaho">
       <div className="space-y-2">
         <p className="rounded-xl bg-brand-light p-2.5 text-xs text-brand-deep">Ang <b>pangalan, purok, contact at skills mo</b> ay awtomatikong ipapadala sa employer. Siya at ang Barangay lang ang makakakita.</p>
+        <div className="space-y-2 rounded-2xl border border-gray-200 p-3">
+          <p className="text-[0.8rem] font-extrabold text-brand-dark">Resume {o.resumeRequired ? <span className="text-red-700">(kailangan)</span> : <span className="font-medium text-gray-500">(optional)</span>}</p>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/pdf,image/*"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              setError("");
+              try {
+                setResume(await readResume(f));
+              } catch (err) {
+                setError(friendlyError(err));
+              } finally {
+                if (fileInput.current) fileInput.current.value = "";
+              }
+            }}
+          />
+          {resume ? (
+            <div className="flex items-center gap-2 rounded-xl bg-brand-light px-3 py-2 text-sm">
+              <FileText className="h-4 w-4 shrink-0 text-brand" aria-hidden />
+              <span className="min-w-0 flex-1 truncate font-semibold">{resume.name}</span>
+              <button type="button" aria-label="Alisin ang resume" onClick={() => setResume(null)}><X className="h-4 w-4" /></button>
+            </div>
+          ) : (
+            <Button type="button" variant="outline" full onClick={() => fileInput.current?.click()}>
+              <FileText className="h-4 w-4" aria-hidden /> Magdagdag ng resume (PDF o larawan)
+            </Button>
+          )}
+          <Input label="O link ng resume (Google Drive, LinkedIn)" type="url" inputMode="url" placeholder="https://..." value={resumeLink} onChange={(e) => setResumeLink(e.target.value)} maxLength={300} />
+          <Textarea label="Edukasyon (optional)" placeholder="hal. BS Electronics, 2022" value={education} onChange={(e) => setEducation(e.target.value)} maxLength={400} />
+          <Textarea label="Karanasan sa trabaho (optional)" placeholder="hal. 2 taon bilang production operator" value={experience} onChange={(e) => setExperience(e.target.value)} maxLength={600} />
+          <p className="text-xs text-gray-500">Ang resume ay makikita lang ng employer at ng Barangay.</p>
+        </div>
         <Textarea label="Mensahe sa employer (optional)" placeholder="hal. May 2 taon po akong karanasan. Pwede po ako agad." value={message} onChange={(e) => setMessage(e.target.value)} maxLength={500} />
         <ErrorText>{error}</ErrorText>
         <Button full loading={busy} onClick={apply}>Mag-apply ngayon</Button>
@@ -137,7 +188,7 @@ export function OpeningDetail({ o, mine, onClosed }: { o: Opening; mine: Applica
       </div>
       <div>
         <p className="text-xl font-extrabold leading-tight">{o.title}</p>
-        <p className="text-sm text-gray-600">{o.employer}{o.purok ? ` · ${o.purok}` : ""}</p>
+        <p className="text-sm text-gray-600">{o.employer}{openingPlace(o) ? ` · ${openingPlace(o)}` : ""}</p>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded-xl bg-gray-50 p-2"><p className="text-sm font-extrabold">{o.slots}</p><p className="text-[0.68rem] text-gray-600">Kailangan</p></div>
@@ -162,7 +213,8 @@ export function OpeningDetail({ o, mine, onClosed }: { o: Opening; mine: Applica
           {o.status === "approved" && (
             <>
               <Button full onClick={() => setShowApplicants(true)} disabled={o.applyMode !== "website"}>Tingnan ang mga nag-apply</Button>
-              {o.applyMode !== "website" && <p className="text-xs text-gray-500">Tawag o personal ang aplikasyon sa bakanteng ito.</p>}
+              {o.applyMode === "contact" && <p className="text-xs text-gray-500">Tawag o personal ang aplikasyon sa bakanteng ito.</p>}
+              {o.applyMode === "link" && <p className="text-xs text-gray-500">Sa website ng kumpanya mag-a-apply ang mga tao, kaya wala itong listahan dito.</p>}
               <div className="grid grid-cols-2 gap-2">
                 {o.state === "closed" ? <Button variant="outline" onClick={() => setState("open")}>Buksan ulit</Button> : <Button variant="outline" onClick={() => setState("closed")}>Isara ang bakante</Button>}
                 <Button variant="outline" className="!text-red-700" onClick={remove}>Burahin</Button>
@@ -173,8 +225,20 @@ export function OpeningDetail({ o, mine, onClosed }: { o: Opening; mine: Applica
         </div>
       ) : taking && o.applyMode === "website" ? (
         <ApplyBox o={o} mine={mine} />
+      ) : taking && o.applyMode === "link" && o.applyUrl ? (
+        <div className="space-y-2">
+          <a href={o.applyUrl} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-brand to-brand-dark py-3.5 font-bold text-white active:brightness-90">
+            <ExternalLink className="h-5 w-5" aria-hidden /> Mag-apply sa {urlHost(o.applyUrl)}
+          </a>
+          <p className="text-center text-xs text-gray-500">Lalabas ka sa website na ito. Mag-ingat sa mga humihingi ng bayad para sa trabaho.</p>
+        </div>
       ) : (
         taking && <p className="rounded-xl bg-gold-light p-3 text-sm text-yellow-900">Tumawag o pumunta sa employer para mag-apply.</p>
+      )}
+      {taking && !isOwner && o.applyMode === "website" && o.applyUrl && (
+        <a href={o.applyUrl} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#C9D4E5] py-3 text-sm font-bold text-brand-dark active:bg-brand-light">
+          <ExternalLink className="h-4 w-4" aria-hidden /> Bisitahin ang website: {urlHost(o.applyUrl)}
+        </a>
       )}
 
       {!isOwner && mine && !taking && <ApplyBoxStatus mine={mine} />}

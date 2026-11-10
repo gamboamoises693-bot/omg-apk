@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { sortNewest } from "@/lib/format";
-import { APPLICATION_STATUS, OPENING_TYPES, deadlineLabel, isTakingApplications, slotsLabel, type Application, type Opening } from "@/lib/hiring";
+import { APPLICATION_STATUS, OPENING_TYPES, deadlineLabel, openingPlace, isTakingApplications, slotsLabel, type Application, type Opening } from "@/lib/hiring";
 import { Badge, Button, EmptyState, FilterTabs, Modal, PageHeader, Spinner } from "@/components/ui";
 import { SidelineJobs } from "@/components/hiring/SidelineJobs";
 import { OpeningForm } from "@/components/hiring/OpeningForm";
@@ -31,7 +31,7 @@ function OpeningCard({ o, onOpen, badge }: { o: Opening; onOpen: () => void; bad
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-extrabold leading-tight">{o.title}</p>
-          <p className="truncate text-[0.82rem] text-gray-600">{o.employer}{o.purok ? ` · ${o.purok}` : ""}</p>
+          <p className="truncate text-[0.82rem] text-gray-600">{o.employer}{openingPlace(o) ? ` · ${openingPlace(o)}` : ""}</p>
         </div>
         {badge ?? (
           <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[0.7rem] font-extrabold ${taking ? (o.slots - o.filled >= 5 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800") : "bg-gray-100 text-gray-600"}`}>
@@ -44,6 +44,8 @@ function OpeningCard({ o, onOpen, badge }: { o: Opening; onOpen: () => void; bad
         {o.salary && <span className="rounded-lg bg-gray-100 px-2 py-0.5">{o.salary}</span>}
         {!o.official && o.deadline && taking && <span className="rounded-lg bg-gray-100 px-2 py-0.5">{deadlineLabel(o.deadline)}</span>}
         {o.applyMode === "contact" && <span className="rounded-lg bg-gray-100 px-2 py-0.5">Tumawag lang</span>}
+        {o.applyMode === "link" && <span className="rounded-lg bg-gray-100 px-2 py-0.5">Sa website ng kumpanya</span>}
+        {o.applyMode === "website" && <span className="rounded-lg bg-gray-100 px-2 py-0.5">Mag-apply dito</span>}
       </div>
     </button>
   );
@@ -80,7 +82,7 @@ export default function HiringPage() {
     return approved.data
       .filter((o) => o.state !== "closed")
       .filter((o) => (type === "Lahat" ? true : type === "Opisyal" ? o.official : o.type === type))
-      .filter((o) => !t || `${o.title} ${o.employer} ${o.purok} ${o.requirements.join(" ")}`.toLowerCase().includes(t));
+      .filter((o) => !t || `${o.title} ${o.employer} ${o.purok} ${o.location ?? ""} ${o.requirements.join(" ")}`.toLowerCase().includes(t));
   }, [approved.data, search, type]);
   const active = sortNewest(list.filter(isTakingApplications)).sort((a, b) => Number(b.official) - Number(a.official));
   const ended = sortNewest(list.filter((o) => !isTakingApplications(o)));

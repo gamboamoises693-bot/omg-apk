@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { useCollection } from "@/lib/useCollection";
 import { formatPeso, friendlyError, sortNewest, timeAgo } from "@/lib/format";
 import type { Job, Listing, Post } from "@/lib/types";
-import { deadlineLabel, type Opening } from "@/lib/hiring";
+import { deadlineLabel, urlHost, type Opening } from "@/lib/hiring";
 import { Button, Card, EmptyState, SectionTitle, Spinner } from "@/components/ui";
 import { PostCard } from "@/components/PostCard";
 import { SellerInfo } from "./SellerInfo";
@@ -136,7 +136,12 @@ export function AdminModeration() {
             <Card key={o.id}>
               <p className="font-bold">{o.title} <span className="font-normal text-gray-500">· {o.slots} ang kailangan</span></p>
               <p className="text-gray-600">{o.employer} · {o.type} · {o.salary || "walang sahod na nakalagay"}</p>
-              <p className="text-sm text-gray-500">{o.purok || "—"} · {deadlineLabel(o.deadline)} · {timeAgo(o.createdAt)}</p>
+              <p className="text-sm text-gray-500">{o.location || o.purok || "—"} · {deadlineLabel(o.deadline)} · {timeAgo(o.createdAt)}</p>
+              {o.applyUrl && (
+                <p className="mt-1 break-all rounded-lg bg-yellow-50 px-2 py-1 text-xs text-yellow-900">
+                  Link: <a href={o.applyUrl} target="_blank" rel="noopener noreferrer nofollow" className="font-bold underline">{urlHost(o.applyUrl)}</a> · tingnan muna bago i-approve ({o.applyUrl})
+                </p>
+              )}
               {o.requirements.length > 0 && <p className="mt-1 text-sm text-gray-600">Kailangan: {o.requirements.join("; ")}</p>}
               <SellerInfo uid={o.posterId} contact={o.contact} kind="jobs" />
               <ApproveButtons busy={openingBusy === o.id} onApprove={() => decideOpening(o, "approved")} onReject={() => decideOpening(o, "rejected")} />
