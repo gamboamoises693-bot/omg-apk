@@ -5,7 +5,7 @@ import { db } from "./firebase";
 /** Who may open a feature. "off" hides it from residents ("Malapit na"). */
 export type AccessLevel = "all" | "login" | "verified" | "off";
 
-export const ACCESS_LABEL: Record<AccessLevel, string> = { all: "Lahat", login: "Login", verified: "Verified", off: "Patay" };
+export const ACCESS_LABEL: Record<AccessLevel, string> = { all: "Lahat", login: "Login", verified: "Verified", off: "Off" };
 export const ACCESS_LEVELS: AccessLevel[] = ["all", "login", "verified", "off"];
 
 export interface WebFeature {

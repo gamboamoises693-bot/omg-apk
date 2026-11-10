@@ -49,7 +49,7 @@ export function AdminWebAccess() {
     try {
       await setDoc(doc(db, "settings", "webAccess"), { features: levels, preset, electionMode, updatedAt: serverTimestamp() });
       const off = WEB_FEATURES.filter((f) => levels[f.key] === "off").map((f) => f.label);
-      logActivity("Web Access", `Na-save ang Web Access${off.length ? `. Patay: ${off.join(", ")}` : ""}${electionMode ? ". Eleksyon mode" : ""}`);
+      logActivity("Web Access", `Na-save ang Web Access${off.length ? `. Off: ${off.join(", ")}` : ""}${electionMode ? ". Eleksyon mode" : ""}`);
       setSaved(true);
     } catch (err) {
       setError(friendlyError(err));
@@ -105,7 +105,7 @@ export function AdminWebAccess() {
         <p><b>Lahat:</b> kahit bisita (hindi naka-login) ay nakakakita.</p>
         <p><b>Login:</b> kailangang naka-login.</p>
         <p><b>Verified:</b> verified na residente lang.</p>
-        <p><b>Patay:</b> nakatago sa residente (lalabas ang “Malapit na”).</p>
+        <p><b>Off:</b> nakatago sa residente (lalabas ang “Malapit na”).</p>
         <p className="pt-1"><b>Eleksyon mode:</b> {electionMode ? "NAKA-ON. Nasa unahan ng Home ang Presinto at may naka-pin na paalala." : "naka-off."}</p>
       </div>
 

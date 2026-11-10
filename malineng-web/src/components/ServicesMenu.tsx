@@ -135,7 +135,7 @@ export function ServicesMenu({ pinPresinto, children }: { pinPresinto: boolean; 
                           </span>
                           <span className="min-w-0 text-sm font-semibold leading-tight">
                             {label}
-                            {off && isStaff && <span className="block text-[0.6rem] font-bold text-gray-500">Patay sa residente</span>}
+                            {off && isStaff && <span className="block text-[0.6rem] font-bold text-gray-500">Off sa residente</span>}
                           </span>
                         </Link>
                       </li>
