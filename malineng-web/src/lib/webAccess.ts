@@ -17,6 +17,7 @@ export interface WebFeature {
 /** Every service a Super Admin can switch. SOS/Emergency, login and account are always open. */
 export const WEB_FEATURES: WebFeature[] = [
   { key: "presinto", label: "Presinto Finder" },
+  { key: "chat", label: "Chat ng Barangay" },
   { key: "tindahan", label: "Tindahan" },
   { key: "hiring", label: "Hiring" },
   { key: "ayuda", label: "Ayuda" },
@@ -43,7 +44,7 @@ export const WEB_FEATURES: WebFeature[] = [
 ];
 
 /** The voters list is private, so it needs a login even before a Super Admin touches Web Access. */
-const DEFAULT_LEVEL: Record<string, AccessLevel> = { presinto: "login" };
+const DEFAULT_LEVEL: Record<string, AccessLevel> = { presinto: "login", chat: "verified" };
 
 export type PresetKey = "lahat" | "pangunahin" | "eleksyon" | "custom";
 

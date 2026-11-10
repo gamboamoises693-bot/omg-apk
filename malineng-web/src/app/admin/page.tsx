@@ -33,6 +33,7 @@ import {
   X,
   Clapperboard,
   Globe,
+  MessageCircle,
   ListChecks,
   type LucideIcon,
 } from "lucide-react";
@@ -66,6 +67,7 @@ import { AdminSektor } from "@/components/admin/AdminSektor";
 import { AdminPresinto } from "@/components/admin/AdminPresinto";
 import { AdminWebAccess } from "@/components/admin/AdminWebAccess";
 import { AdminVideos } from "@/components/admin/AdminVideos";
+import { AdminChat } from "@/components/admin/AdminChat";
 
 interface Section {
   key: string;
@@ -111,6 +113,7 @@ const GROUPS: Group[] = [
       { key: "mapa", label: "Mapa", icon: MapPinned, Component: AdminMapa },
       { key: "events", label: "Events", icon: CalendarDays, Component: AdminEvents },
       { key: "polls", label: "Botohan", icon: Vote, Component: AdminPolls },
+      { key: "chat", label: "Chat Moderation", icon: MessageCircle, Component: AdminChat, borrowOnly: true },
       { key: "presinto", label: "Presinto", icon: ListChecks, Component: AdminPresinto, borrowOnly: true },
       { key: "purok", label: "Purok Points", icon: Trophy, Component: AdminPurok },
       { key: "report", label: "Report", icon: FileBarChart, Component: AdminReport },

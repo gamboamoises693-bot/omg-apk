@@ -48,6 +48,7 @@ export const ACTIVITY_TYPES = [
   "Presinto",
   "Web Access",
   "Videos",
+  "Chat",
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 

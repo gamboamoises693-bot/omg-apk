@@ -90,6 +90,27 @@ service cloud.firestore {
       return request.resource.data;
     }
 
+    // Chat rooms: "all" (whole barangay) or the exact Purok name. Verified residents read the
+    // barangay room and their own Purok; staff read every room.
+    function canReadRoom(room) {
+      return verifiedPoster() && (room == 'all' || room == me().get('purok', '') || isStaff());
+    }
+
+    function chatMuted() {
+      return exists(/databases/$(database)/documents/chatMutes/$(request.auth.uid))
+        && get(/databases/$(database)/documents/chatMutes/$(request.auth.uid)).data.until > request.time;
+    }
+
+    function chatOpen() {
+      return !exists(/databases/$(database)/documents/settings/chat)
+        || get(/databases/$(database)/documents/settings/chat).data.get('enabled', true) == true;
+    }
+
+    function chatPhotosOpen() {
+      return !exists(/databases/$(database)/documents/settings/chat)
+        || get(/databases/$(database)/documents/settings/chat).data.get('photos', true) == true;
+    }
+
     function existing() {
       return resource.data;
     }
@@ -789,7 +810,63 @@ service cloud.firestore {
     // ---------- settings (settings/main; settings/webAccess is Super Admin only) ----------
     match /settings/{docId} {
       allow read: if true;
-      allow write: if docId == 'webAccess' ? isSuperAdmin() : isAdmin();
+      allow write: if docId in ['webAccess', 'chat'] ? isSuperAdmin() : isAdmin();
+    }
+
+    // ---------- Chat ng Barangay (verified residents) ----------
+    match /chatRooms/{room} {
+      // Room settings: the pinned message.
+      allow read: if canReadRoom(room);
+      allow write: if isOfficer() && incoming().keys().hasOnly(['pinText', 'pinBy', 'pinAt'])
+        && incoming().pinText is string && incoming().pinText.size() <= 300
+        && incoming().pinBy is string && incoming().pinBy.size() <= 80;
+
+      match /messages/{messageId} {
+        allow read: if canReadRoom(room);
+        allow create: if canReadRoom(room) && chatOpen() && !chatMuted()
+          && incoming().keys().hasOnly(['text', 'photo', 'authorId', 'authorName', 'authorRole', 'createdAt'])
+          && incoming().authorId == request.auth.uid
+          && incoming().authorName == me().fullName
+          // The badge must be the sender's real position: nobody can pose as Kapitan.
+          && (incoming().authorRole == ''
+              || (isAdmin() && incoming().authorRole == me().get('position', ''))
+              || (isSuperAdmin() && incoming().authorRole == 'Super Admin'))
+          && incoming().text is string && incoming().text.size() <= 500
+          && incoming().photo is string && incoming().photo.size() <= 200000
+          && (incoming().photo == '' || chatPhotosOpen())
+          && (incoming().text.size() > 0 || incoming().photo.size() > 0)
+          && incoming().createdAt == request.time;
+        // Officers remove anything; the writer may remove their own message for 5 minutes.
+        allow delete: if isOfficer()
+          || (signedIn() && existing().authorId == request.auth.uid && request.time < existing().createdAt + duration.value(5, 'm'));
+      }
+    }
+
+    // Temporary mutes set by officers.
+    match /chatMutes/{uid} {
+      allow read: if isSelf(uid) || isOfficer();
+      allow create, update: if isOfficer()
+        && incoming().keys().hasOnly(['until', 'by', 'name', 'reason'])
+        && incoming().until is timestamp
+        && incoming().by is string && incoming().name is string && incoming().name.size() <= 80
+        && incoming().reason is string && incoming().reason.size() <= 120;
+      allow delete: if isOfficer();
+    }
+
+    // Reports from residents. Document id = messageId_reporterUid, so one report per person per message.
+    match /chatReports/{reportId} {
+      allow read: if isOfficer();
+      allow create: if verifiedPoster()
+        && incoming().keys().hasOnly(['room', 'messageId', 'messageText', 'messageAuthorId', 'messageAuthorName', 'reporterId', 'reason', 'status', 'createdAt'])
+        && incoming().reporterId == request.auth.uid
+        && reportId == incoming().messageId + '_' + request.auth.uid
+        && canReadRoom(incoming().room)
+        && incoming().messageText is string && incoming().messageText.size() <= 500
+        && isNonEmptyString(incoming().reason, 60)
+        && incoming().status == 'open'
+        && incoming().createdAt == request.time;
+      allow update: if isOfficer() && changedOnly(['status']) && incoming().status in ['open', 'removed', 'dismissed'];
+      allow delete: if isOfficer();
     }
 
     // ---------- Home videos (links only; no file storage) ----------
