@@ -502,6 +502,40 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ---------- Blotter / Reklamo (private: complainant + officers) ----------
+    match /blotters/{id} {
+      allow read: if (signedIn() && resource.data.complainantId == request.auth.uid) || isOfficer();
+      allow create: if verifiedPoster()
+        && incoming().complainantId == request.auth.uid
+        && incoming().status == 'natanggap'
+        && incoming().keys().hasOnly(['caseNo', 'complainantId', 'complainantName', 'purok', 'contact', 'type', 'description', 'respondent', 'hasPhoto', 'status', 'history', 'createdAt'])
+        && isNonEmptyString(incoming().description, 2000)
+        && incoming().type is string && incoming().type.size() <= 60
+        && incoming().respondent is string && incoming().respondent.size() <= 120
+        && incoming().history is list && incoming().history.size() == 1;
+      allow update: if isOfficer();
+      allow delete: if isSuperAdmin();
+    }
+    // Evidence photo kept apart (same privacy as its blotter).
+    match /blotterPhotos/{id} {
+      allow read: if isOfficer()
+        || (signedIn() && get(/databases/$(database)/documents/blotters/$(id)).data.complainantId == request.auth.uid);
+      allow create: if verifiedPoster()
+        && getAfter(/databases/$(database)/documents/blotters/$(id)).data.complainantId == request.auth.uid
+        && incoming().photo is string && incoming().photo.size() < 400000;
+      allow update: if false;
+      allow delete: if isOfficer();
+    }
+
+    // ---------- Senior / PWD / Solo Parent registry (officers; a linked resident sees their own) ----------
+    match /sectorMembers/{id} {
+      allow read: if isOfficer() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create, update: if isOfficer()
+        && isNonEmptyString(incoming().fullName, 120)
+        && incoming().sectors is list && incoming().sectors.size() > 0 && incoming().sectors.size() <= 3;
+      allow delete: if isOfficer();
+    }
+
     // ---------- Pabatid (announcements) ----------
     match /announcements/{id} {
       allow read: if true;
@@ -636,7 +670,8 @@ service cloud.firestore {
     // ---------- stats (public counts only; written by admins) ----------
     match /stats/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      // Officers publish this week's senior birthdays (first name + age only) for the Home greeting.
+      allow write: if isAdmin() || (docId == 'birthdays' && isOfficer());
     }
 
     // ---------- settings (single doc: settings/main) ----------

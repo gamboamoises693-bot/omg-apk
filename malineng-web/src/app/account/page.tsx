@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { collection, deleteDoc, doc, query, updateDoc, where, writeBatch } from "firebase/firestore";
-import { BadgeCheck, Ban, Camera, CalendarCheck, Pill, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
+import { BadgeCheck, Ban, Camera, CalendarCheck, IdCard, Pill, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
 import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup } from "firebase/auth";
 import { db, googleProvider } from "@/lib/firebase";
 import { logActivity, roleLabel } from "@/lib/activity";
@@ -371,7 +371,8 @@ function AccountContent() {
       <div className="mb-2 grid grid-cols-2 gap-2">
         <LinkButton href="/appointment" variant="outline"><CalendarCheck className="h-5 w-5" /> Appointments</LinkButton>
         <LinkButton href="/tindahan/magbenta" variant="outline"><Store className="h-5 w-5" /> Magbenta</LinkButton>
-        <LinkButton href="/pamilya" variant="outline" className="col-span-2"><Users className="h-5 w-5" /> Pamilya ko (household)</LinkButton>
+        <LinkButton href="/pamilya" variant="outline"><Users className="h-5 w-5" /> Pamilya ko</LinkButton>
+        <LinkButton href="/barangay-id" variant="outline"><IdCard className="h-5 w-5" /> Barangay ID</LinkButton>
       </div>
       {isAdmin && (
         <LinkButton href="/admin" variant="gold" full className="mb-2"><ShieldCheck className="h-5 w-5" /> Admin Dashboard</LinkButton>
