@@ -18,6 +18,7 @@ import type { UserProfile } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, FilterTabs, Modal, Select, Spinner } from "@/components/ui";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { AddAccountForm } from "./AddAccountForm";
+import { releasePhone } from "@/lib/phone";
 import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
 
@@ -30,9 +31,9 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "suspended", label: "Suspended" },
 ];
 
-type UserRow = UserProfile & { id: string };
+export type UserRow = UserProfile & { id: string };
 
-function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; onClose: () => void }) {
+export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; onClose: () => void }) {
   const { user } = useAuth();
   const toast = useToast();
   const isMe = user?.uid === u.id;
@@ -102,6 +103,7 @@ function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; o
         }
       }
       await Promise.all(["verifications", "verifiedUsers", "households"].map((c) => deleteDoc(doc(db, c, u.id)).catch(() => undefined)));
+      await releasePhone(u.contact ?? "", u.id);
       await deleteDoc(doc(db, "users", u.id));
       refreshPublicStatsQuietly();
       logActivity("Roles", `Binura ang account ni ${u.fullName}${alsoPosts ? " (kasama ang mga post)" : ""}`, u.id);

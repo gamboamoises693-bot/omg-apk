@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { ensureUserDoc, useAuth } from "@/context/AuthContext";
+import { PHONE_TAKEN_MESSAGE, normalizePhone } from "@/lib/phone";
 import { usePuroks } from "@/lib/useSettings";
 import { friendlyError } from "@/lib/format";
 import { Button, Card, ErrorText, Input, Select } from "@/components/ui";
@@ -13,7 +14,6 @@ import { GoogleButton } from "@/components/GoogleButton";
 import { useToast } from "@/components/Toast";
 import { logActivity, setActivityActor } from "@/lib/activity";
 
-const PH_MOBILE = /^(09|\+639)\d{9}$/;
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,22 +34,28 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    const contact = form.contact.replace(/\s|-/g, "");
+    const contact = normalizePhone(form.contact);
     if (form.fullName.trim().length < 3) return setError("Ilagay ang buong pangalan.");
     if (!form.purok) return setError("Pumili ng Purok.");
-    if (!PH_MOBILE.test(contact)) return setError("Mali ang contact number. Halimbawa: 09171234567");
+    if (!contact) return setError("Mali ang contact number. Halimbawa: 09171234567");
     if (form.password.length < 6) return setError("Ang password ay dapat 6 characters pataas.");
 
     setLoading(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
       await updateProfile(cred.user, { displayName: form.fullName.trim() });
-      await ensureUserDoc(cred.user, {
-        fullName: form.fullName.trim(),
-        purok: form.purok,
-        contact,
-        birthday: form.birthday,
-      });
+      try {
+        await ensureUserDoc(cred.user, {
+          fullName: form.fullName.trim(),
+          purok: form.purok,
+          contact,
+          birthday: form.birthday,
+        });
+      } catch (profileErr) {
+        // Number already used: undo the login we just made so this email can register again.
+        if (profileErr instanceof Error && profileErr.message === PHONE_TAKEN_MESSAGE) await cred.user.delete().catch(() => undefined);
+        throw profileErr;
+      }
       setActivityActor({ uid: cred.user.uid, name: form.fullName.trim(), role: "resident" });
       logActivity("Account", `Nag-register (${form.purok})`, cred.user.uid);
       toast("Na-register ka na! Huling hakbang: selfie para ma-verify.");
