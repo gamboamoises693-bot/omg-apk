@@ -37,6 +37,7 @@ import { OnlineUsers } from "@/components/OnlineUsers";
 import { MembersList } from "@/components/MembersList";
 import { InstallBanner } from "@/components/InstallApp";
 import { ServicesMenu } from "@/components/ServicesMenu";
+import { SiteFooter } from "@/components/SiteFooter";
 import { WatchVideos } from "@/components/WatchVideos";
 import { useWebAccess } from "@/lib/webAccess";
 import type { PrecinctMeta } from "@/lib/presinto";
@@ -476,7 +477,7 @@ export default function HomePage() {
         </>
       )}
 
-      <p className="mt-8 text-center text-xs text-gray-400">© {new Date().getFullYear()} Barangay Malineng, {BARANGAY_CITY}</p>
+      <SiteFooter className="mt-8 pb-2" />
 
       {isSuperAdmin && (
         <Modal open={showOnline} onClose={() => setShowOnline(false)} title="Sino ang online">

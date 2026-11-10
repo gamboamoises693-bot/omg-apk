@@ -1,5 +1,6 @@
 "use client";
 
+import { SiteFooter } from "@/components/SiteFooter";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -76,6 +77,7 @@ export default function LoginPage() {
         Wala pang account?{" "}
         <Link href="/register" className="font-bold text-brand underline">Mag-register dito</Link>
       </p>
+      <SiteFooter className="mt-10" />
     </div>
   );
 }
