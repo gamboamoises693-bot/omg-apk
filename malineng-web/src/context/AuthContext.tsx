@@ -20,6 +20,8 @@ interface AuthContextValue {
   canBotika: boolean;
   /** Approves Hiraman (borrowing) requests: Kapitan, Secretary or Super Admin. */
   canBorrowAdmin: boolean;
+  /** Officers (Kapitan, Secretary, Super Admin): Pabatid, Survey, Transparency. */
+  isOfficer: boolean;
   isSuperAdmin: boolean;
   /** Can approve ambulance trips: Kapitan or Super Admin. */
   isKapitan: boolean;
@@ -166,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isStaff,
       canBotika: isSuperAdmin || isBhw || (isAdmin && profile?.position === "Kapitan"),
       canBorrowAdmin: isSuperAdmin || (isAdmin && (profile?.position === "Kapitan" || profile?.position === "Secretary")),
+      isOfficer: isSuperAdmin || (isAdmin && (profile?.position === "Kapitan" || profile?.position === "Secretary")),
       isSuperAdmin,
       isKapitan: isSuperAdmin || (isAdmin && profile?.position === "Kapitan"),
       isVerified: isStaff || verifiedFlag,

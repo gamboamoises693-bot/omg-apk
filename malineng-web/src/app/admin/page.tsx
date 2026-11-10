@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import {
   Pill,
+  Megaphone,
+  Landmark,
   CopyCheck,
   MapPinned,
   Package,
@@ -118,7 +120,7 @@ function Badge({ n }: { n?: number }) {
 }
 
 export default function AdminPage() {
-  const { isSuperAdmin, canBotika, canBorrowAdmin, profile } = useAuth();
+  const { isSuperAdmin, canBotika, canBorrowAdmin, isOfficer, profile } = useAuth();
   const { byTab, total } = useAdminPending();
   const groups = useMemo(
     () =>
@@ -259,6 +261,23 @@ export default function AdminPage() {
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800">Botika (BHW)</span>
                   </Link>
+                </div>
+              )}
+              {isOfficer && (
+                <div>
+                  <p className="px-2 pb-1 pt-3 text-[0.68rem] font-bold uppercase tracking-wider text-gray-500">Kapitan at Secretary</p>
+                  {[
+                    { href: "/pabatid", label: "Pabatid (magpadala)", Icon: Megaphone },
+                    { href: "/survey", label: "Survey at Suhestiyon", Icon: Vote },
+                    { href: "/pondo", label: "Pondo / Transparency", Icon: Landmark },
+                  ].map(({ href, label, Icon }) => (
+                    <Link key={href} href={href} className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left active:bg-gray-50">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
+                        <Icon className="h-[1.1rem] w-[1.1rem]" aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800">{label}</span>
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>

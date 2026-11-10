@@ -53,6 +53,11 @@ service cloud.firestore {
       return isSuperAdmin() || (isAdmin() && me().get('position', '') in ['Kapitan', 'Secretary']);
     }
 
+    // Officers: Kapitan, Secretary and the Super Admin (Pabatid, Survey, Transparency, Blotter...).
+    function isOfficer() {
+      return isBorrowAdmin();
+    }
+
     function isSuperAdmin() {
       return hasProfile() && me().role == 'superadmin';
     }
@@ -495,6 +500,84 @@ service cloud.firestore {
     match /purokPoints/{purokId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // ---------- Pabatid (announcements) ----------
+    match /announcements/{id} {
+      allow read: if true;
+      allow create, update: if isOfficer()
+        && isNonEmptyString(incoming().title, 120)
+        && incoming().body is string && incoming().body.size() <= 2000
+        && incoming().category is string && incoming().category.size() <= 30
+        && incoming().puroks is list && incoming().puroks.size() <= 50;
+      allow delete: if isOfficer();
+    }
+
+    // ---------- Survey (anonymous answers, one per verified resident) ----------
+    match /surveys/{surveyId} {
+      allow read: if true;
+      allow create, update: if isOfficer()
+        && isNonEmptyString(incoming().title, 150)
+        && incoming().questions is list && incoming().questions.size() > 0 && incoming().questions.size() <= 10
+        && incoming().status in ['open', 'closed'];
+      allow delete: if isOfficer();
+
+      // voters/{uid} only marks THAT you answered; the answers are stored without your uid.
+      match /voters/{uid} {
+        allow get: if isSelf(uid) || isOfficer();
+        allow list: if isOfficer();
+        allow create: if isSelf(uid) && verifiedPoster()
+          && get(/databases/$(database)/documents/surveys/$(surveyId)).data.status == 'open'
+          && incoming().keys().hasOnly(['at']);
+        allow update, delete: if false;
+      }
+    }
+
+    match /surveyResponses/{id} {
+      allow read: if isOfficer();
+      // Only together with a NEW voters/{me} marker in the same batch = one answer per person.
+      allow create: if verifiedPoster()
+        && incoming().keys().hasOnly(['surveyId', 'answers', 'suggestion'])
+        && incoming().answers is list && incoming().answers.size() <= 10
+        && incoming().suggestion is string && incoming().suggestion.size() <= 500
+        && get(/databases/$(database)/documents/surveys/$(incoming().surveyId)).data.status == 'open'
+        && !exists(/databases/$(database)/documents/surveys/$(incoming().surveyId)/voters/$(request.auth.uid))
+        && existsAfter(/databases/$(database)/documents/surveys/$(incoming().surveyId)/voters/$(request.auth.uid));
+      allow update: if false;
+      allow delete: if isSuperAdmin();
+    }
+
+    // Suhestiyon box: anonymous (no uid stored), verified residents only.
+    match /suggestions/{id} {
+      allow read, delete: if isOfficer();
+      allow create: if verifiedPoster()
+        && incoming().keys().hasOnly(['text', 'purok', 'createdAt'])
+        && isNonEmptyString(incoming().text, 1000)
+        && incoming().purok is string && incoming().purok.size() <= 40;
+      allow update: if false;
+    }
+
+    // ---------- Transparency (budget and expenses; public) ----------
+    match /budgets/{year} {
+      allow read: if true;
+      allow write: if isOfficer()
+        && incoming().total is number && incoming().total >= 0
+        && incoming().categories is list && incoming().categories.size() <= 20;
+    }
+    match /expenses/{id} {
+      allow read: if true;
+      allow create, update: if isOfficer()
+        && isNonEmptyString(incoming().description, 200)
+        && incoming().amount is number && incoming().amount >= 0
+        && incoming().year is int
+        && incoming().category is string && incoming().category.size() <= 60;
+      allow delete: if isOfficer();
+    }
+    // Receipt photos live apart so the expense list stays light.
+    match /expenseReceipts/{id} {
+      allow read: if true;
+      allow write: if isOfficer() && incoming().photo is string && incoming().photo.size() < 400000;
+      allow delete: if isOfficer();
     }
 
     // ---------- Mapa (places pinned on the Malineng map) ----------

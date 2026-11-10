@@ -8,6 +8,7 @@ import { AdminAlertWatcher } from "./admin/AdminAlertWatcher";
 import { ListingHousekeeping } from "./admin/ListingHousekeeping";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { PresenceBeat } from "@/lib/presence";
+import { PabatidWatcher } from "./PabatidBell";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -21,6 +22,7 @@ export function Providers({ children }: { children: ReactNode }) {
             </div>
           )}
           <PresenceBeat />
+          <PabatidWatcher />
           <AdminAlertWatcher />
           <ListingHousekeeping />
           {children}

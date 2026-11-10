@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { BARANGAY_CITY } from "@/lib/constants";
 import { AdminShieldLink } from "./AdminShieldLink";
+import { PabatidBell } from "./PabatidBell";
 import { LogoButton, LogoMark } from "./BarangayLogo";
 
 /** Slim app bar for inner pages. Home draws its own greeting header instead. */
@@ -20,7 +21,10 @@ export function TopBar() {
             <span className="block text-[0.7rem] text-white/75">{BARANGAY_CITY}</span>
           </span>
         </LogoButton>
-        <AdminShieldLink />
+        <div className="flex items-center gap-2">
+          <PabatidBell />
+          <AdminShieldLink />
+        </div>
       </div>
     </header>
   );
