@@ -11,7 +11,7 @@ import { compressToDataUrl, uploadImage } from "@/lib/upload";
 import { LISTING_CATEGORIES } from "@/lib/constants";
 import { LISTING_DURATION_HOURS, newExpiry } from "@/lib/listings";
 import { friendlyError, safeMessengerLink } from "@/lib/format";
-import { Button, Card, ErrorText, Input, PageHeader, Select, Textarea, LinkButton } from "@/components/ui";
+import { Button, Card, ErrorText, Input, PageHeader, Select, Textarea, LinkButton, SelectOther } from "@/components/ui";
 import { ImagePicker } from "@/components/ImagePicker";
 import { RequireVerified } from "@/components/RequireVerified";
 import { logActivity } from "@/lib/activity";
@@ -100,7 +100,7 @@ function SellForm() {
         <ImagePicker file={file} onChange={setFile} label="Larawan ng paninda" />
         <Input label="Pangalan ng Paninda" required maxLength={120} placeholder="Hal. Lutong Adobo (1 order)" value={form.title} onChange={update("title")} />
         <Input label="Presyo (₱)" type="number" inputMode="decimal" min={0} step="0.01" required placeholder="100" value={form.price} onChange={update("price")} />
-        <Select label="Category" required options={LISTING_CATEGORIES} placeholder="-- Pumili --" value={form.category} onChange={update("category")} />
+        <SelectOther label="Category" required options={LISTING_CATEGORIES} placeholder="-- Pumili --" value={form.category} onChange={(v) => update("category")({ target: { value: v } })} />
         <Textarea label="Description" placeholder="Ilarawan ang paninda, kailan available, delivery o pick-up..." maxLength={2000} value={form.description} onChange={update("description")} />
         <Input label="Contact Number" type="tel" inputMode="tel" required value={form.contact} onChange={update("contact")} />
         <Input label="Messenger Link (optional)" placeholder="m.me/pangalan-mo" hint="Buksan ang Messenger > Profile > kopyahin ang link" value={form.messengerLink} onChange={update("messengerLink")} />

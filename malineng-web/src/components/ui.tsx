@@ -98,6 +98,90 @@ export function Select({
   );
 }
 
+/** The word for "something else" in every dropdown list. */
+export const OTHER_LABEL = "Iba pa";
+
+/**
+ * A dropdown whose "Iba pa" choice shows a box where the person writes what it is.
+ * `value` is always the FINAL text: a listed option, or what was written ("Iba pa" while nothing is written yet),
+ * so forms keep their own checks and saved data holds the real answer.
+ */
+export function SelectOther({
+  label,
+  hint,
+  options,
+  placeholder,
+  value,
+  onChange,
+  required,
+  maxLength = 60,
+  suggestions = [],
+}: {
+  label: string;
+  hint?: string;
+  options: readonly string[];
+  placeholder?: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  maxLength?: number;
+  /** Things other people already wrote, offered as you type (avoids near-duplicates). */
+  suggestions?: string[];
+}) {
+  const hasOther = options.includes(OTHER_LABEL);
+  const isOther = hasOther && (value === OTHER_LABEL || (value !== "" && !options.includes(value)));
+  const listId = `other-${label.replace(/\W+/g, "-").toLowerCase()}`;
+
+  // Tidy what was written when leaving the box: collapse spaces and start with a capital letter.
+  const tidy = (text: string) => {
+    const t = text.trim().replace(/\s+/g, " ").slice(0, maxLength);
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) : OTHER_LABEL;
+  };
+
+  return (
+    <div className="space-y-2">
+      <FieldWrap label={label} hint={isOther ? undefined : hint}>
+        <select
+          required={required}
+          value={isOther ? OTHER_LABEL : value}
+          onChange={(e) => onChange(e.target.value)}
+          className={fieldClass}
+        >
+          {placeholder && <option value="">{placeholder}</option>}
+          {options.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </FieldWrap>
+      {isOther && (
+        <>
+          <input
+            aria-label={`${label}: isulat kung ano`}
+            placeholder="Isulat kung ano ang iba pa..."
+            maxLength={maxLength}
+            list={suggestions.length ? listId : undefined}
+            value={value === OTHER_LABEL ? "" : value}
+            onChange={(e) => onChange(e.target.value.trim() ? e.target.value : OTHER_LABEL)}
+            onBlur={(e) => onChange(tidy(e.target.value))}
+            className={`${fieldClass} border-brand/40 bg-white`}
+            autoFocus={value === OTHER_LABEL}
+          />
+          {suggestions.length > 0 && (
+            <datalist id={listId}>
+              {suggestions.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+          )}
+          {hint && <span className="block text-xs text-gray-500">{hint}</span>}
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ---------------- Layout bits ---------------- */
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`rounded-2xl bg-white p-4 shadow-card ${className}`}>{children}</div>;

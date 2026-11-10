@@ -14,7 +14,7 @@ import { ADMIN_POSITIONS } from "@/lib/constants";
 import { friendlyError } from "@/lib/format";
 import { refreshPublicStatsQuietly } from "@/lib/stats";
 import { PHONE_TAKEN_MESSAGE, claimPhoneInBatch, normalizePhone, phoneOwner } from "@/lib/phone";
-import { Button, ErrorText, Input, Select } from "@/components/ui";
+import { Button, ErrorText, Input, Select, SelectOther } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
 /** Readable temporary password, e.g. "Malineng-4827-kx". */
@@ -135,7 +135,7 @@ export function AddAccountForm({ onDone }: { onDone: () => void }) {
       <div className="grid grid-cols-2 gap-2">
         <Select label="Role" options={["Admin", "Residente"]} value={role === "admin" ? "Admin" : "Residente"} onChange={(e) => setRole(e.target.value === "Admin" ? "admin" : "resident")} />
         {role === "admin" ? (
-          <Select label="Position" options={ADMIN_POSITIONS} value={position} onChange={(e) => setPosition(e.target.value)} />
+          <SelectOther label="Position" options={ADMIN_POSITIONS} value={position} onChange={setPosition} maxLength={40} />
         ) : (
           <span />
         )}

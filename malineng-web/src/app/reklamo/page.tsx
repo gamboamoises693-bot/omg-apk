@@ -10,7 +10,7 @@ import { logActivity } from "@/lib/activity";
 import { compressToDataUrl } from "@/lib/upload";
 import { friendlyError, sortNewest } from "@/lib/format";
 import { BLOTTER_STATUS, BLOTTER_TYPES, newCaseNo, type Blotter } from "@/lib/blotter";
-import { Badge, Button, Card, EmptyState, ErrorText, Input, Modal, PageHeader, Select, Spinner, Textarea } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorText, Input, Modal, PageHeader, Select, Spinner, Textarea, SelectOther } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 import { BlotterTimeline } from "@/components/BlotterTimeline";
 import { useToast } from "@/components/Toast";
@@ -75,7 +75,7 @@ function FileForm({ onDone }: { onDone: () => void }) {
       <p className="flex items-start gap-2 rounded-xl bg-brand-light p-3 text-[0.82rem] text-brand-deep">
         <Lock className="mt-0.5 h-4 w-4 shrink-0" /> Pribado ito: ikaw, si Kapitan at ang Secretary lang ang makakakita.
       </p>
-      <Select label="Uri ng reklamo" options={BLOTTER_TYPES} value={type} onChange={(e) => setType(e.target.value)} />
+      <SelectOther label="Uri ng reklamo" options={BLOTTER_TYPES} value={type} onChange={setType} />
       <Textarea label="Ano ang nangyari" placeholder="Kailan, saan, at ano ang nangyari..." value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} />
       <Input label="Inirereklamo (optional)" placeholder="Pangalan at purok, kung alam" value={respondent} onChange={(e) => setRespondent(e.target.value)} maxLength={120} />
       <label className="block cursor-pointer">

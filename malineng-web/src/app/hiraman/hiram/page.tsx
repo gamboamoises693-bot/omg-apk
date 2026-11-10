@@ -17,7 +17,7 @@ import {
   type BorrowBooking,
   type BorrowItem,
 } from "@/lib/hiraman";
-import { Button, Card, ErrorText, Input, PageHeader, Select, Spinner } from "@/components/ui";
+import { Button, Card, ErrorText, Input, PageHeader, Select, Spinner, SelectOther } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 import { useToast } from "@/components/Toast";
 
@@ -202,7 +202,7 @@ function BorrowForm() {
 
       <Card className="mb-3 space-y-3">
         <p className="text-xs font-bold uppercase tracking-wide text-gray-500">3. Para saan</p>
-        <Select label="Okasyon" options={BORROW_PURPOSES} value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+        <SelectOther label="Okasyon" options={BORROW_PURPOSES} value={purpose} onChange={setPurpose} maxLength={80} />
         <Input label="Tala (optional)" placeholder="hal. Sa Purok 3, tapat ng kapilya" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} />
       </Card>
 

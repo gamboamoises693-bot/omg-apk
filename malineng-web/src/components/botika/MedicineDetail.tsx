@@ -18,7 +18,7 @@ import {
   type Medicine,
   type MedicineLog,
 } from "@/lib/botika";
-import { Badge, Button, Input, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Input, Select, Spinner, SelectOther } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { MedicineForm } from "./MedicineForm";
 
@@ -134,7 +134,7 @@ export function MedicineDetail({ m, onDeleted }: { m: Medicine; onDeleted: () =>
             <Input label="Dami" type="number" inputMode="numeric" min={1} value={qty} onChange={(e) => setQty(e.target.value)} />
             <Input label="Expiry" type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
           </div>
-          <Select label="Galing saan" options={RESTOCK_SOURCES} value={source} onChange={(e) => setSource(e.target.value)} />
+          <SelectOther label="Galing saan" options={RESTOCK_SOURCES} value={source} onChange={setSource} />
           <Button full loading={busy} disabled={!(n > 0)} onClick={restock}>Idagdag sa stock</Button>
         </div>
       )}

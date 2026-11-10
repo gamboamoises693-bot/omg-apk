@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
 import { MEDICINE_CATEGORIES, MEDICINE_FORMS, RESTOCK_SOURCES, createMedicine, type Medicine } from "@/lib/botika";
-import { Button, ErrorText, Input, Select } from "@/components/ui";
+import { Button, ErrorText, Input, Select, SelectOther } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
 function toInt(v: string): number {
@@ -79,7 +79,7 @@ export function MedicineForm({ existing, onDone }: { existing?: Medicine; onDone
         <Select label="Uri / unit" options={MEDICINE_FORMS} value={form} onChange={(e) => setForm(e.target.value)} />
         <Input label="Minimum (babala)" type="number" inputMode="numeric" min={0} value={minStock} onChange={(e) => setMinStock(e.target.value)} hint="Paubos kapag ganito na lang" />
       </div>
-      <Select label="Kategorya" options={MEDICINE_CATEGORIES} value={category} onChange={(e) => setCategory(e.target.value)} />
+      <SelectOther label="Kategorya" options={MEDICINE_CATEGORIES} value={category} onChange={setCategory} />
       <label className="flex items-center gap-2 rounded-xl bg-gray-50 p-3 text-sm">
         <input type="checkbox" checked={needsPrescription} onChange={(e) => setNeedsPrescription(e.target.checked)} className="h-5 w-5 accent-brand" />
         Kailangan ng reseta (babala lang kapag ibinigay)
@@ -94,7 +94,7 @@ export function MedicineForm({ existing, onDone }: { existing?: Medicine; onDone
             <Input label="Dami" type="number" inputMode="numeric" min={0} placeholder="0" value={stock} onChange={(e) => setStock(e.target.value)} />
             <Input label="Expiry" type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} />
           </div>
-          <Select label="Galing saan" options={RESTOCK_SOURCES} value={source} onChange={(e) => setSource(e.target.value)} />
+          <SelectOther label="Galing saan" options={RESTOCK_SOURCES} value={source} onChange={setSource} />
         </div>
       )}
 

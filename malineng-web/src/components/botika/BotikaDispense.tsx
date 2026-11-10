@@ -24,7 +24,7 @@ import {
 import type { UserProfile } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
-import { Button, Card, ErrorText, Input, Select } from "@/components/ui";
+import { Button, Card, ErrorText, Input, Select, SelectOther } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
 type UserRow = UserProfile & { id: string };
@@ -229,7 +229,7 @@ export function BotikaDispense({ meds, onDone }: { meds: Medicine[]; onDone: () 
           lines.length === 0 && <p className="text-sm text-gray-500">Walang gamot na may stock.</p>
         )}
 
-        <Select label="Dahilan / Sakit" options={DISPENSE_REASONS} value={reason} onChange={(e) => setReason(e.target.value)} />
+        <SelectOther label="Dahilan / Sakit" options={DISPENSE_REASONS} value={reason} onChange={setReason} />
         <Input label="Tala (optional)" placeholder="hal. May reseta mula RHU" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} />
       </Section>
 

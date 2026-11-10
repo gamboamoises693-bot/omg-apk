@@ -349,7 +349,8 @@ service cloud.firestore {
         && incoming().status == 'pending'
         && isNonEmptyString(incoming().title, 120)
         && incoming().price is number && incoming().price >= 0
-        && incoming().category in ['Ulam', 'Pagkain', 'Ukay', 'Halaman', 'Homemade', 'Iba pa']
+        // A listed category, or one the seller wrote when choosing "Iba pa" (an admin approves every listing).
+        && isNonEmptyString(incoming().category, 40)
         && incoming().expiresAt is timestamp
         && optionalPhoto();
 
@@ -484,7 +485,8 @@ service cloud.firestore {
       allow create: if verifiedPoster()
         && incoming().userId == request.auth.uid
         && incoming().status == 'natanggap'
-        && incoming()['service'] in ['Barangay Clearance', 'Indigency', 'Cedula', 'Blotter', 'Iba pa']
+        // A listed service, or the one the resident wrote when choosing "Iba pa".
+        && isNonEmptyString(incoming()['service'], 60)
         && isNonEmptyString(incoming().fullName, 120);
       allow update: if isAdmin();
       allow delete: if isAdmin()

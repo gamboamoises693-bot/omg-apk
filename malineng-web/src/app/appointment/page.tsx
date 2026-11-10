@@ -10,7 +10,7 @@ import { useCollection } from "@/lib/useCollection";
 import { APPOINTMENT_SERVICES } from "@/lib/constants";
 import { formatDate, friendlyError, sortNewest, todayISO } from "@/lib/format";
 import type { Appointment } from "@/lib/types";
-import { Button, Card, EmptyState, ErrorText, Input, PageHeader, SectionTitle, Select, Spinner, Textarea } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorText, Input, PageHeader, SectionTitle, Select, Spinner, Textarea, SelectOther } from "@/components/ui";
 import { LoginGate } from "@/components/LoginGate";
 import { RequireVerified } from "@/components/RequireVerified";
 import { logActivity } from "@/lib/activity";
@@ -83,7 +83,7 @@ function BookForm() {
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Buong Pangalan" required value={form.fullName} onChange={update("fullName")} />
-        <Select label="Serbisyo" required options={APPOINTMENT_SERVICES} placeholder="-- Pumili ng serbisyo --" value={form.service} onChange={update("service")} />
+        <SelectOther label="Serbisyo" required options={APPOINTMENT_SERVICES} placeholder="-- Pumili ng serbisyo --" value={form.service} onChange={(v) => update("service")({ target: { value: v } })} />
         <Input label="Petsa ng Pagkuha" type="date" required min={todayISO()} value={form.date} onChange={update("date")} hint="Lunes hanggang Biyernes lang" />
         <Input label="Contact Number" type="tel" required value={form.contact} onChange={update("contact")} />
         <Textarea label={form.service === "Blotter" ? "Ano ang irereport? (Detalye)" : "Purpose / Paalala (optional)"} value={form.notes} onChange={update("notes")} maxLength={1000} />

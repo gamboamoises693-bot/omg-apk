@@ -10,7 +10,7 @@ import { useCollection } from "@/lib/useCollection";
 import { AMBULANCE_REASONS, findBusySlot, formatTime12, nowHHMM } from "@/lib/ambulance";
 import { formatDate, friendlyError, todayISO } from "@/lib/format";
 import type { AmbulanceSlot } from "@/lib/types";
-import { Button, ErrorText, Input, Select, Textarea } from "@/components/ui";
+import { Button, ErrorText, Input, Select, Textarea, SelectOther } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { RequireVerified } from "@/components/RequireVerified";
 import { logActivity } from "@/lib/activity";
@@ -130,7 +130,7 @@ export function AmbulanceForm({ initialMode = "schedule", onDone }: { initialMod
         <Textarea label="Ano ang nangyari?" required placeholder="Hal. nahimatay, hirap huminga, naaksidente" maxLength={300} value={form.reason} onChange={update("reason")} />
       ) : (
         <>
-          <Select label="Dahilan" required options={AMBULANCE_REASONS} placeholder="-- Pumili --" value={form.reason} onChange={update("reason")} />
+          <SelectOther label="Dahilan" required options={AMBULANCE_REASONS} placeholder="-- Pumili --" value={form.reason} onChange={(v) => update("reason")({ target: { value: v } })} />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Petsa" type="date" required min={todayISO()} value={form.date} onChange={update("date")} />
             <Input label="Oras ng sundo" type="time" required value={form.time} onChange={update("time")} />

@@ -9,7 +9,7 @@ import { useCollection } from "@/lib/useCollection";
 import { usePuroks } from "@/lib/useSettings";
 import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
-import { Badge, Button, Card, EmptyState, ErrorText, FilterTabs, Input, Modal, PageHeader, Select, Spinner, Textarea } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorText, FilterTabs, Input, Modal, PageHeader, Select, Spinner, Textarea, SelectOther } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 import { useToast } from "@/components/Toast";
 
@@ -143,7 +143,7 @@ function LeagueForm({ onDone }: { onDone: () => void }) {
   return (
     <div className="space-y-3">
       <Input label="Pangalan ng liga" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
-      <Select label="Laro" options={SPORTS} value={sport} onChange={(e) => setSport(e.target.value)} />
+      <SelectOther label="Laro" options={SPORTS} value={sport} onChange={setSport} maxLength={40} />
       <Button full loading={busy} onClick={save}>Gawin ang liga</Button>
     </div>
   );

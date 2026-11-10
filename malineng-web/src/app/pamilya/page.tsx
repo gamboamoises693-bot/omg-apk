@@ -11,7 +11,7 @@ import { logActivity } from "@/lib/activity";
 import { ageFrom } from "@/lib/age";
 import { friendlyError } from "@/lib/format";
 import type { HouseholdMember } from "@/lib/types";
-import { Button, Card, ErrorText, Input, PageHeader, Select, Spinner } from "@/components/ui";
+import { Button, Card, ErrorText, Input, PageHeader, Select, Spinner, SelectOther } from "@/components/ui";
 import { LoginGate } from "@/components/LoginGate";
 import { useToast } from "@/components/Toast";
 
@@ -101,7 +101,7 @@ function HouseholdForm() {
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Select label="Kaugnayan" options={HOUSEHOLD_RELATIONS} value={m.relation} onChange={(e) => setMember(i, { relation: e.target.value })} />
+              <SelectOther label="Kaugnayan" options={HOUSEHOLD_RELATIONS} value={m.relation} onChange={(v) => setMember(i, { relation: v })} maxLength={40} />
               <Select label="Kasarian" options={["Lalaki", "Babae"]} value={m.sex} onChange={(e) => setMember(i, { sex: e.target.value as HouseholdMember["sex"] })} />
             </div>
             <Input label="Birthday" type="date" value={m.birthday} onChange={(e) => setMember(i, { birthday: e.target.value })} hint={age !== null ? `${age} taong gulang${age >= 60 ? " · Senior" : age < 18 ? " · Menor de edad" : ""}` : undefined} />

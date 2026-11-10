@@ -87,7 +87,19 @@ export function friendlyError(err: unknown): string {
 }
 
 /**
- * "  welder  " / "WELDER" / "welder" -> "Welder". Used for skills that residents write themselves,
+ * Filter tabs for a list that has "Iba pa": the listed choices (without "Iba pa"), then every custom value
+ * people wrote (most common first), then "Iba pa" last.
+ */
+export function withCustomOptions(known: readonly string[], values: string[]): string[] {
+  const counts = new Map<string, number>();
+  for (const v of values) if (v && !known.includes(v)) counts.set(v, (counts.get(v) ?? 0) + 1);
+  const custom = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name);
+  const list = known.filter((k) => k !== "Iba pa");
+  return [...list, ...custom, ...(known.includes("Iba pa") ? ["Iba pa"] : [])];
+}
+
+/**
+ * "  welder  / "WELDER" / "welder" -> "Welder". Used for skills that residents write themselves,
  * so the same skill typed in different ways is grouped as one.
  */
 export function normalizeSkillLabel(raw: string): string {
