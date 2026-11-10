@@ -10,7 +10,7 @@ import { JOB_CATEGORIES } from "@/lib/constants";
 import { usePuroks } from "@/lib/useSettings";
 import { friendlyError, sortNewest, telHref, timeAgo } from "@/lib/format";
 import type { Job } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, ErrorText, FilterTabs, Input, Modal, PageHeader, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorText, FilterTabs, Input, Modal, Select, Spinner } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 import { logActivity } from "@/lib/activity";
 import { useToast } from "@/components/Toast";
@@ -70,7 +70,8 @@ function JobForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-export default function TrabahoPage() {
+/** The old Trabaho page: quick sideline jobs where people just call or text (approved by an admin). */
+export function SidelineJobs() {
   const [formOpen, setFormOpen] = useState(false);
   const [interested, setInterested] = useState<Job | null>(null);
   const [filter, setFilter] = useState("Lahat");
@@ -80,8 +81,8 @@ export default function TrabahoPage() {
 
   return (
     <div>
-      <PageHeader title="Trabaho at Sideline" subtitle="Trabaho na malapit lang sa bahay" />
-      <Button full onClick={() => setFormOpen(true)} className="mb-4"><Plus className="h-5 w-5" /> Mag-post ng Trabaho</Button>
+      <p className="mb-3 text-sm text-gray-600">Mabilis na sideline na malapit lang sa bahay. Tawagan o i-text ang nag-post.</p>
+      <Button full variant="soft" onClick={() => setFormOpen(true)} className="mb-3"><Plus className="h-5 w-5" /> Mag-post ng sideline</Button>
 
       <FilterTabs label="Kategorya ng trabaho" value={filter} onChange={setFilter} options={["Lahat", ...JOB_CATEGORIES].map((c) => ({ value: c, label: c }))} />
 

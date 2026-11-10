@@ -380,6 +380,65 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && existing().posterId == request.auth.uid);
     }
 
+    // ---------- Hiring: job openings + applications ----------
+    function validOpening() {
+      return isNonEmptyString(incoming().title, 120)
+        && incoming().employer is string && incoming().employer.size() <= 80
+        && incoming().slots is int && incoming().slots >= 1 && incoming().slots <= 500
+        && incoming().filled == 0
+        && incoming().type in ['Full-time', 'Part-time', 'Pana-panahon']
+        && incoming().salary is string && incoming().salary.size() <= 60
+        && incoming().deadline is string && incoming().deadline.size() <= 10
+        && incoming().requirements is list && incoming().requirements.size() <= 10
+        && incoming().details is string && incoming().details.size() <= 500
+        && incoming().purok is string && incoming().purok.size() <= 40
+        && incoming().contact is string && incoming().contact.size() <= 30
+        && incoming().applyMode in ['website', 'contact']
+        && incoming().state == 'open';
+    }
+
+    match /openings/{id} {
+      allow read: if resource.data.status == 'approved'
+        || isAdmin()
+        || (signedIn() && resource.data.posterId == request.auth.uid);
+      allow create: if validOpening() && incoming().posterId == request.auth.uid && (
+        // Verified residents wait for approval; the Barangay officers publish "OPISYAL" openings directly.
+        (verifiedPoster() && incoming().status == 'pending' && incoming().official == false)
+        || (isOfficer() && incoming().status == 'approved' && incoming().official == true));
+      // The poster can only close / reopen and update how many were hired; admins can change anything.
+      allow update: if isAdmin()
+        || (signedIn() && existing().posterId == request.auth.uid && existing().status == 'approved'
+          && changedOnly(['state', 'filled'])
+          && incoming().state in ['open', 'full', 'closed']
+          && incoming().filled is int && incoming().filled >= 0 && incoming().filled <= existing().slots);
+      allow delete: if isAdmin() || (signedIn() && existing().posterId == request.auth.uid);
+    }
+
+    // Private: the applicant, the employer who posted the opening, and the officers (Kapitan, Secretary, Super Admin).
+    match /applications/{appId} {
+      allow read: if (signedIn() && (resource.data.applicantId == request.auth.uid || resource.data.employerId == request.auth.uid))
+        || isOfficer();
+      // One application per person per opening (the id carries both), only while the opening is taking applications.
+      allow create: if verifiedPoster()
+        && incoming().applicantId == request.auth.uid
+        && appId == incoming().openingId + '_' + request.auth.uid
+        && incoming().status == 'new'
+        && incoming().keys().hasOnly(['openingId', 'openingTitle', 'employerId', 'applicantId', 'applicantName', 'purok', 'contact', 'age', 'verified', 'skills', 'message', 'status', 'createdAt'])
+        && incoming().message is string && incoming().message.size() <= 500
+        && incoming().skills is list && incoming().skills.size() <= 10
+        && incoming().employerId != request.auth.uid
+        && get(/databases/$(database)/documents/openings/$(incoming().openingId)).data.status == 'approved'
+        && get(/databases/$(database)/documents/openings/$(incoming().openingId)).data.state == 'open'
+        && get(/databases/$(database)/documents/openings/$(incoming().openingId)).data.applyMode == 'website'
+        && get(/databases/$(database)/documents/openings/$(incoming().openingId)).data.posterId == incoming().employerId;
+      // The employer moves the application along; nothing else about it can change.
+      allow update: if (signedIn() && existing().employerId == request.auth.uid && changedOnly(['status'])
+          && incoming().status in ['new', 'interview', 'hired', 'rejected'])
+        || isOfficer();
+      // The applicant can withdraw.
+      allow delete: if (signedIn() && existing().applicantId == request.auth.uid) || isOfficer();
+    }
+
     // ---------- skills (Skills Directory) ----------
     match /skills/{skillId} {
       allow read: if true;

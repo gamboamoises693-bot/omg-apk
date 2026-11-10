@@ -32,6 +32,11 @@
       ],
       "redirects": [
         {
+          "regex": "^/trabaho/?$",
+          "destination": "/hiring/",
+          "type": 301
+        },
+        {
           "regex": "^/(?P<path>.*?)/?index\\.txt/$",
           "destination": "/:path",
           "type": 301
@@ -69,6 +74,11 @@
         }
       ],
       "redirects": [
+        {
+          "regex": "^/trabaho/?$",
+          "destination": "/hiring/",
+          "type": 301
+        },
         {
           "regex": "^/(?P<path>.*?)/?index\\.txt/$",
           "destination": "/:path",

@@ -70,7 +70,7 @@ const TINT: Record<Tint, string> = {
 
 const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[] = [
   { href: "/tindahan", label: "Tindahan", icon: Store, tint: "gold" },
-  { href: "/trabaho", label: "Trabaho", icon: Briefcase, tint: "green" },
+  { href: "/hiring", label: "Hiring", icon: Briefcase, tint: "green" },
   { href: "/ayuda", label: "Ayuda", icon: HandCoins, tint: "teal" },
   { href: "/appointment", label: "Appointment", icon: CalendarCheck, tint: "purple" },
   { href: "/ambulansya", label: "Ambulansya", icon: Ambulance, tint: "red" },
