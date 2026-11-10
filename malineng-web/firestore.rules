@@ -420,7 +420,13 @@ service cloud.firestore {
         && incoming().details is string && incoming().details.size() <= 500
         && incoming().purok is string && incoming().purok.size() <= 40
         && incoming().contact is string && incoming().contact.size() <= 30
-        && incoming().applyMode in ['website', 'contact']
+        && incoming().applyMode in ['website', 'contact', 'link']
+        // Where the job is (any place, not only Malineng) and an optional company website.
+        && incoming().get('location', '') is string && incoming().get('location', '').size() <= 100
+        && incoming().get('applyUrl', '') is string && incoming().get('applyUrl', '').size() <= 300
+        && (incoming().get('applyUrl', '') == '' || incoming().get('applyUrl', '').matches('^https?://[^ ]+$'))
+        && (incoming().applyMode != 'link' || incoming().get('applyUrl', '') != '')
+        && incoming().get('resumeRequired', false) is bool
         && incoming().state == 'open';
     }
 
@@ -450,7 +456,17 @@ service cloud.firestore {
         && incoming().applicantId == request.auth.uid
         && appId == incoming().openingId + '_' + request.auth.uid
         && incoming().status == 'new'
-        && incoming().keys().hasOnly(['openingId', 'openingTitle', 'employerId', 'applicantId', 'applicantName', 'purok', 'contact', 'age', 'verified', 'skills', 'message', 'status', 'createdAt'])
+        && incoming().keys().hasOnly(['openingId', 'openingTitle', 'employerId', 'applicantId', 'applicantName', 'purok', 'contact', 'age', 'verified', 'skills', 'message', 'status', 'createdAt', 'resumeLink', 'resumeFile', 'resumeName', 'resumeType', 'education', 'experience'])
+        // Resume: a file kept in the application (small), a link, and two short text boxes.
+        && incoming().get('resumeLink', '') is string && incoming().get('resumeLink', '').size() <= 300
+        && (incoming().get('resumeLink', '') == '' || incoming().get('resumeLink', '').matches('^https?://[^ ]+$'))
+        && incoming().get('resumeFile', '') is string && incoming().get('resumeFile', '').size() <= 700000
+        && incoming().get('resumeName', '') is string && incoming().get('resumeName', '').size() <= 100
+        && incoming().get('resumeType', '') is string && incoming().get('resumeType', '').size() <= 40
+        && incoming().get('education', '') is string && incoming().get('education', '').size() <= 400
+        && incoming().get('experience', '') is string && incoming().get('experience', '').size() <= 600
+        && (!get(/databases/$(database)/documents/openings/$(incoming().openingId)).data.get('resumeRequired', false)
+            || incoming().get('resumeFile', '') != '' || incoming().get('resumeLink', '') != '' || incoming().get('experience', '') != '')
         && incoming().message is string && incoming().message.size() <= 500
         && incoming().skills is list && incoming().skills.size() <= 10
         && incoming().employerId != request.auth.uid

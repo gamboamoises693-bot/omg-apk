@@ -22,8 +22,17 @@ export interface Opening {
   details: string;
   purok: string;
   contact: string;
-  /** "website" = people apply here; "contact" = call or visit. */
-  applyMode: "website" | "contact";
+  /**
+   * "website" = people apply here (with a resume); "link" = apply on the company's own site;
+   * "contact" = call or visit.
+   */
+  applyMode: "website" | "contact" | "link";
+  /** Where the job is: any company or place, not only Malineng (e.g. "SFA Semicon, Cavite" or "Online"). */
+  location?: string;
+  /** Company or career-page link (needed for applyMode "link", optional otherwise). */
+  applyUrl?: string;
+  /** Applicants must send a resume (file, link or typed experience). */
+  resumeRequired?: boolean;
   /** Posted by the Barangay (Kapitan / Secretary / Super Admin). */
   official: boolean;
   status: "pending" | "approved" | "rejected";
@@ -45,6 +54,13 @@ export interface Application {
   verified: boolean;
   skills: string[];
   message: string;
+  /** Resume: a small file kept in the application, and/or a link, plus two short text boxes. */
+  resumeFile?: string;
+  resumeName?: string;
+  resumeType?: string;
+  resumeLink?: string;
+  education?: string;
+  experience?: string;
   status: ApplicationStatus;
   createdAt?: Timestamp;
 }
@@ -90,4 +106,33 @@ export function slotsLabel(o: Pick<Opening, "slots" | "filled">): string {
 /** application doc id: one application per person per opening (enforced by the rules too). */
 export function applicationId(openingId: string, uid: string): string {
   return `${openingId}_${uid}`;
+}
+
+/** Returns a clean http(s) link, or "" when the text is not a usable web address. */
+export function cleanUrl(input: string): string {
+  const text = input.trim();
+  if (!text || /\s/.test(text)) return "";
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(text) ? text : `https://${text}`;
+  try {
+    const u = new URL(withScheme);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return "";
+    if (!u.hostname.includes(".")) return "";
+    return u.toString().length <= 300 ? u.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+/** Just the site name for display ("sfasemicon.com"). */
+export function urlHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+/** Where the job is shown on cards: the written location, else the Purok. */
+export function openingPlace(o: Pick<Opening, "location" | "purok">): string {
+  return o.location || o.purok || "";
 }

@@ -8,7 +8,7 @@ import { usePuroks } from "@/lib/useSettings";
 import { logActivity } from "@/lib/activity";
 import { friendlyError, todayISO } from "@/lib/format";
 import { normalizePhone } from "@/lib/phone";
-import { OPENING_TYPES } from "@/lib/hiring";
+import { OPENING_TYPES, cleanUrl } from "@/lib/hiring";
 import { Button, ErrorText, Input, Select, Textarea } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
@@ -27,7 +27,10 @@ export function OpeningForm({ onDone }: { onDone: () => void }) {
   const [details, setDetails] = useState("");
   const [purok, setPurok] = useState(profile?.purok ?? "");
   const [contact, setContact] = useState(profile?.contact ?? "");
-  const [applyMode, setApplyMode] = useState<"website" | "contact">("website");
+  const [applyMode, setApplyMode] = useState<"website" | "contact" | "link">("website");
+  const [location, setLocation] = useState("");
+  const [applyUrl, setApplyUrl] = useState("");
+  const [resumeRequired, setResumeRequired] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,7 +42,10 @@ export function OpeningForm({ onDone }: { onDone: () => void }) {
     if (!title.trim()) return setError("Ilagay ang posisyon.");
     if (!employer.trim()) return setError("Ilagay ang pangalan ng negosyo o employer.");
     if (!(n >= 1 && n <= 500)) return setError("Ilagay kung ilan ang kailangan (1 pataas).");
-    if (!phone) return setError("Ilagay ang contact number.");
+    if (applyMode === "contact" && !phone) return setError("Ilagay ang contact number para sa tawag o pagpunta.");
+    const url = cleanUrl(applyUrl);
+    if (applyUrl.trim() && !url) return setError("Hindi tamang web address ang link (hal. sfasemicon.com/careers).");
+    if (applyMode === "link" && !url) return setError("Ilagay ang link ng website kung saan mag-a-apply.");
     if (deadline && deadline < todayISO()) return setError("Nakalipas na ang deadline.");
 
     const reqs = requirements.split("\n").map((r) => r.trim().slice(0, 100)).filter(Boolean).slice(0, 10);
@@ -59,6 +65,9 @@ export function OpeningForm({ onDone }: { onDone: () => void }) {
         details: details.trim().slice(0, 500),
         purok,
         contact: phone,
+        location: location.trim().slice(0, 100),
+        applyUrl: url,
+        resumeRequired: applyMode === "website" && resumeRequired,
         applyMode,
         official: isOfficer,
         status: isOfficer ? "approved" : "pending",
@@ -93,7 +102,8 @@ export function OpeningForm({ onDone }: { onDone: () => void }) {
     <div className="space-y-3">
       {isOfficer && <p className="rounded-xl bg-brand-light p-2.5 text-xs font-semibold text-brand-deep">Lalabas ito bilang OPISYAL na bakante ng Barangay at agad na ipapadala sa Pabatid.</p>}
       <Input label="Posisyon" placeholder="hal. Cashier / Sales Clerk" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />
-      <Input label="Negosyo / Employer" placeholder="hal. Malineng Mini Mart" value={employer} onChange={(e) => setEmployer(e.target.value)} maxLength={80} />
+      <Input label="Kumpanya / Employer" placeholder="hal. SFA Semicon o Malineng Mini Mart" value={employer} onChange={(e) => setEmployer(e.target.value)} maxLength={80} />
+      <Input label="Saan ang trabaho" placeholder="hal. Cavite, Cuyapo, o Online" value={location} onChange={(e) => setLocation(e.target.value)} maxLength={100} hint="Pwede kahit saan: kumpanya, pabrika o opisina, hindi lang sa Malineng." />
       <div className="grid grid-cols-2 gap-2">
         <Input label="Ilan ang kailangan" type="number" inputMode="numeric" min={1} value={slots} onChange={(e) => setSlots(e.target.value)} />
         <Select label="Uri" options={OPENING_TYPES} value={type} onChange={(e) => setType(e.target.value)} />
@@ -105,20 +115,45 @@ export function OpeningForm({ onDone }: { onDone: () => void }) {
       <Textarea label="Kailangan (isa kada linya)" placeholder={"18 taong gulang pataas\nNakatapos ng high school"} value={requirements} onChange={(e) => setRequirements(e.target.value)} />
       <Textarea label="Oras, benepisyo at iba pa (optional)" value={details} onChange={(e) => setDetails(e.target.value)} maxLength={500} />
       <div className="grid grid-cols-2 gap-2">
-        <Select label="Purok / Lugar" options={puroks} placeholder="Piliin" value={purok} onChange={(e) => setPurok(e.target.value)} />
-        <Input label="Contact" type="tel" inputMode="tel" value={contact} onChange={(e) => setContact(e.target.value)} />
+        <Select label="Purok (kung taga-Malineng)" options={puroks} placeholder="Wala" value={purok} onChange={(e) => setPurok(e.target.value)} />
+        <Input label={applyMode === "contact" ? "Contact" : "Contact (optional)"} type="tel" inputMode="tel" value={contact} onChange={(e) => setContact(e.target.value)} />
       </div>
       <fieldset className="space-y-2">
-        <legend className="mb-1 text-[0.85rem] font-semibold text-gray-700">Paano mag-apply</legend>
-        <label className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm ${applyMode === "website" ? "border-2 border-brand bg-brand-light" : "border-gray-200"}`}>
-          <input type="radio" name="apply" checked={applyMode === "website"} onChange={() => setApplyMode("website")} className="h-4 w-4 accent-brand" />
-          Sa website (makikita ko ang listahan ng nag-apply)
-        </label>
-        <label className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm ${applyMode === "contact" ? "border-2 border-brand bg-brand-light" : "border-gray-200"}`}>
-          <input type="radio" name="apply" checked={applyMode === "contact"} onChange={() => setApplyMode("contact")} className="h-4 w-4 accent-brand" />
-          Tumawag o pumunta lang sa amin
-        </label>
+        <legend className="mb-1 text-[0.8rem] font-bold text-brand-dark">Paano mag-apply</legend>
+        {(
+          [
+            ["website", "Sa website na ito", "Magpapadala sila ng resume rito at makikita mo ang listahan ng nag-apply."],
+            ["link", "Sa website ng kumpanya", "Ilalagay mo ang link at doon sila mag-a-apply."],
+            ["contact", "Tumawag o pumunta lang", "Walang aplikasyon dito."],
+          ] as const
+        ).map(([value, label, hint]) => (
+          <label key={value} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm ${applyMode === value ? "border-2 border-brand bg-brand-light" : "border-gray-200"}`}>
+            <input type="radio" name="apply" checked={applyMode === value} onChange={() => setApplyMode(value)} className="mt-0.5 h-4 w-4 accent-brand" />
+            <span>
+              <b className="block">{label}</b>
+              <span className="text-xs text-gray-600">{hint}</span>
+            </span>
+          </label>
+        ))}
       </fieldset>
+      {(applyMode === "link" || applyMode === "website") && (
+        <Input
+          label={applyMode === "link" ? "Link ng website para mag-apply" : "Link ng website ng kumpanya (optional)"}
+          type="url"
+          inputMode="url"
+          placeholder="hal. sfasemicon.com/careers"
+          value={applyUrl}
+          onChange={(e) => setApplyUrl(e.target.value)}
+          maxLength={300}
+        />
+      )}
+      {applyMode === "website" && (
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 p-3 text-sm">
+          <input type="checkbox" checked={resumeRequired} onChange={(e) => setResumeRequired(e.target.checked)} className="h-4 w-4 accent-brand" />
+          <span><b>Kailangan ng resume</b> <span className="text-xs text-gray-600">(file, link o isinulat na karanasan)</span></span>
+        </label>
+      )}
+      {!isOfficer && <p className="rounded-xl bg-gold-light p-2.5 text-xs text-yellow-900">Sinusuri ng Barangay ang bawat bakante at ang link bago ito lumabas.</p>}
       <ErrorText>{error}</ErrorText>
       <Button full loading={busy} onClick={submit}>{isOfficer ? "I-post ngayon" : "Ipadala para i-approve"}</Button>
     </div>
