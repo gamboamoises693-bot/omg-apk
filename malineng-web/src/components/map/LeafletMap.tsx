@@ -57,7 +57,7 @@ function clusterHtml(n: number): string {
 
 /**
  * Leaflet map: free, no API key. Leaflet touches `window`, so it is loaded inside the effect
- * (safe for the static export build). Clean CARTO streets (falls back to OpenStreetMap), satellite with
+ * (safe for the static export build). Clean Esri streets (falls back to OpenStreetMap), satellite with
  * place names, round icon pins that group into numbers when crowded, and the barangay boundary.
  */
 export const LeafletMap = forwardRef<MapHandle, Props>(function LeafletMap(
@@ -165,11 +165,12 @@ export const LeafletMap = forwardRef<MapHandle, Props>(function LeafletMap(
       L.current = leaflet;
       const m = leaflet.map(el.current, { zoomControl: false, attributionControl: true }).setView([center.lat, center.lng], center.zoom);
 
-      // Base layers (all free, no key). Streets: CARTO Voyager, with OpenStreetMap as the fallback if it fails to load.
-      const carto = leaflet.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        subdomains: "abcd",
+      // Base layers (all free, no key). Streets: Esri World Street Map (clean, with names), with
+      // OpenStreetMap as the fallback if it fails to load.
+      const esriStreet = leaflet.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: 20,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxNativeZoom: 19,
+        attribution: "Tiles &copy; Esri, HERE, Garmin, OpenStreetMap contributors",
       });
       const osm = leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 20,
@@ -183,12 +184,12 @@ export const LeafletMap = forwardRef<MapHandle, Props>(function LeafletMap(
       });
       const labels = leaflet.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 20, maxNativeZoom: 18, opacity: 0.95 });
 
-      let street = carto;
+      let street = esriStreet;
       let errors = 0;
-      carto.on("tileerror", () => {
+      esriStreet.on("tileerror", () => {
         errors += 1;
-        if (errors === 6 && street === carto && m.hasLayer(carto)) {
-          m.removeLayer(carto);
+        if (errors === 6 && street === esriStreet && m.hasLayer(esriStreet)) {
+          m.removeLayer(esriStreet);
           street = osm;
           osm.addTo(m);
         }
@@ -202,7 +203,7 @@ export const LeafletMap = forwardRef<MapHandle, Props>(function LeafletMap(
       }
       let useSatellite = saved === "satellite";
       const show = () => {
-        [carto, osm, satellite, labels].forEach((l) => m.hasLayer(l) && m.removeLayer(l));
+        [esriStreet, osm, satellite, labels].forEach((l) => m.hasLayer(l) && m.removeLayer(l));
         if (useSatellite) {
           satellite.addTo(m);
           labels.addTo(m);
