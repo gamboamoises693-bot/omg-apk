@@ -10,6 +10,8 @@ import {
   IdCard,
   FileWarning,
   Landmark,
+  ListChecks,
+  Lock,
   MapPinned,
   Package,
   Ambulance,
@@ -54,6 +56,8 @@ import { useOnlineCount } from "@/lib/presence";
 import { OnlineUsers } from "@/components/OnlineUsers";
 import { MembersList } from "@/components/MembersList";
 import { InstallBanner } from "@/components/InstallApp";
+import { levelOf, useWebAccess } from "@/lib/webAccess";
+import type { PrecinctMeta } from "@/lib/presinto";
 
 type Tint = "green" | "gold" | "red" | "blue" | "purple" | "orange" | "teal" | "pink";
 // Bank-app look: one calm light-blue circle for every service; red only for emergencies.
@@ -72,6 +76,7 @@ const TINT: Record<Tint, string> = {
 const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[] = [
   { href: "/tindahan", label: "Tindahan", icon: Store, tint: "gold" },
   { href: "/hiring", label: "Hiring", icon: Briefcase, tint: "green" },
+  { href: "/presinto", label: "Presinto", icon: ListChecks, tint: "blue" },
   { href: "/ayuda", label: "Ayuda", icon: HandCoins, tint: "teal" },
   { href: "/appointment", label: "Appointment", icon: CalendarCheck, tint: "purple" },
   { href: "/ambulansya", label: "Ambulansya", icon: Ambulance, tint: "red" },
@@ -223,7 +228,21 @@ export default function HomePage() {
     ...settings.hotlines.slice(0, 3).map((h) => ({ name: h.name, number: h.numbers[0] ?? "", icon: Siren, tint: "red" as Tint })),
   ].filter((r) => r.number);
 
-  const services = showAll ? SERVICES : SERVICES.slice(0, PRIMARY_COUNT);
+  // Web Access: Super Admin decides what residents see. Staff always see everything.
+  const { access } = useWebAccess();
+  const { isStaff } = useAuth();
+  const [electionMeta, setElectionMeta] = useState<PrecinctMeta | null>(null);
+  useEffect(
+    () => onSnapshot(doc(db, "precinctMeta", "current"), (snap) => setElectionMeta(snap.exists() ? (snap.data() as PrecinctMeta) : null), () => setElectionMeta(null)),
+    [],
+  );
+  const electionOn = access?.electionMode === true && !!electionMeta && electionMeta.count > 0;
+  const ordered = useMemo(() => {
+    // Eleksyon mode pins Presinto to the very front.
+    if (!electionOn) return SERVICES;
+    return [...SERVICES.filter((s) => s.href === "/presinto"), ...SERVICES.filter((s) => s.href !== "/presinto")];
+  }, [electionOn]);
+  const services = showAll ? ordered : ordered.slice(0, PRIMARY_COUNT);
   const projects = useCollection<InfraProject>(projectsCollection);
   const topProjects = useMemo(
     () => [...projects.data].sort((a, b) => projectSortKey(a.status) - projectSortKey(b.status) || tsToMillis(b.updatedAt) - tsToMillis(a.updatedAt)).slice(0, 3),
@@ -308,17 +327,32 @@ export default function HomePage() {
         </section>
       )}
 
+      {electionOn && (
+        <Link href="/presinto" className="mt-3 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-brand to-brand-deep p-3.5 text-white shadow-card active:opacity-90">
+          <ListChecks className="h-8 w-8 shrink-0" aria-hidden />
+          <span className="min-w-0 text-sm">
+            <b className="block text-base">Eleksyon{electionMeta?.electionDate ? `: ${electionMeta.electionDate}` : ""}</b>
+            Alamin kung saang presinto ka boboto. Pindutin dito.
+          </span>
+          <ChevronRight className="ml-auto h-5 w-5 shrink-0" aria-hidden />
+        </Link>
+      )}
+
       {/* Services grid */}
       <SectionTitle>Mga Serbisyo</SectionTitle>
       <div className="grid grid-cols-4 gap-x-1 gap-y-4 rounded-2xl bg-white px-2 py-4 shadow-card">
-        {services.map(({ href, label, icon: Icon, tint }) => (
-          <Link key={href} href={href} className="flex flex-col items-center gap-1.5 text-center active:scale-95">
-            <span className={`flex h-12 w-12 items-center justify-center rounded-full ${TINT[tint]}`}>
-              <Icon className="h-5 w-5" aria-hidden />
-            </span>
-            <span className="text-[0.75rem] font-medium leading-tight text-gray-700">{label}</span>
-          </Link>
-        ))}
+        {services.map(({ href, label, icon: Icon, tint }) => {
+          const off = levelOf(access, href.slice(1)) === "off";
+          return (
+            <Link key={href} href={href} className={`flex flex-col items-center gap-1.5 text-center active:scale-95 ${off && !isStaff ? "opacity-55" : ""}`}>
+              <span className={`relative flex h-12 w-12 items-center justify-center rounded-full ${off && !isStaff ? "bg-gray-100 text-gray-500" : TINT[tint]}`}>
+                {off && !isStaff ? <Lock className="h-5 w-5" aria-hidden /> : <Icon className="h-5 w-5" aria-hidden />}
+              </span>
+              <span className="text-[0.75rem] font-medium leading-tight text-gray-700">{label}</span>
+              {off && isStaff && <span className="-mt-1 rounded-full bg-gray-200 px-1.5 text-[0.55rem] font-bold text-gray-600">Patay sa residente</span>}
+            </Link>
+          );
+        })}
         <button onClick={() => setShowAll((v) => !v)} className="flex flex-col items-center gap-1.5 text-center active:scale-95" aria-expanded={showAll}>
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-brand">
             {showAll ? <ChevronUp className="h-5 w-5" /> : <LayoutGrid className="h-5 w-5" />}
