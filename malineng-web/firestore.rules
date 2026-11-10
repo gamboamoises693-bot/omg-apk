@@ -905,7 +905,16 @@ service cloud.firestore {
           && incoming().kind in ['youtube', 'facebook', 'file']
           && incoming().videoId is string && incoming().videoId.size() <= 20)
         // Anyone watching adds exactly one view.
-        || (changedOnly(['views']) && incoming().views == existing().views + 1);
+        || (changedOnly(['views']) && incoming().views == existing().views + 1)
+        // Signed-in residents react: only their own uid in "likes" and "reactions".
+        || (signedIn() && notSuspended()
+          && changedOnly(['likes', 'reactions'])
+          && incoming().get('likes', []).toSet().difference(existing().get('likes', []).toSet())
+               .union(existing().get('likes', []).toSet().difference(incoming().get('likes', []).toSet()))
+               .hasOnly([request.auth.uid])
+          && incoming().get('reactions', {}).diff(existing().get('reactions', {})).affectedKeys().hasOnly([request.auth.uid])
+          && (!(request.auth.uid in incoming().get('reactions', {}))
+              || incoming().reactions[request.auth.uid] in ['like', 'love', 'haha', 'wow', 'sad', 'pray']));
       allow delete: if isSuperAdmin();
 
       // Pieces of an uploaded video (about 700 KB each).
@@ -917,6 +926,36 @@ service cloud.firestore {
           && incoming().data is bytes && incoming().data.size() <= 800000;
         allow delete: if isSuperAdmin();
       }
+    }
+
+    // ---------- Comments under Home videos ----------
+    match /videoComments/{commentId} {
+      allow read: if true;
+      allow create: if signedIn() && notSuspended() && !chatMuted()
+        && incoming().keys().hasOnly(['videoId', 'authorId', 'authorName', 'text', 'createdAt'])
+        && incoming().authorId == request.auth.uid
+        && incoming().authorName == me().fullName
+        && isNonEmptyString(incoming().text, 1000)
+        && exists(/databases/$(database)/documents/videos/$(incoming().videoId))
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      // Officers remove any comment; the writer removes their own.
+      allow delete: if isOfficer() || (signedIn() && existing().authorId == request.auth.uid);
+    }
+
+    // Reports on those comments. Document id = commentId_reporterUid (one report per person per comment).
+    match /videoCommentReports/{reportId} {
+      allow read: if isOfficer();
+      allow create: if signedIn() && notSuspended()
+        && incoming().keys().hasOnly(['videoId', 'commentId', 'commentText', 'commentAuthorId', 'commentAuthorName', 'reporterId', 'reason', 'status', 'createdAt'])
+        && incoming().reporterId == request.auth.uid
+        && reportId == incoming().commentId + '_' + request.auth.uid
+        && incoming().commentText is string && incoming().commentText.size() <= 1000
+        && isNonEmptyString(incoming().reason, 60)
+        && incoming().status == 'open'
+        && incoming().createdAt == request.time;
+      allow update: if isOfficer() && changedOnly(['status']) && incoming().status in ['open', 'removed', 'dismissed'];
+      allow delete: if isOfficer();
     }
 
     // ---------- Presinto Finder (Posted Computerized Voters List) ----------

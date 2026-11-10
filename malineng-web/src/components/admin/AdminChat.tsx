@@ -32,9 +32,22 @@ interface Mute {
   until: Ts;
 }
 
-type Tab = "reports" | "mutes" | "settings";
+interface CommentReport {
+  id: string;
+  videoId: string;
+  commentId: string;
+  commentText: string;
+  commentAuthorId: string;
+  commentAuthorName: string;
+  reason: string;
+  status: "open" | "removed" | "dismissed";
+  createdAt?: Ts;
+}
+
+type Tab = "reports" | "comments" | "mutes" | "settings";
 const reportsQ = query(collection(db, "chatReports"), where("status", "==", "open"));
 const mutesQ = query(collection(db, "chatMutes"));
+const commentReportsQ = query(collection(db, "videoCommentReports"), where("status", "==", "open"));
 
 /** Officers: handle reports, mutes, and the chat on/off switch (Super Admin). */
 export function AdminChat() {
@@ -42,6 +55,7 @@ export function AdminChat() {
   const { settings } = useSettings();
   const reports = useCollection<Report>(reportsQ);
   const mutes = useCollection<Mute>(mutesQ);
+  const commentReports = useCollection<CommentReport>(commentReportsQ);
   const [tab, setTab] = useState<Tab>("reports");
   const [error, setError] = useState("");
   const [cfg, setCfg] = useState({ enabled: true, photos: true });
@@ -53,6 +67,12 @@ export function AdminChat() {
     reports.data.forEach((r) => map.set(`${r.room}/${r.messageId}`, [...(map.get(`${r.room}/${r.messageId}`) ?? []), r]));
     return [...map.values()].sort((a, b) => b.length - a.length);
   }, [reports.data]);
+  // Reports on video comments, grouped by comment.
+  const groupedComments = useMemo(() => {
+    const map = new Map<string, CommentReport[]>();
+    commentReports.data.forEach((r) => map.set(r.commentId, [...(map.get(r.commentId) ?? []), r]));
+    return [...map.values()].sort((a, b) => b.length - a.length);
+  }, [commentReports.data]);
   const activeMutes = mutes.data.filter((m) => m.until.toMillis() > Date.now());
 
   // Chat settings (read once).
@@ -115,6 +135,29 @@ export function AdminChat() {
     }
   }
 
+  async function removeComment(g: CommentReport[], muteMs = 0, muteLabel = "") {
+    setError("");
+    const first = g[0];
+    try {
+      if (muteMs) {
+        await setDoc(doc(db, "chatMutes", first.commentAuthorId), { until: Timestamp.fromMillis(Date.now() + muteMs), by: user?.uid ?? "", name: first.commentAuthorName, reason: first.reason });
+      }
+      await deleteDoc(doc(db, "videoComments", first.commentId)).catch(() => {});
+      await Promise.all(g.map((r) => updateDoc(doc(db, "videoCommentReports", r.id), { status: "removed" })));
+      logActivity("Chat", `Binura ang comment ni ${first.commentAuthorName} sa video${muteMs ? ` at na-mute ng ${muteLabel}` : ""}`, first.commentId);
+    } catch (err) {
+      setError(friendlyError(err));
+    }
+  }
+
+  async function dismissComment(g: CommentReport[]) {
+    try {
+      await Promise.all(g.map((r) => updateDoc(doc(db, "videoCommentReports", r.id), { status: "dismissed" })));
+    } catch (err) {
+      setError(friendlyError(err));
+    }
+  }
+
   async function saveSettings(next: { enabled: boolean; photos: boolean }) {
     setCfg(next);
     try {
@@ -132,7 +175,8 @@ export function AdminChat() {
         value={tab}
         onChange={setTab}
         options={[
-          { value: "reports", label: "Reports", count: grouped.length },
+          { value: "reports", label: "Chat", count: grouped.length },
+          { value: "comments", label: "Video", count: groupedComments.length },
           { value: "mutes", label: "Naka-mute", count: activeMutes.length },
           ...(isSuperAdmin ? [{ value: "settings" as const, label: "Settings" }] : []),
         ]}
@@ -157,6 +201,29 @@ export function AdminChat() {
                 <Button variant="danger" className="!px-1 !text-xs" onClick={() => removeMessage(g)}>Burahin</Button>
                 <Button variant="outline" className="!px-1 !text-xs" onClick={() => mute(g, MUTE_OPTIONS[1].ms, MUTE_OPTIONS[1].label)}>Burahin + mute 1 araw</Button>
                 <Button variant="soft" className="!px-1 !text-xs" onClick={() => dismiss(g)}>Balewalain</Button>
+              </div>
+            </Card>
+          ))
+        ))}
+
+      {tab === "comments" &&
+        (commentReports.loading ? (
+          <Spinner />
+        ) : groupedComments.length === 0 ? (
+          <EmptyState icon={<MessageCircle />} title="Walang report sa video">Walang comment na naghihintay ng aksyon.</EmptyState>
+        ) : (
+          groupedComments.map((g) => (
+            <Card key={g[0].commentId} className="space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-extrabold">{g[0].commentAuthorName} <span className="text-xs font-medium text-gray-500">· comment sa video</span></p>
+                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-extrabold text-amber-800">{g.length} report</span>
+              </div>
+              <p className="rounded-xl bg-gray-50 px-3 py-2 text-sm">{g[0].commentText}</p>
+              <p className="text-xs text-gray-600">Dahilan: {[...new Set(g.map((r) => r.reason))].join(", ")} · {timeAgo(g[0].createdAt)}</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                <Button variant="danger" className="!px-1 !text-xs" onClick={() => removeComment(g)}>Burahin</Button>
+                <Button variant="outline" className="!px-1 !text-xs" onClick={() => removeComment(g, MUTE_OPTIONS[1].ms, MUTE_OPTIONS[1].label)}>Burahin + mute 1 araw</Button>
+                <Button variant="soft" className="!px-1 !text-xs" onClick={() => dismissComment(g)}>Balewalain</Button>
               </div>
             </Card>
           ))
