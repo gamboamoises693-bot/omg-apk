@@ -383,9 +383,11 @@ service cloud.firestore {
     // ---------- skills (Skills Directory) ----------
     match /skills/{skillId} {
       allow read: if true;
+      // `skill` may be any text the resident wrote (e.g. "Welder", "Gumagawa ng pugon").
       allow create: if notSuspended()
         && incoming().userId == request.auth.uid
         && isNonEmptyString(incoming().name, 120)
+        && isNonEmptyString(incoming().skill, 40)
         && validPurok(incoming().purok);
       allow update: if isAdmin();
       allow delete: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);

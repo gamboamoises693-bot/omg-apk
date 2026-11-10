@@ -8,24 +8,26 @@ import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { SKILL_TYPES } from "@/lib/constants";
 import { usePuroks } from "@/lib/useSettings";
-import { friendlyError, sortNewest, telHref } from "@/lib/format";
+import { friendlyError, normalizeSkillLabel, sortNewest, telHref } from "@/lib/format";
 import type { Skill } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, ErrorText, Input, Modal, PageHeader, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorText, FilterTabs, Input, Modal, PageHeader, Select, Spinner } from "@/components/ui";
 import { LoginGate } from "@/components/LoginGate";
 import { useToast } from "@/components/Toast";
 
 const skillsCollection = collection(db, "skills");
+/** Choosing this in the list lets the resident write their own skill. */
+const OTHER = "Iba pa";
 
-function SkillForm({ onDone }: { onDone: () => void }) {
+function SkillForm({ onDone, knownSkills }: { onDone: () => void; knownSkills: string[] }) {
   const { user, profile } = useAuth();
   const puroks = usePuroks();
   const toast = useToast();
-  const [form, setForm] = useState({ name: "", skill: "", purok: "", contact: "" });
+  const [form, setForm] = useState({ name: "", skill: "", custom: "", purok: "", contact: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (profile) setForm((f) => ({ name: f.name || profile.fullName, skill: f.skill, purok: f.purok || profile.purok, contact: f.contact || profile.contact }));
+    if (profile) setForm((f) => ({ ...f, name: f.name || profile.fullName, purok: f.purok || profile.purok, contact: f.contact || profile.contact }));
   }, [profile]);
 
   const update = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -34,13 +36,16 @@ function SkillForm({ onDone }: { onDone: () => void }) {
     e.preventDefault();
     if (!user) return;
     if (!form.name.trim() || !form.skill || !form.purok || !form.contact.trim()) return setError("Kumpletuhin ang lahat ng field.");
+    // "Iba pa" = the skill the resident wrote, cleaned up so "welder" and "WELDER" count as one.
+    const skill = form.skill === OTHER ? normalizeSkillLabel(form.custom) : form.skill;
+    if (!skill) return setError("Isulat kung ano ang skill mo.");
     setLoading(true);
     setError("");
     try {
       await addDoc(skillsCollection, {
         userId: user.uid,
         name: form.name.trim().slice(0, 120),
-        skill: form.skill,
+        skill,
         purok: form.purok,
         contact: form.contact.trim(),
         createdAt: serverTimestamp(),
@@ -58,6 +63,25 @@ function SkillForm({ onDone }: { onDone: () => void }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input label="Pangalan" required value={form.name} onChange={update("name")} />
       <Select label="Skill" required options={SKILL_TYPES} placeholder="-- Pumili --" value={form.skill} onChange={update("skill")} />
+      {form.skill === OTHER && (
+        <>
+          <Input
+            label="Isulat ang skill mo"
+            required
+            maxLength={40}
+            placeholder="hal. Welder, Barbero, Magtatahi ng kurtina"
+            list="skill-suggestions"
+            value={form.custom}
+            onChange={update("custom")}
+            hint="Kung may lumabas na mungkahi, piliin iyon para hindi madoble."
+          />
+          <datalist id="skill-suggestions">
+            {knownSkills.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+        </>
+      )}
       <Select label="Purok" required options={puroks} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} />
       <Input label="Contact Number" type="tel" required value={form.contact} onChange={update("contact")} />
       <ErrorText>{error}</ErrorText>
@@ -70,13 +94,28 @@ export default function SkillsPage() {
   const { user, isAdmin } = useAuth();
   const toast = useToast();
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("Lahat");
   const [open, setOpen] = useState(false);
   const { data, loading, error } = useCollection<Skill>(skillsCollection);
 
+  // Skills that residents added themselves (anything outside the built-in list), most common first.
+  const customSkills = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of data) if (!(SKILL_TYPES as readonly string[]).includes(s.skill)) counts.set(s.skill, (counts.get(s.skill) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name);
+  }, [data]);
+
+  // Tabs: only skills that somebody actually has.
+  const tabs = useMemo(() => {
+    const have = new Set(data.map((s) => s.skill));
+    const names = [...SKILL_TYPES.filter((t) => t !== OTHER && have.has(t)), ...customSkills];
+    return ["Lahat", ...names].map((value) => ({ value, label: value, count: value === "Lahat" ? undefined : data.filter((s) => s.skill === value).length, tone: "neutral" as const }));
+  }, [data, customSkills]);
+
   const skills = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return sortNewest(data).filter((s) => !term || `${s.name} ${s.skill} ${s.purok}`.toLowerCase().includes(term));
-  }, [data, search]);
+    return sortNewest(data).filter((s) => (filter === "Lahat" || s.skill === filter) && (!term || `${s.name} ${s.skill} ${s.purok}`.toLowerCase().includes(term)));
+  }, [data, search, filter]);
 
   const remove = async (id: string) => {
     if (!confirm("Tanggalin ang skill na ito sa listahan?")) return;
@@ -102,7 +141,8 @@ export default function SkillsPage() {
           aria-label="Hanapin ang skill"
         />
       </div>
-      <Button full variant="gold" className="mb-4" onClick={() => setOpen(true)}><Plus className="h-5 w-5" /> Magpa-lista ng Skill</Button>
+      <Button full variant="gold" className="mb-3" onClick={() => setOpen(true)}><Plus className="h-5 w-5" /> Magpa-lista ng Skill</Button>
+      {tabs.length > 1 && <FilterTabs label="Uri ng skill" value={tabs.some((t) => t.value === filter) ? filter : "Lahat"} onChange={setFilter} options={tabs} />}
 
       {loading ? (
         <Spinner />
@@ -136,7 +176,7 @@ export default function SkillsPage() {
 
       <Modal open={open} onClose={() => setOpen(false)} title="Magpa-lista ng Skill">
         <LoginGate message="Mag-login para mailista ang skill mo.">
-          <SkillForm onDone={() => setOpen(false)} />
+          <SkillForm onDone={() => setOpen(false)} knownSkills={customSkills} />
         </LoginGate>
       </Modal>
     </div>
