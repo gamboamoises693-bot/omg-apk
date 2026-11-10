@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { addDoc, arrayRemove, arrayUnion, collection, deleteDoc, deleteField, doc, getCountFromServer, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
-import { Check, Link2, MessageCircle, MoreHorizontal, Send, Share2, ThumbsUp, Trash2, X } from "lucide-react";
-import { QUICK_EMOJIS, REACTIONS, REACTION_BY_KEY, isReactionKey, type ReactionKey } from "@/lib/reactions";
+import { addDoc, collection, deleteDoc, doc, getCountFromServer, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
+import { Check, Link2, MessageCircle, MoreHorizontal, Send, Share2, Trash2, X } from "lucide-react";
+import { QUICK_EMOJIS } from "@/lib/reactions";
+import { LikeButton, ReactionCounts, ReactionSummary, reactionPatch, useReactions } from "./ReactionBar";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { friendlyError, sortNewest, timeAgo } from "@/lib/format";
 import type { Comment, Post } from "@/lib/types";
 import { Avatar } from "./Avatar";
-import { Badge, Button, Modal } from "./ui";
+import { Badge, Button } from "./ui";
 import { useToast } from "./Toast";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { useVerifiedSet } from "@/lib/useVerifiedSet";
@@ -149,39 +150,12 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
   const [menu, setMenu] = useState(false);
   const [zoom, setZoom] = useState(false);
   const [commentCount, setCommentCount] = useState<number | null>(null);
-  const [pop, setPop] = useState(false);
-  const [tray, setTray] = useState(false);
-  const [summary, setSummary] = useState(false);
-  // Show the tap immediately; the real value arrives from the database a moment later.
-  // undefined = nothing pending, null = removed, string = chosen reaction.
-  const [optimistic, setOptimistic] = useState<ReactionKey | null | undefined>(undefined);
-  const holdTimer = useRef<number | null>(null);
-  const heldOpen = useRef(false);
   const verified = useVerifiedSet();
-
-  // Everyone's reaction. Older likes (no entry) count as 👍.
-  const reactionMap = useMemo(() => {
-    const map: Record<string, ReactionKey> = {};
-    for (const uid of post.likes) map[uid] = "like";
-    for (const [uid, key] of Object.entries(post.reactions ?? {})) if (isReactionKey(key)) map[uid] = key;
-    if (user && optimistic !== undefined) {
-      if (optimistic === null) delete map[user.uid];
-      else map[user.uid] = optimistic;
-    }
-    return map;
-  }, [post.likes, post.reactions, optimistic, user]);
-  const mine: ReactionKey | null = (user && reactionMap[user.uid]) || null;
-  const counts = useMemo(() => {
-    const c: Partial<Record<ReactionKey, number>> = {};
-    Object.values(reactionMap).forEach((k) => (c[k] = (c[k] ?? 0) + 1));
-    return c;
-  }, [reactionMap]);
-  const total = Object.keys(reactionMap).length;
-  const topKeys = REACTIONS.map((r) => r.key)
-    .filter((k) => (counts[k] ?? 0) > 0)
-    .sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0))
-    .slice(0, 3);
-  useEffect(() => setOptimistic(undefined), [post.likes, post.reactions]);
+  const r = useReactions({
+    likes: post.likes,
+    reactions: post.reactions,
+    save: (uid, key) => updateDoc(doc(db, "posts", post.id), reactionPatch(uid, key)),
+  });
 
   // Cheap one-time count so the card can say "3 comments" without loading them all.
   useEffect(() => {
@@ -190,43 +164,6 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
       .then((s) => setCommentCount(s.data().count))
       .catch(() => {});
   }, [post.id, post.status]);
-
-  /** Tap the same reaction again to remove it. */
-  const react = async (key: ReactionKey) => {
-    if (!user) {
-      toast("Mag-login muna para mag-react.", "error");
-      return;
-    }
-    setTray(false);
-    const remove = mine === key;
-    setOptimistic(remove ? null : key);
-    if (!remove) {
-      setPop(true);
-      setTimeout(() => setPop(false), 350);
-    }
-    try {
-      await updateDoc(
-        doc(db, "posts", post.id),
-        remove ? { likes: arrayRemove(user.uid), [`reactions.${user.uid}`]: deleteField() } : { likes: arrayUnion(user.uid), [`reactions.${user.uid}`]: key },
-      );
-    } catch (err) {
-      setOptimistic(undefined);
-      toast(friendlyError(err), "error");
-    }
-  };
-
-  // Tap = 👍 (or remove). Hold the button to choose another reaction.
-  const startHold = () => {
-    heldOpen.current = false;
-    holdTimer.current = window.setTimeout(() => {
-      heldOpen.current = true;
-      setTray(true);
-    }, 380);
-  };
-  const endHold = () => {
-    if (holdTimer.current) window.clearTimeout(holdTimer.current);
-    holdTimer.current = null;
-  };
 
   const share = async () => {
     setMenu(false);
@@ -340,18 +277,7 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
         <>
           {/* Counts */}
           <div className="flex items-center justify-between px-4 pb-2 pt-3 text-sm text-gray-500">
-            {total > 0 ? (
-              <button type="button" onClick={() => setSummary(true)} className="flex items-center gap-1.5 active:opacity-70" aria-label={`${total} reaction. Tingnan ang detalye`}>
-                <span className="flex -space-x-1.5">
-                  {topKeys.map((k) => (
-                    <span key={k} className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[0.8rem] leading-none ring-2 ring-white">{REACTION_BY_KEY[k].emoji}</span>
-                  ))}
-                </span>
-                {total.toLocaleString("en-PH")}
-              </button>
-            ) : (
-              <span className="text-xs">Maging una sa pag-react</span>
-            )}
+            <ReactionCounts r={r} />
             {(commentCount ?? 0) > 0 && (
               <button type="button" onClick={() => setShowComments(true)} className="active:underline">
                 {commentCount} comment{commentCount === 1 ? "" : "s"}
@@ -361,46 +287,7 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
 
           {/* Actions */}
           <div className="mx-2 flex border-t border-gray-100 py-1">
-            <div className="relative flex-1">
-              {tray && (
-                <>
-                  <button type="button" aria-label="Isara ang mga reaction" className="fixed inset-0 z-30 cursor-default" onClick={() => setTray(false)} />
-                  <div className="absolute bottom-full left-0 z-40 mb-2 flex gap-1 rounded-full bg-white px-2 py-1.5 shadow-float ring-1 ring-gray-100" role="menu" aria-label="Pumili ng reaction">
-                    {REACTIONS.map((r) => (
-                      <button key={r.key} type="button" role="menuitem" onClick={() => react(r.key)} aria-label={r.label} title={r.label} className={`rounded-full px-1 text-[1.7rem] leading-none transition-transform active:scale-125 ${mine === r.key ? "scale-110 bg-brand-light" : ""}`}>
-                        {r.emoji}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-              <button
-                type="button"
-                onPointerDown={startHold}
-                onPointerUp={endHold}
-                onPointerLeave={endHold}
-                onPointerCancel={endHold}
-                onContextMenu={(e) => e.preventDefault()}
-                onClick={() => {
-                  if (heldOpen.current) {
-                    heldOpen.current = false;
-                    return;
-                  }
-                  react(mine ?? "like");
-                }}
-                aria-pressed={!!mine}
-                aria-label={mine ? `${REACTION_BY_KEY[mine].label}. Pindutin para alisin, o pindutin nang matagal para palitan` : "Like. Pindutin nang matagal para sa ibang reaction"}
-                className={`flex w-full select-none items-center justify-center gap-2 rounded-xl py-2.5 text-[0.95rem] font-semibold active:bg-gray-100 ${mine ? REACTION_BY_KEY[mine].color : "text-gray-600"}`}
-                style={{ WebkitTouchCallout: "none" }}
-              >
-                {mine ? (
-                  <span className={`text-xl leading-none ${pop ? "animate-like-pop" : ""}`}>{REACTION_BY_KEY[mine].emoji}</span>
-                ) : (
-                  <ThumbsUp className="h-5 w-5" />
-                )}
-                {mine ? REACTION_BY_KEY[mine].label : "Like"}
-              </button>
-            </div>
+            <LikeButton r={r} />
             <button type="button" onClick={() => setShowComments((v) => !v)} aria-expanded={showComments} className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[0.95rem] font-semibold active:bg-gray-100 ${showComments ? "text-brand" : "text-gray-600"}`}>
               <MessageCircle className="h-5 w-5" /> Comment
             </button>
@@ -412,18 +299,7 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
         </>
       ) : null}
 
-      <Modal open={summary} onClose={() => setSummary(false)} title="Mga reaction">
-        <ul className="divide-y divide-gray-100">
-          {REACTIONS.filter((r) => (counts[r.key] ?? 0) > 0).map((r) => (
-            <li key={r.key} className="flex items-center gap-3 py-2.5">
-              <span className="text-2xl">{r.emoji}</span>
-              <span className="flex-1 font-semibold">{r.label}</span>
-              <span className="font-bold text-gray-700">{counts[r.key]}</span>
-            </li>
-          ))}
-        </ul>
-        {total === 0 && <p className="text-sm text-gray-600">Wala pang reaction.</p>}
-      </Modal>
+      <ReactionSummary r={r} />
 
       {zoom && post.photoURL && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-2" role="dialog" aria-modal="true" aria-label="Larawan" onClick={() => setZoom(false)}>

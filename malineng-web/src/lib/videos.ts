@@ -15,6 +15,9 @@ export interface Video {
   views: number;
   /** Hidden videos are not shown on Home (only the Super Admin sees them in Admin). */
   hidden?: boolean;
+  /** Everyone who reacted, and uid -> reaction key (same shape as posts). */
+  likes?: string[];
+  reactions?: Record<string, string>;
   /** Uploaded videos only: number of chunk documents, mime type, size in bytes and a JPEG thumbnail. */
   chunks?: number;
   mime?: string;

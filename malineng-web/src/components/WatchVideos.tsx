@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { collection, doc, increment, updateDoc } from "firebase/firestore";
-import { Clapperboard, Eye, Play } from "lucide-react";
+import { collection, doc, getCountFromServer, increment, query, updateDoc, where } from "firebase/firestore";
+import { Clapperboard, Eye, MessageCircle, Play } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { loadVideoBlob } from "@/lib/videoUpload";
+import { LikeButton, ReactionCounts, ReactionSummary, reactionPatch, useReactions } from "./ReactionBar";
+import { VideoComments } from "./VideoComments";
 import { alreadyCounted, embedUrl, getSavedPosition, markCounted, savePosition, youtubeThumb, type Video } from "@/lib/videos";
 
 const videosRef = collection(db, "videos");
+const NO_LIKES: string[] = [];
 
 function Thumb({ v, className = "" }: { v: Video; className?: string }) {
   if (v.thumb) {
@@ -24,6 +27,50 @@ function Thumb({ v, className = "" }: { v: Video; className?: string }) {
     <span className={`flex h-full w-full items-center justify-center bg-gradient-to-br from-brand to-brand-deep text-white ${className}`}>
       <Clapperboard className="h-7 w-7" aria-hidden />
     </span>
+  );
+}
+
+/** Reactions and comments for the video that is selected. Re-created per video, so counts never mix. */
+function VideoSocial({ video }: { video: Video }) {
+  const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState<number | null>(null);
+  const r = useReactions({
+    likes: video.likes ?? NO_LIKES,
+    reactions: video.reactions,
+    save: (uid, key) => updateDoc(doc(db, "videos", video.id), reactionPatch(uid, key)),
+  });
+
+  // Cheap count so the bar can say "3 comments" before the comments are opened.
+  useEffect(() => {
+    getCountFromServer(query(collection(db, "videoComments"), where("videoId", "==", video.id)))
+      .then((s) => setCommentCount(s.data().count))
+      .catch(() => {});
+  }, [video.id, showComments]);
+
+  return (
+    <div className="mt-2">
+      <div className="flex items-center justify-between px-1 pb-1.5 pt-1 text-sm text-gray-500">
+        <ReactionCounts r={r} />
+        {(commentCount ?? 0) > 0 && (
+          <button type="button" onClick={() => setShowComments(true)} className="active:underline">
+            {commentCount} comment{commentCount === 1 ? "" : "s"}
+          </button>
+        )}
+      </div>
+      <div className="flex border-t border-gray-100 py-1">
+        <LikeButton r={r} />
+        <button
+          type="button"
+          onClick={() => setShowComments((v) => !v)}
+          aria-expanded={showComments}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[0.95rem] font-semibold active:bg-gray-100 ${showComments ? "text-brand" : "text-gray-600"}`}
+        >
+          <MessageCircle className="h-5 w-5" /> Comment
+        </button>
+      </div>
+      {showComments && <VideoComments videoId={video.id} />}
+      <ReactionSummary r={r} />
+    </div>
   );
 }
 
@@ -170,6 +217,8 @@ export function WatchVideos() {
                 <Eye className="h-4 w-4" aria-hidden /> {(current.views ?? 0).toLocaleString("en-PH")} views
               </span>
             </div>
+
+            <VideoSocial key={current.id} video={current} />
 
             {videos.length > 1 && (
               <>
