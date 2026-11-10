@@ -9,16 +9,16 @@ import { ChevronLeft, Loader2, X } from "lucide-react";
 type Variant = "primary" | "gold" | "outline" | "danger" | "ghost" | "soft";
 
 const variantClass: Record<Variant, string> = {
-  primary: "bg-brand text-white active:bg-brand-dark",
-  gold: "bg-gold text-brand-deep active:bg-gold-dark",
-  outline: "border border-gray-200 bg-white text-brand active:bg-brand-light",
-  danger: "bg-red-600 text-white active:bg-red-700",
+  primary: "bg-gradient-to-b from-brand to-brand-dark text-white shadow-sm active:brightness-90",
+  gold: "bg-gradient-to-b from-[#E3C25A] to-gold text-brand-deep shadow-sm active:brightness-95",
+  outline: "border-[1.5px] border-[#C9D4E5] bg-white text-brand-dark active:bg-brand-light",
+  danger: "bg-red-700 text-white shadow-sm active:bg-red-800",
   ghost: "text-brand active:bg-brand-light",
-  soft: "bg-brand-light text-brand active:bg-brand-light/70",
+  soft: "bg-brand-light text-brand-dark active:brightness-95",
 };
 
 const buttonBase =
-  "inline-flex min-h-[2.9rem] items-center justify-center gap-2 rounded-xl px-4 py-2 text-[0.95rem] font-semibold transition disabled:opacity-60";
+  "inline-flex min-h-[2.9rem] items-center justify-center gap-2 rounded-[0.9rem] px-4 py-2 text-[0.95rem] font-bold transition disabled:opacity-60";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -47,7 +47,7 @@ export function LinkButton({ href, variant = "primary", full, className = "", ch
 function FieldWrap({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[0.85rem] font-semibold text-gray-700">{label}</span>
+      <span className="mb-1 block text-[0.8rem] font-bold text-brand-dark">{label}</span>
       {children}
       {hint && <span className="mt-1 block text-xs text-gray-500">{hint}</span>}
     </label>
@@ -56,7 +56,7 @@ function FieldWrap({ label, hint, children }: { label: string; hint?: string; ch
 
 // Input text stays >= 16px (see globals.css) so iPhones don't zoom while typing.
 const fieldClass =
-  "w-full rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2.5 outline-none transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/15 disabled:bg-gray-100";
+  "w-full rounded-[0.9rem] border-[1.5px] border-line bg-[#F8FAFD] px-3.5 py-3 outline-none transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/15 disabled:bg-gray-100";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }>(
   function Input({ label, hint, className = "", ...rest }, ref) {
@@ -184,7 +184,7 @@ export function SelectOther({
 
 /* ---------------- Layout bits ---------------- */
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-2xl bg-white p-4 shadow-card ${className}`}>{children}</div>;
+  return <div className={`rounded-[1.125rem] border border-line bg-white p-4 shadow-card ${className}`}>{children}</div>;
 }
 
 // Bottom-nav roots don't need a back button.
@@ -195,30 +195,37 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   const pathname = (usePathname() ?? "/").replace(/\/$/, "") || "/";
   const showBack = !ROOT_PATHS.includes(pathname);
 
+  // Navy band across the page with a thin gold line, the same on every page.
   return (
-    <div className="mb-4 flex items-center gap-3">
-      {showBack && (
-        <button
-          onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-card active:bg-gray-100"
-          aria-label="Bumalik"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-      )}
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate text-xl font-extrabold text-gray-900">{title}</h1>
-        {subtitle && <p className="text-[0.85rem] text-gray-500">{subtitle}</p>}
+    <div className="relative -mx-4 -mt-4 mb-5 rounded-b-[1.75rem] bg-gradient-to-br from-brand-dark to-brand-deep px-4 pb-6 pt-4 text-white">
+      <div className="flex items-center gap-3">
+        {showBack && (
+          <button
+            onClick={() => (window.history.length > 1 ? router.back() : router.push("/"))}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-white active:bg-white/25"
+            aria-label="Bumalik"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        )}
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-[1.45rem] font-extrabold leading-tight tracking-tight">{title}</h1>
+          {subtitle && <p className="text-[0.85rem] text-white/75">{subtitle}</p>}
+        </div>
+        {action}
       </div>
-      {action}
+      <div className="pointer-events-none absolute inset-x-6 bottom-0 h-[3px] rounded-full bg-gradient-to-r from-transparent via-gold to-transparent opacity-80" aria-hidden />
     </div>
   );
 }
 
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-2 mt-6 flex items-baseline justify-between gap-2">
-      <h2 className="text-base font-bold text-gray-900">{children}</h2>
+    <div className="mb-2.5 mt-6 flex items-center justify-between gap-2">
+      <h2 className="flex items-center gap-2 text-[0.78rem] font-extrabold uppercase tracking-[0.08em] text-brand-deep">
+        <span className="h-3.5 w-[3px] rounded-sm bg-gold" aria-hidden />
+        {children}
+      </h2>
       {action}
     </div>
   );
@@ -226,13 +233,13 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
 
 export function Badge({ children, color = "green" }: { children: ReactNode; color?: "green" | "gold" | "gray" | "red" | "blue" }) {
   const colors = {
-    green: "bg-brand-light text-brand",
-    gold: "bg-gold-light text-yellow-800",
-    gray: "bg-gray-100 text-gray-600",
+    green: "bg-brand-light text-brand-dark",
+    gold: "bg-gold-light text-[#6B5409]",
+    gray: "bg-[#EDF0F5] text-gray-600",
     red: "bg-red-50 text-red-700",
     blue: "bg-blue-50 text-blue-700",
   } as const;
-  return <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${colors[color]}`}>{children}</span>;
+  return <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.68rem] font-extrabold uppercase tracking-wide ${colors[color]}`}>{children}</span>;
 }
 
 export function Spinner({ label = "Naglo-load..." }: { label?: string }) {
@@ -246,7 +253,7 @@ export function Spinner({ label = "Naglo-load..." }: { label?: string }) {
 
 export function EmptyState({ icon, title, children }: { icon?: ReactNode; title: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl bg-white px-6 py-8 text-center text-sm text-gray-500 shadow-card">
+    <div className="flex flex-col items-center rounded-[1.125rem] border border-line bg-white px-6 py-8 text-center text-sm text-gray-500 shadow-card">
       {icon && <div className="mb-2 text-gray-300 [&>svg]:h-10 [&>svg]:w-10">{icon}</div>}
       <p className="font-semibold text-gray-700">{title}</p>
       {children && <div className="mt-1">{children}</div>}
@@ -275,10 +282,10 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 pb-8 sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[1.75rem] bg-white p-5 pb-8 sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200 sm:hidden" aria-hidden />
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+          <h2 className="text-lg font-extrabold text-brand-deep">{title}</h2>
           <button onClick={onClose} className="rounded-full bg-gray-100 p-1.5 active:bg-gray-200" aria-label="Isara">
             <X className="h-5 w-5" />
           </button>
@@ -289,7 +296,7 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
   );
 }
 
-/* ---------------- Filter tabs (underline style) ---------------- */
+/* ---------------- Filter tabs (segmented pills) ---------------- */
 export interface FilterOption<T extends string> {
   value: T;
   label: string;
@@ -300,7 +307,7 @@ export interface FilterOption<T extends string> {
 }
 
 /**
- * Underline tabs used for every filter row. Up to 4 options share the width equally;
+ * Segmented tabs used for every filter row. Up to 4 options share the width equally;
  * more options scroll sideways (no scrollbar) and the selected one is kept in view.
  */
 export function FilterTabs<T extends string>({ options, value, onChange, label }: { options: FilterOption<T>[]; value: T; onChange: (v: T) => void; label: string }) {
@@ -318,7 +325,7 @@ export function FilterTabs<T extends string>({ options, value, onChange, label }
       ref={rowRef}
       role="tablist"
       aria-label={label}
-      className={`mb-3 rounded-2xl bg-white px-1 shadow-card ${fits ? "grid" : "no-scrollbar flex overflow-x-auto"}`}
+      className={`mb-3 gap-0.5 rounded-2xl bg-[#E4EAF3] p-1 ${fits ? "grid" : "no-scrollbar flex overflow-x-auto"}`}
       style={fits ? { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` } : undefined}
     >
       {options.map((o) => {
@@ -339,8 +346,8 @@ export function FilterTabs<T extends string>({ options, value, onChange, label }
             role="tab"
             aria-selected={on}
             onClick={() => onChange(o.value)}
-            className={`flex min-w-0 items-center justify-center gap-1 border-b-[2.5px] py-2.5 text-[0.82rem] transition-colors ${fits ? "px-1" : "shrink-0 px-3"} ${
-              on ? "border-brand font-bold text-brand" : "border-transparent font-medium text-gray-500"
+            className={`flex min-w-0 items-center justify-center gap-1 rounded-xl py-2 text-[0.82rem] transition-colors ${fits ? "px-1" : "shrink-0 px-3"} ${
+              on ? "bg-white font-extrabold text-brand-deep shadow-[0_1px_3px_rgba(15,23,42,0.14)]" : "font-semibold text-gray-600"
             }`}
           >
             <span className="truncate">{o.label}</span>

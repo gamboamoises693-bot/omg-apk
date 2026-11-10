@@ -12,12 +12,12 @@ export function TopBar() {
   if (pathname === "/") return null;
 
   return (
-    <header className="no-print sticky top-0 z-40 bg-brand text-white">
+    <header className="no-print sticky top-0 z-40 bg-brand-deep text-white">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-2.5">
         <LogoButton className="flex items-center gap-2">
           <LogoMark />
           <span className="leading-tight">
-            <span className="block text-[0.95rem] font-bold">Barangay Malineng</span>
+            <span className="block text-[0.9rem] font-extrabold uppercase tracking-wide">Barangay Malineng</span>
             <span className="block text-[0.7rem] text-white/75">{BARANGAY_CITY}</span>
           </span>
         </LogoButton>
