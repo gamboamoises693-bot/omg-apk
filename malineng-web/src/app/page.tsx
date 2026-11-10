@@ -5,6 +5,7 @@ import Link from "next/link";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import {
   Pill,
+  Landmark,
   MapPinned,
   Package,
   Ambulance,
@@ -41,6 +42,7 @@ import type { AmbulanceRequest, Appointment, InfraProject, Listing } from "@/lib
 import { ProgressBar, ProjectStatusPill, projectSortKey } from "@/components/ProjectBits";
 import { LinkButton, Modal, SectionTitle, Spinner } from "@/components/ui";
 import { AdminShieldLink } from "@/components/AdminShieldLink";
+import { PabatidBell } from "@/components/PabatidBell";
 import { Avatar } from "@/components/Avatar";
 import { LogoButton, LogoMark } from "@/components/BarangayLogo";
 import type { PublicStats } from "@/lib/stats";
@@ -71,6 +73,9 @@ const SERVICES: { href: string; label: string; icon: typeof Store; tint: Tint }[
   { href: "/botika", label: "Botika", icon: Pill, tint: "green" },
   { href: "/hiraman", label: "Hiraman", icon: Package, tint: "blue" },
   { href: "/mapa", label: "Mapa", icon: MapPinned, tint: "blue" },
+  { href: "/pabatid", label: "Pabatid", icon: Megaphone, tint: "blue" },
+  { href: "/survey", label: "Survey", icon: Vote, tint: "blue" },
+  { href: "/pondo", label: "Pondo", icon: Landmark, tint: "blue" },
   { href: "/lost-found", label: "Lost & Found", icon: Search, tint: "pink" },
   { href: "/skills", label: "Skills", icon: Wrench, tint: "orange" },
   { href: "/proyekto", label: "Proyekto", icon: HardHat, tint: "gold" },
@@ -218,7 +223,10 @@ export default function HomePage() {
               <p className="text-base font-bold">{firstName ? `${firstName} 👋` : "Kabarangay 👋"}</p>
             </div>
           </div>
-          <AdminShieldLink />
+          <div className="flex items-center gap-2">
+            <PabatidBell />
+            <AdminShieldLink />
+          </div>
         </div>
         <LogoButton className="mt-3 flex items-center gap-2 text-xs text-white/80">
           <LogoMark size="h-6 w-6" textClass="text-[0.65rem]" />
