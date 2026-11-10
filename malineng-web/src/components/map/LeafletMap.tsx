@@ -5,6 +5,8 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { Map as LMap, LayerGroup } from "leaflet";
 import { categoryColor, type Place } from "@/lib/places";
 
+const MAP_STYLE_KEY = "malineng-map-style";
+
 export interface MapHandle {
   flyTo: (lat: number, lng: number, zoom?: number) => void;
   getView: () => { lat: number; lng: number; zoom: number } | null;
@@ -60,13 +62,55 @@ export const LeafletMap = forwardRef<MapHandle, Props>(function LeafletMap({ cen
       if (cancelled || !el.current || map.current) return;
       L.current = leaflet;
       const m = leaflet.map(el.current, { zoomControl: false, attributionControl: true }).setView([center.lat, center.lng], center.zoom);
-      leaflet
-        .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        })
-        .addTo(m);
+      // Two free base layers. OpenStreetMap has few houses mapped here, so satellite shows every roof.
+      const street = leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 20,
+        maxNativeZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      });
+      const satellite = leaflet.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxZoom: 20,
+        // Past this zoom the satellite tiles are simply enlarged instead of showing grey squares.
+        maxNativeZoom: 18,
+        attribution: "Tiles &copy; Esri, Maxar, Earthstar Geographics",
+      });
+      let saved: string | null = null;
+      try {
+        saved = localStorage.getItem(MAP_STYLE_KEY);
+      } catch {
+        // Storage blocked: fall back to the street map.
+      }
+      let useSatellite = saved === "satellite";
+      (useSatellite ? satellite : street).addTo(m);
       leaflet.control.zoom({ position: "bottomleft" }).addTo(m);
+
+      // One button that flips between the street map and satellite (stacks above the zoom buttons).
+      const StyleControl = leaflet.Control.extend({
+        onAdd() {
+          const btn = leaflet.DomUtil.create("button", "") as HTMLButtonElement;
+          btn.type = "button";
+          btn.style.cssText = "background:#fff;border:2px solid rgba(0,0,0,.2);border-radius:10px;padding:8px 12px;font:600 13px system-ui,sans-serif;color:#0F3A70;box-shadow:0 2px 6px rgba(0,0,0,.2);cursor:pointer;margin-bottom:8px";
+          const paint = () => {
+            btn.textContent = useSatellite ? "🗺️ Mapa" : "🛰️ Satellite (bahay)";
+            btn.setAttribute("aria-label", useSatellite ? "Ipakita ang karaniwang mapa" : "Ipakita ang satellite para makita ang mga bahay");
+          };
+          paint();
+          leaflet.DomEvent.disableClickPropagation(btn);
+          btn.onclick = () => {
+            useSatellite = !useSatellite;
+            m.removeLayer(useSatellite ? street : satellite);
+            (useSatellite ? satellite : street).addTo(m);
+            try {
+              localStorage.setItem(MAP_STYLE_KEY, useSatellite ? "satellite" : "street");
+            } catch {
+              // Not saved; it still works for this visit.
+            }
+            paint();
+          };
+          return btn;
+        },
+      });
+      new StyleControl({ position: "bottomleft" }).addTo(m);
       layer.current = leaflet.layerGroup().addTo(m);
       m.on("moveend", () => {
         const c = m.getCenter();
