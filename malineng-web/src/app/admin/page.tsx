@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import Link from "next/link";
 import {
   Pill,
+  CopyCheck,
   MapPinned,
   Package,
   Ambulance,
@@ -51,6 +52,7 @@ import { AdminActivity } from "@/components/admin/AdminActivity";
 import { AdminProjects } from "@/components/admin/AdminProjects";
 import { AdminHiraman } from "@/components/admin/AdminHiraman";
 import { AdminMapa } from "@/components/admin/AdminMapa";
+import { AdminDuplicates } from "@/components/admin/AdminDuplicates";
 
 interface Section {
   key: string;
@@ -104,6 +106,7 @@ const GROUPS: Group[] = [
     superOnly: true,
     sections: [
       { key: "users", label: "Users at Roles", icon: Crown, Component: AdminUsers },
+      { key: "doble", label: "Posibleng Doble", icon: CopyCheck, Component: AdminDuplicates },
       { key: "activity", label: "Activity Log", icon: ScrollText, Component: AdminActivity },
     ],
   },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Timestamp, collection, doc, getCountFromServer, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
+import { Timestamp, arrayUnion, collection, doc, getCountFromServer, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { auth, db, isFirebaseConfigured } from "./firebase";
 
 /**
@@ -55,7 +55,8 @@ async function beatUser(): Promise<void> {
   if (lastUserBeat.uid === uid && Date.now() - lastUserBeat.at < 60_000) return;
   lastUserBeat = { uid, at: Date.now() };
   try {
-    await setDoc(doc(db, "presenceUsers", uid), { lastSeen: serverTimestamp() });
+    // `devices` lets the Super Admin spot several accounts used on one phone.
+    await setDoc(doc(db, "presenceUsers", uid), { lastSeen: serverTimestamp(), devices: arrayUnion(deviceId()) }, { merge: true });
   } catch (err) {
     lastUserBeat = { uid: "", at: 0 };
     console.warn("[presence] user heartbeat failed:", err);

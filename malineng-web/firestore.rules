@@ -103,6 +103,34 @@ service cloud.firestore {
     }
 
     // ---------- users ----------
+    // One mobile number = one account: a non-empty contact must be a normalized PH mobile
+    // number whose phoneIndex entry (written in the same batch) belongs to this user.
+    function contactOk(uid) {
+      return !('contact' in incoming())
+        || incoming().contact == ''
+        || (incoming().contact is string
+          && incoming().contact.matches('^09[0-9]{9}$')
+          && getAfter(/databases/$(database)/documents/phoneIndex/$(incoming().contact)).data.uid == uid);
+    }
+
+    match /phoneIndex/{phone} {
+      // Lets the app tell "this number is taken" (a denied read on someone else's number).
+      allow get: if signedIn() && (resource == null || resource.data.uid == request.auth.uid || isAdmin());
+      allow list: if isSuperAdmin();
+      // Claimed only together with the user's contact; never moved to another user.
+      allow create: if phone.matches('^09[0-9]{9}$')
+        && incoming().keys().hasOnly(['uid', 'createdAt'])
+        && (incoming().uid == request.auth.uid || isSuperAdmin())
+        && getAfter(/databases/$(database)/documents/users/$(incoming().uid)).data.contact == phone;
+      allow update: if false;
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isSuperAdmin());
+    }
+
+    // Duplicate groups the Super Admin marked "hindi doble".
+    match /duplicateDismissed/{key} {
+      allow read, write: if isSuperAdmin();
+    }
+
     match /users/{uid} {
       // BHW reads users to look up the resident receiving medicine.
       allow read: if isSelf(uid) || isAdmin() || isBotika();
@@ -110,19 +138,22 @@ service cloud.firestore {
         && incoming().role == 'resident'
         && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'createdAt'])
         && isNonEmptyString(incoming().fullName, 120)
+        && contactOk(uid)
         // The Super Admin can also create accounts for officials (Kapitan, Secretary, BHW...).
         || (isSuperAdmin()
           && incoming().role in ['resident', 'admin']
           && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'position', 'createdAt', 'createdBy'])
           && incoming().uid == uid
-          && isNonEmptyString(incoming().fullName, 120));
+          && isNonEmptyString(incoming().fullName, 120)
+          && contactOk(uid));
       // A user edits their own profile but never role, position or suspension.
       // Only the Super Admin manages roles, and cannot demote themself (avoids lock-out).
       // Profile photo (photoURL) is for staff (admins and BHW) only.
       allow update: if (isSelf(uid)
           && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended'])
           && (!incoming().diff(existing()).affectedKeys().hasAny(['photoURL'])
-              || (isStaff() && incoming().photoURL is string && incoming().photoURL.size() < 60000)))
+              || (isStaff() && incoming().photoURL is string && incoming().photoURL.size() < 60000))
+          && (!incoming().diff(existing()).affectedKeys().hasAny(['contact']) || contactOk(uid)))
         || (isSuperAdmin() && !(isSelf(uid) && incoming().role != 'superadmin'));
       allow delete: if isSelf(uid) || isSuperAdmin();
     }
@@ -500,9 +531,11 @@ service cloud.firestore {
     // ---------- who is online (logged-in users; Super Admin only) ----------
     match /presenceUsers/{uid} {
       allow read: if isSuperAdmin();
+      // `devices`: ids of phones this account was used on (for the duplicate checker).
       allow create, update: if isSelf(uid)
-        && incoming().keys().hasOnly(['lastSeen'])
-        && incoming().lastSeen == request.time;
+        && incoming().keys().hasOnly(['lastSeen', 'devices'])
+        && incoming().lastSeen == request.time
+        && (!('devices' in incoming()) || (incoming().devices is list && incoming().devices.size() <= 20));
       allow delete: if isSuperAdmin();
     }
 

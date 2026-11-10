@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { collection, deleteDoc, doc, query, updateDoc, where } from "firebase/firestore";
+import { collection, deleteDoc, doc, query, updateDoc, where, writeBatch } from "firebase/firestore";
 import { BadgeCheck, Ban, Camera, CalendarCheck, Pill, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
 import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup } from "firebase/auth";
 import { db, googleProvider } from "@/lib/firebase";
@@ -18,6 +18,7 @@ import { Badge, Button, Card, ErrorText, Input, LinkButton, Modal, PageHeader, S
 import { LoginGate } from "@/components/LoginGate";
 import { TextSizeSetting } from "@/components/TextSizeSetting";
 import { useToast } from "@/components/Toast";
+import { PHONE_TAKEN_MESSAGE, claimPhoneInBatch, normalizePhone, phoneOwner, releasePhone } from "@/lib/phone";
 import { Avatar } from "@/components/Avatar";
 import { compressToDataUrl } from "@/lib/upload";
 
@@ -45,16 +46,27 @@ function ProfileForm() {
     e.preventDefault();
     if (!user) return;
     if (!form.fullName.trim() || !form.purok || !form.contact.trim()) return setError("Kailangan ang pangalan, purok at contact.");
+    const contact = normalizePhone(form.contact);
+    if (!contact) return setError("Mali ang contact number. Halimbawa: 09171234567");
     setSaving(true);
     setError("");
     try {
+      const oldContact = profile?.contact ?? "";
+      const changed = contact !== oldContact;
+      const owner = changed ? await phoneOwner(contact, user.uid) : "mine";
+      if (owner === "taken") throw new Error(PHONE_TAKEN_MESSAGE);
       // role is intentionally NOT included: residents cannot change it (enforced by rules).
-      await updateDoc(doc(db, "users", user.uid), {
+      const batch = writeBatch(db);
+      batch.update(doc(db, "users", user.uid), {
         fullName: form.fullName.trim().slice(0, 120),
         purok: form.purok,
-        contact: form.contact.trim(),
+        contact,
         birthday: form.birthday,
       });
+      if (owner === "free") claimPhoneInBatch(batch, contact, user.uid);
+      await batch.commit();
+      // Free the old number so its owner can use it again.
+      if (changed && oldContact) await releasePhone(oldContact, user.uid);
       toast("Na-save ang profile mo.");
     } catch (err) {
       setError(friendlyError(err));
@@ -69,7 +81,7 @@ function ProfileForm() {
       <form onSubmit={handleSave} className="space-y-4">
         <Input label="Buong Pangalan" value={form.fullName} onChange={update("fullName")} required />
         <Select label="Purok" options={puroks} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} required />
-        <Input label="Contact Number" type="tel" value={form.contact} onChange={update("contact")} required />
+        <Input label="Contact Number" type="tel" inputMode="tel" value={form.contact} onChange={update("contact")} required hint="Isang numero = isang account" />
         <Input label="Birthday" type="date" value={form.birthday} onChange={update("birthday")} />
         <ErrorText>{error}</ErrorText>
         <Button type="submit" full loading={saving}>I-save ang Profile</Button>
@@ -248,6 +260,7 @@ function DeleteAccount() {
       else await reauthenticateWithPopup(user, googleProvider);
       logActivity("Account", `Binura ang sariling account (${profile?.fullName ?? ""})`, user.uid);
       await Promise.all(["verifications", "verifiedUsers", "households"].map((c) => deleteDoc(doc(db, c, user.uid)).catch(() => undefined)));
+      await releasePhone(profile?.contact ?? "", user.uid);
       await deleteDoc(doc(db, "users", user.uid));
       await user.delete();
       toast("Nabura na ang account mo at ang personal na data mo.");

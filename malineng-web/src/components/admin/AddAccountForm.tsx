@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { deleteApp, initializeApp } from "firebase/app";
 import { createUserWithEmailAndPassword, inMemoryPersistence, initializeAuth, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { Copy, Eye, EyeOff } from "lucide-react";
 import { firebaseConfig } from "@/config/firebase.config";
 import { auth, db } from "@/lib/firebase";
@@ -13,6 +13,7 @@ import { logActivity, roleLabel } from "@/lib/activity";
 import { ADMIN_POSITIONS } from "@/lib/constants";
 import { friendlyError } from "@/lib/format";
 import { refreshPublicStatsQuietly } from "@/lib/stats";
+import { PHONE_TAKEN_MESSAGE, claimPhoneInBatch, normalizePhone, phoneOwner } from "@/lib/phone";
 import { Button, ErrorText, Input, Select } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
@@ -68,16 +69,21 @@ export function AddAccountForm({ onDone }: { onDone: () => void }) {
     if (!fullName.trim()) return setError("Ilagay ang buong pangalan.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return setError("Mali ang format ng email.");
     if (password.length < 6) return setError("Dapat 6 characters pataas ang password.");
+    const phone = contact.trim() ? normalizePhone(contact) : "";
+    if (contact.trim() && !phone) return setError("Mali ang contact number. Halimbawa: 09171234567");
 
     setBusy(true);
     try {
+      // Check the number BEFORE creating the login, so no orphan login is left behind.
+      if (phone && (await phoneOwner(phone, "")) !== "free") throw new Error(PHONE_TAKEN_MESSAGE);
       const uid = await createAuthUser(cleanEmail, password);
-      // Profile doc written by the Super Admin (allowed by firestore.rules).
-      await setDoc(doc(db, "users", uid), {
+      // Profile doc + number claim written by the Super Admin (allowed by firestore.rules).
+      const batch = writeBatch(db);
+      batch.set(doc(db, "users", uid), {
         uid,
         fullName: fullName.trim(),
         email: cleanEmail,
-        contact: contact.trim(),
+        contact: phone,
         purok,
         birthday: "",
         role,
@@ -85,6 +91,8 @@ export function AddAccountForm({ onDone }: { onDone: () => void }) {
         createdAt: serverTimestamp(),
         createdBy: user.uid,
       });
+      if (phone) claimPhoneInBatch(batch, phone, uid);
+      await batch.commit();
       if (sendReset) await sendPasswordResetEmail(auth, cleanEmail).catch(() => undefined);
       const label = roleLabel(role, role === "admin" ? position : "");
       logActivity("Roles", `Gumawa ng account para kay ${fullName.trim()} (${label})`, uid);

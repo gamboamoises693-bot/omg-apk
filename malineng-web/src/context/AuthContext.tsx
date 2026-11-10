@@ -2,10 +2,11 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
-import { doc, onSnapshot, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot, serverTimestamp, getDoc, writeBatch } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import type { UserProfile, Verification } from "@/lib/types";
 import { setActivityActor } from "@/lib/activity";
+import { PHONE_TAKEN_MESSAGE, claimPhoneInBatch, normalizePhone, phoneOwner } from "@/lib/phone";
 
 interface AuthContextValue {
   user: User | null;
@@ -42,16 +43,41 @@ export async function ensureUserDoc(user: User, extra?: Partial<UserProfile>): P
   const userRef = doc(db, "users", user.uid);
   const snap = await getDoc(userRef);
   if (snap.exists()) return;
-  await setDoc(userRef, {
+  // One number = one account: the number is claimed in the same batch as the profile.
+  const contact = normalizePhone(extra?.contact ?? "");
+  if (contact && (await phoneOwner(contact, user.uid)) === "taken") throw new Error(PHONE_TAKEN_MESSAGE);
+  const batch = writeBatch(db);
+  batch.set(userRef, {
     uid: user.uid,
     fullName: extra?.fullName || user.displayName || "Residente",
     purok: extra?.purok ?? "",
-    contact: extra?.contact ?? "",
+    contact,
     birthday: extra?.birthday ?? "",
     email: user.email ?? "",
     role: "resident",
     createdAt: serverTimestamp(),
   });
+  if (contact) claimPhoneInBatch(batch, contact, user.uid);
+  await batch.commit();
+}
+
+/**
+ * Accounts made before the one-number rule: claim their number once, if nobody else has.
+ * (If someone already holds it, the Super Admin sees both in "Posibleng Doble".)
+ */
+const backfilled = new Set<string>();
+async function backfillPhone(uid: string, contact: string): Promise<void> {
+  const phone = normalizePhone(contact);
+  if (!phone || phone !== contact || backfilled.has(uid)) return;
+  backfilled.add(uid);
+  try {
+    if ((await phoneOwner(phone, uid)) !== "free") return;
+    const batch = writeBatch(db);
+    claimPhoneInBatch(batch, phone, uid);
+    await batch.commit();
+  } catch (err) {
+    console.warn("[phone] backfill skipped:", err);
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -97,8 +123,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubProfile = onSnapshot(
         doc(db, "users", firebaseUser.uid),
         (snap) => {
-          setProfile(snap.exists() ? ({ uid: snap.id, ...snap.data() } as UserProfile) : null);
+          const p = snap.exists() ? ({ uid: snap.id, ...snap.data() } as UserProfile) : null;
+          setProfile(p);
           setLoading(false);
+          if (p?.contact) void backfillPhone(snap.id, p.contact);
         },
         (err) => {
           console.error("[auth] profile listener error:", err);
