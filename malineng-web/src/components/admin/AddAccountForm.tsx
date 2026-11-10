@@ -68,7 +68,7 @@ export function AddAccountForm({ onDone }: { onDone: () => void }) {
     const cleanEmail = email.trim().toLowerCase();
     if (!fullName.trim()) return setError("Ilagay ang buong pangalan.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return setError("Mali ang format ng email.");
-    if (password.length < 6) return setError("Dapat 6 characters pataas ang password.");
+    if (password.length < 8) return setError("Dapat 8 characters pataas ang password.");
     const phone = contact.trim() ? normalizePhone(contact) : "";
     if (contact.trim() && !phone) return setError("Mali ang contact number. Halimbawa: 09171234567");
 

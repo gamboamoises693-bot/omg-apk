@@ -1,5 +1,6 @@
 "use client";
 
+import { EmailVerifyCard, needsEmailConfirm } from "@/components/EmailVerifyCard";
 import { verifiedSetAdd, verifiedSetRef } from "@/lib/verified";
 import { useEffect, useRef, useState } from "react";
 import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
@@ -101,6 +102,9 @@ function SelfieStep() {
       setBusy(false);
     }
   };
+
+  // The selfie is accepted only after the email is confirmed (the database checks this too).
+  if (needsEmailConfirm(user) && !isStaff) return <EmailVerifyCard />;
 
   return (
     <Card className="space-y-3">
