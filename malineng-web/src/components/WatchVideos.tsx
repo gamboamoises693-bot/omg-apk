@@ -6,11 +6,16 @@ import { Clapperboard, Eye, Play } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
+import { loadVideoBlob } from "@/lib/videoUpload";
 import { alreadyCounted, embedUrl, markCounted, youtubeThumb, type Video } from "@/lib/videos";
 
 const videosRef = collection(db, "videos");
 
 function Thumb({ v, className = "" }: { v: Video; className?: string }) {
+  if (v.thumb) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={v.thumb} alt="" className={`h-full w-full object-cover ${className}`} />;
+  }
   if (v.kind === "youtube") {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={youtubeThumb(v.videoId)} alt="" loading="lazy" className={`h-full w-full object-cover ${className}`} />;
@@ -29,6 +34,10 @@ export function WatchVideos() {
   const [open, setOpen] = useState(true);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
+  // Uploaded videos are downloaded from Firestore, then played from memory.
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loadPct, setLoadPct] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState("");
 
   const videos = useMemo(() => [...data].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [data]);
   const current = videos.find((v) => v.id === currentId) ?? videos[0];
@@ -41,8 +50,24 @@ export function WatchVideos() {
     }
   }, [videos, currentId]);
 
-  function play() {
+  // Free the memory of the previous uploaded video.
+  useEffect(() => () => { if (blobUrl) URL.revokeObjectURL(blobUrl); }, [blobUrl]);
+
+  async function play() {
     if (!current) return;
+    setLoadError("");
+    if (current.kind === "upload") {
+      try {
+        setLoadPct(0);
+        const blob = await loadVideoBlob(current.id, current.mime ?? "video/mp4", setLoadPct);
+        setBlobUrl(URL.createObjectURL(blob));
+      } catch {
+        setLoadError("Hindi ma-load ang video. I-check ang internet at subukan ulit.");
+        setLoadPct(null);
+        return;
+      }
+      setLoadPct(null);
+    }
     setPlaying(true);
     if (!alreadyCounted(current.id)) {
       markCounted(current.id);
@@ -70,8 +95,27 @@ export function WatchVideos() {
           <div className="mt-3">
             <div className="relative aspect-video overflow-hidden rounded-2xl bg-black">
               {playing ? (
-                current.kind === "file" ? (
-                  <video key={current.id} src={current.url} controls autoPlay playsInline preload="metadata" className="h-full w-full" />
+                current.kind === "file" || current.kind === "upload" ? (
+                  <video
+                    key={current.id}
+                    src={current.kind === "upload" ? (blobUrl ?? "") : current.url}
+                    controls
+                    autoPlay
+                    playsInline
+                    preload="metadata"
+                    className="h-full w-full"
+                    onLoadedMetadata={(e) => {
+                      // Browser-recorded files have no length in the header: seek far once so the player learns it.
+                      const el = e.currentTarget;
+                      if (current.kind === "upload" && el.duration === Infinity) {
+                        el.currentTime = 1e101;
+                        el.ontimeupdate = () => {
+                          el.ontimeupdate = null;
+                          el.currentTime = 0;
+                        };
+                      }
+                    }}
+                  />
                 ) : (
                   <iframe
                     key={current.id}
@@ -88,13 +132,14 @@ export function WatchVideos() {
                   <Thumb v={current} />
                   <span className="absolute inset-0 flex items-center justify-center bg-black/20">
                     <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-brand shadow-lg group-active:scale-95">
-                      <Play className="h-7 w-7 translate-x-0.5" fill="currentColor" aria-hidden />
+                      {loadPct !== null ? <span className="text-sm font-extrabold">{loadPct}%</span> : <Play className="h-7 w-7 translate-x-0.5" fill="currentColor" aria-hidden />}
                     </span>
                   </span>
                 </button>
               )}
             </div>
 
+            {loadError && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{loadError}</p>}
             <div className="mt-3 flex items-start justify-between gap-3">
               <p className="min-w-0 text-base font-extrabold leading-snug">▶ {current.title}</p>
               <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-gray-500">
@@ -117,6 +162,8 @@ export function WatchVideos() {
                         onClick={() => {
                           setCurrentId(v.id);
                           setPlaying(false);
+                          setBlobUrl(null);
+                          setLoadError("");
                         }}
                         aria-current={active}
                         className="w-36 shrink-0 snap-start text-left"
