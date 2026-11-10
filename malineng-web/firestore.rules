@@ -58,6 +58,11 @@ service cloud.firestore {
       return isBorrowAdmin();
     }
 
+    // Liga ng barangay: officers + SK Chairman.
+    function isLiga() {
+      return isOfficer() || (isAdmin() && me().get('position', '') == 'SK Chairman');
+    }
+
     function isSuperAdmin() {
       return hasProfile() && me().role == 'superadmin';
     }
@@ -536,10 +541,52 @@ service cloud.firestore {
       allow delete: if isOfficer();
     }
 
+    // ---------- Kalusugan: children's vaccines + pregnancies (BHW; parent/mother sees own) ----------
+    match /children/{id} {
+      allow read: if isBotika() || (signedIn() && resource.data.parentId == request.auth.uid);
+      allow create, update: if isBotika()
+        && isNonEmptyString(incoming().name, 120)
+        && incoming().birthday is string && incoming().birthday.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && incoming().vaccines is map;
+      allow delete: if isBotika();
+    }
+    match /pregnancies/{id} {
+      allow read: if isBotika() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create, update: if isBotika() && isNonEmptyString(incoming().name, 120);
+      allow delete: if isBotika();
+    }
+
+    // ---------- Liga at Palaro (public; officers + SK Chairman manage) ----------
+    match /leagues/{id} {
+      allow read: if true;
+      allow write: if isLiga();
+    }
+    match /ligaGames/{id} {
+      allow read: if true;
+      allow create, update: if isLiga()
+        && incoming().homeScore is int && incoming().homeScore >= 0
+        && incoming().awayScore is int && incoming().awayScore >= 0
+        && incoming().status in ['scheduled', 'live', 'final'];
+      allow delete: if isLiga();
+    }
+    match /ligaTeams/{id} {
+      allow read: if true;
+      // Verified residents register a team; it waits for approval.
+      allow create: if verifiedPoster()
+        && incoming().captainId == request.auth.uid
+        && incoming().status == 'pending'
+        && isNonEmptyString(incoming().name, 60)
+        && incoming().players is list && incoming().players.size() <= 20;
+      allow update: if isLiga();
+      allow delete: if isLiga()
+        || (signedIn() && resource.data.captainId == request.auth.uid && resource.data.status == 'pending');
+    }
+
     // ---------- Pabatid (announcements) ----------
     match /announcements/{id} {
       allow read: if true;
-      allow create, update: if isOfficer()
+      // BHW may also send "Kalusugan" notices (vaccination reminders).
+      allow create, update: if (isOfficer() || (isBotika() && incoming().category == 'Kalusugan'))
         && isNonEmptyString(incoming().title, 120)
         && incoming().body is string && incoming().body.size() <= 2000
         && incoming().category is string && incoming().category.size() <= 30
