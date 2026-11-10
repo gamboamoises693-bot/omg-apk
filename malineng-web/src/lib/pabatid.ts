@@ -79,7 +79,7 @@ export function useAnnouncements(): { all: Announcement[]; loading: boolean } {
     listeners.push(l);
     if (!unsub) {
       unsub = onSnapshot(
-        query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(50)),
+        query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(20)),
         (snap) => {
           cache = snap.docs.map((d) => {
             const data = d.data() as Omit<Announcement, "id">;

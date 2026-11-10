@@ -243,7 +243,7 @@ export default function HomePage() {
                 disabled={!isSuperAdmin}
                 onClick={() => setShowOnline(true)}
                 className="flex flex-1 flex-col items-center gap-0.5 px-1 enabled:active:opacity-70"
-                title="Bukas ang website sa nakaraang 5 minuto"
+                title="Bukas ang website sa nakaraang 10 minuto"
                 aria-label={isSuperAdmin ? `${online} online ngayon. Tingnan kung sino` : `${online} online ngayon`}
               >
                 <span className="flex items-center gap-1.5 text-lg font-extrabold leading-none">

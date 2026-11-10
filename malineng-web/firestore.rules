@@ -289,7 +289,10 @@ service cloud.firestore {
 
     // ---------- verifiedUsers (public flag: doc exists = verified; for badges) ----------
     match /verifiedUsers/{uid} {
-      allow read: if true;
+      // One person by id (ID check, own status): public. The whole list is for admins only, so
+      // nobody can download the names of every verified resident (badges read stats/verifiedSet).
+      allow get: if true;
+      allow list: if isAdmin();
       // An admin verifies other people; only the Super Admin may verify their own account.
       allow create, update: if isAdmin() && (request.auth.uid != uid || isSuperAdmin());
       allow delete: if isAdmin() || isSelf(uid);
@@ -308,7 +311,9 @@ service cloud.firestore {
 
     // ---------- issuedDocuments (printable clearance; public QR check) ----------
     match /issuedDocuments/{docId} {
-      allow read: if true;
+      // Anyone with the document number can verify it; the full list is for admins only.
+      allow get: if true;
+      allow list: if isAdmin();
       allow create, update: if isAdmin();
       allow delete: if isSuperAdmin();
     }

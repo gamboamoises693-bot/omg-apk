@@ -1,5 +1,6 @@
 "use client";
 
+import { verifiedSetAdd, verifiedSetRef } from "@/lib/verified";
 import { useEffect, useRef, useState } from "react";
 import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
 import { BadgeCheck, Camera, Clock, RotateCcw, XCircle } from "lucide-react";
@@ -85,6 +86,7 @@ function SelfieStep() {
         const batch = writeBatch(db);
         batch.update(doc(db, "verifications", user.uid), { status: "verified", reason: "", reviewedBy: user.uid, reviewedByName: profile.fullName, reviewedAt: serverTimestamp() });
         batch.set(doc(db, "verifiedUsers", user.uid), { name: profile.fullName, verifiedAt: serverTimestamp(), verifiedBy: profile.fullName });
+        batch.set(verifiedSetRef(), verifiedSetAdd(user.uid), { merge: true });
         await batch.commit();
         logActivity("Verification", "Na-verify ang sariling account (Super Admin)", user.uid);
         toast("Na-verify na ang account mo! Gumagana na ang QR ng Barangay ID.");

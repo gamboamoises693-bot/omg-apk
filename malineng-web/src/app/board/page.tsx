@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
-import { addDoc, collection, query, serverTimestamp, where } from "firebase/firestore";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { addDoc, collection, limit, orderBy, query, serverTimestamp, where } from "firebase/firestore";
 import { ImagePlus, MessagesSquare, PenSquare } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -102,15 +102,29 @@ function Composer() {
 }
 
 type Tab = "lahat" | "purok" | "akin";
+const PAGE_SIZE = 20;
 
 export default function BoardPage() {
   const { user, profile, isAdmin } = useAuth();
   const [tab, setTab] = useState<Tab>("lahat");
-  const approvedQ = useMemo(() => query(collection(db, "posts"), where("status", "==", "approved")), []);
+  // Only the newest posts are read (the free plan bills every document read). The query needs a
+  // composite index (see firestore.indexes.json); while it is still being built, fall back to the old query.
+  const [shown, setShown] = useState(PAGE_SIZE);
+  const [noIndex, setNoIndex] = useState(false);
+  const approvedQ = useMemo(
+    () =>
+      noIndex
+        ? query(collection(db, "posts"), where("status", "==", "approved"))
+        : query(collection(db, "posts"), where("status", "==", "approved"), orderBy("createdAt", "desc"), limit(shown)),
+    [noIndex, shown],
+  );
   const pendingQ = useMemo(() => (isAdmin ? query(collection(db, "posts"), where("status", "==", "pending")) : null), [isAdmin]);
   const mineQ = useMemo(() => (user && !isAdmin ? query(collection(db, "posts"), where("authorId", "==", user.uid)) : null), [user, isAdmin]);
 
   const approved = useCollection<Post>(approvedQ);
+  useEffect(() => {
+    if (approved.errorCode === "failed-precondition") setNoIndex(true);
+  }, [approved.errorCode]);
   const pending = useCollection<Post>(pendingQ);
   const mine = useCollection<Post>(mineQ);
 
@@ -175,9 +189,14 @@ export default function BoardPage() {
         </EmptyState>
       ) : (
         <div className="space-y-3">
-          {feed.map((p) => (
+          {(noIndex ? feed.slice(0, shown) : feed).map((p) => (
             <PostCard key={p.id} post={p} />
           ))}
+          {approved.data.length >= shown && (
+            <Button variant="outline" full onClick={() => setShown((n) => n + PAGE_SIZE)}>
+              Magpakita pa ng mga post
+            </Button>
+          )}
         </div>
       )}
     </div>

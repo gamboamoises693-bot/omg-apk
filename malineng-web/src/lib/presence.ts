@@ -7,12 +7,12 @@ import { auth, db, isFirebaseConfigured } from "./firebase";
 /**
  * "Online now" counter on the free plan, without Realtime Database:
  * every open device (logged in or guest) writes presence/{deviceId}.lastSeen
- * every 2 minutes while the page is visible. A device counts as online when
- * it was seen in the last 5 minutes.
+ * every 5 minutes while the page is visible. A device counts as online when
+ * it was seen in the last 10 minutes. (Fewer writes: the free plan allows 20,000 a day.)
  */
-const BEAT_MS = 2 * 60_000;
-const ONLINE_WINDOW_MS = 5 * 60_000;
-const COUNT_REFRESH_MS = 2 * 60_000;
+const BEAT_MS = 5 * 60_000;
+const ONLINE_WINDOW_MS = 10 * 60_000;
+const COUNT_REFRESH_MS = 5 * 60_000;
 const DEVICE_KEY = "malineng.deviceId";
 
 let lastBeat = 0;
@@ -34,7 +34,7 @@ function deviceId(): string {
 
 async function beat(): Promise<void> {
   if (!isFirebaseConfigured || document.visibilityState !== "visible") return;
-  if (Date.now() - lastBeat < 60_000) return; // throttle extra triggers
+  if (Date.now() - lastBeat < 3 * 60_000) return; // throttle extra triggers (tab switches)
   lastBeat = Date.now();
   try {
     await setDoc(doc(db, "presence", deviceId()), { lastSeen: serverTimestamp() });
@@ -52,7 +52,7 @@ async function beat(): Promise<void> {
 async function beatUser(): Promise<void> {
   const uid = auth.currentUser?.uid;
   if (!uid || document.visibilityState !== "visible") return;
-  if (lastUserBeat.uid === uid && Date.now() - lastUserBeat.at < 60_000) return;
+  if (lastUserBeat.uid === uid && Date.now() - lastUserBeat.at < 3 * 60_000) return;
   lastUserBeat = { uid, at: Date.now() };
   try {
     // `devices` lets the Super Admin spot several accounts used on one phone.
@@ -63,7 +63,7 @@ async function beatUser(): Promise<void> {
   }
 }
 
-/** Super Admin: uids of logged-in users seen in the last 5 minutes. */
+/** Super Admin: uids of logged-in users seen in the last 10 minutes. */
 export async function fetchOnlineUserIds(): Promise<{ uid: string; lastSeen: number }[]> {
   const cutoff = Timestamp.fromMillis(Date.now() - ONLINE_WINDOW_MS);
   const snap = await getDocs(query(collection(db, "presenceUsers"), where("lastSeen", ">=", cutoff)));
@@ -90,7 +90,7 @@ export function PresenceBeat(): null {
   return null;
 }
 
-/** Number of devices online in the last 5 minutes (refreshed every 2 minutes while visible). */
+/** Number of devices online in the last 10 minutes (refreshed every 5 minutes while visible). */
 export function useOnlineCount(): number | null {
   const [count, setCount] = useState<number | null>(null);
 
