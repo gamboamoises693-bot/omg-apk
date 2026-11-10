@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import QRCode from "qrcode";
 import { collection, doc, getDoc, query, where } from "firebase/firestore";
 import { Printer, ShieldAlert } from "lucide-react";
@@ -50,9 +51,12 @@ function IdCard() {
       {!flag && (
         <p className="no-print mb-3 flex items-start gap-2 rounded-2xl bg-gold-light p-3 text-sm text-yellow-900">
           <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
-          {isStaff
-            ? "Wala pang verified flag ang account mo, kaya \"HINDI VALID\" ang lalabas sa QR. Ipa-verify sa Super Admin ang selfie mo."
-            : "Hindi pa naka-verify ang account mo, kaya \"HINDI VALID\" ang lalabas kapag na-scan."}
+          <span>
+            {isStaff
+              ? "Wala pang selfie at verified flag ang account mo, kaya \"HINDI VALID\" ang lalabas sa QR. "
+              : "Hindi pa naka-verify ang account mo, kaya \"HINDI VALID\" ang lalabas kapag na-scan. "}
+            <Link href="/verify" className="font-bold underline">Kumuha ng selfie →</Link>
+          </span>
         </p>
       )}
 

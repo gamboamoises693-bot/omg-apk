@@ -260,6 +260,7 @@ service cloud.firestore {
         && incoming().submittedAt == request.time;
       // Admin review.
       allow update: if isAdmin()
+        && (existing().uid != request.auth.uid || isSuperAdmin())
         && changedOnly(['status', 'reason', 'reviewedBy', 'reviewedByName', 'reviewedAt'])
         && incoming().status in ['pending', 'verified', 'rejected'];
       allow delete: if isSelf(uid) || isSuperAdmin();
@@ -268,7 +269,8 @@ service cloud.firestore {
     // ---------- verifiedUsers (public flag: doc exists = verified; for badges) ----------
     match /verifiedUsers/{uid} {
       allow read: if true;
-      allow create, update: if isAdmin();
+      // An admin verifies other people; only the Super Admin may verify their own account.
+      allow create, update: if isAdmin() && (request.auth.uid != uid || isSuperAdmin());
       allow delete: if isAdmin() || isSelf(uid);
     }
 
