@@ -46,6 +46,8 @@ import { Button, ErrorText, Modal, PageHeader, Spinner } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 
 const ROLE_STYLE: Record<string, string> = { Kapitan: "bg-amber-700", Secretary: "bg-teal-700", "Super Admin": "bg-purple-700" };
+/** Stored as "Super Admin" (the database rules check it); shown as "Developer". */
+const roleText = (role: string) => (role === "Super Admin" ? "Developer" : role);
 
 /* ------------------------------ Room list ------------------------------ */
 
@@ -241,7 +243,7 @@ function Conversation({ room }: { room: string }) {
                     {!me && (
                       <p className="mb-0.5 ml-1 text-[0.7rem] font-bold text-gray-600">
                         {m.authorName}
-                        {m.authorRole && <span className={`ml-1.5 rounded-full px-1.5 py-px text-[0.6rem] font-extrabold uppercase text-white ${ROLE_STYLE[m.authorRole] ?? "bg-gray-600"}`}>{m.authorRole}</span>}
+                        {m.authorRole && <span className={`ml-1.5 rounded-full px-1.5 py-px text-[0.6rem] font-extrabold uppercase text-white ${ROLE_STYLE[m.authorRole] ?? "bg-gray-600"}`}>{roleText(m.authorRole)}</span>}
                       </p>
                     )}
                     <div className={`group relative rounded-2xl px-3 py-2 shadow-sm ${me ? "rounded-br-sm bg-brand text-white" : "rounded-bl-sm bg-white text-gray-900"}`}>

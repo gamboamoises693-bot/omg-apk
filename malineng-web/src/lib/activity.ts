@@ -67,7 +67,8 @@ export function logActivity(type: ActivityType, text: string, targetId = ""): vo
 }
 
 export function roleLabel(role: string, position?: string): string {
-  if (role === "superadmin") return "Super Admin";
+  // The person is shown as "Developer" (the permission itself is still called Super Admin elsewhere).
+  if (role === "superadmin") return "Developer";
   if (role === "admin") return position ? `Admin · ${position}` : "Admin";
   return "Residente";
 }
