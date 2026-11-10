@@ -29,6 +29,7 @@ export const ACTIVITY_TYPES = [
   "Ayuda",
   "Tindahan",
   "Trabaho",
+  "Hiring",
   "Board",
   "Events",
   "Botohan",

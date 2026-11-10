@@ -4,7 +4,6 @@ import type {
   AppointmentService,
   AppointmentStatus,
   ListingCategory,
-  SkillType,
 } from "./constants";
 
 export type ModerationStatus = "pending" | "approved" | "rejected";
@@ -139,7 +138,8 @@ export interface Skill {
   id: string;
   userId: string;
   name: string;
-  skill: SkillType;
+  /** One of SKILL_TYPES, or any skill the person wrote themselves (max 40 characters). */
+  skill: string;
   purok: string;
   contact: string;
   createdAt?: Timestamp;

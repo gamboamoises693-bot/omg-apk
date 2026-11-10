@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { useCollection } from "@/lib/useCollection";
 import { formatPeso, friendlyError, sortNewest, timeAgo } from "@/lib/format";
 import type { Job, Listing, Post } from "@/lib/types";
+import { deadlineLabel, type Opening } from "@/lib/hiring";
 import { Button, Card, EmptyState, SectionTitle, Spinner } from "@/components/ui";
 import { PostCard } from "@/components/PostCard";
 import { SellerInfo } from "./SellerInfo";
@@ -47,11 +48,26 @@ export function AdminModeration() {
   const postsQ = useMemo(() => query(collection(db, "posts"), where("status", "==", "pending")), []);
   const listingsQ = useMemo(() => query(collection(db, "listings"), where("status", "==", "pending")), []);
   const jobsQ = useMemo(() => query(collection(db, "jobs"), where("status", "==", "pending")), []);
+  const openingsQ = useMemo(() => query(collection(db, "openings"), where("status", "==", "pending")), []);
   const approvedListingsQ = useMemo(() => query(collection(db, "listings"), where("status", "==", "approved")), []);
 
   const posts = useCollection<Post>(postsQ);
   const listings = useCollection<Listing>(listingsQ);
   const jobs = useCollection<Job>(jobsQ);
+  const openings = useCollection<Opening>(openingsQ);
+  const [openingBusy, setOpeningBusy] = useState<string | null>(null);
+  const decideOpening = async (o: Opening, status: "approved" | "rejected") => {
+    setOpeningBusy(o.id);
+    try {
+      await updateDoc(doc(db, "openings", o.id), { status });
+      logActivity("Hiring", `${status === "approved" ? "Nag-approve" : "Nag-reject"} ng bakante: “${o.title}”`, o.id);
+      toast(status === "approved" ? "Na-approve!" : "Na-reject.");
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setOpeningBusy(null);
+    }
+  };
   const approvedListings = useCollection<Listing>(approvedListingsQ);
   const listingMod = useModerate("listings");
   const jobMod = useModerate("jobs");
@@ -69,7 +85,7 @@ export function AdminModeration() {
     }
   };
 
-  if (posts.loading || listings.loading || jobs.loading) return <Spinner />;
+  if (posts.loading || listings.loading || jobs.loading || openings.loading) return <Spinner />;
 
   return (
     <div>
@@ -111,7 +127,25 @@ export function AdminModeration() {
         <div className="space-y-3">{sortNewest(posts.data).map((p) => <PostCard key={p.id} post={p} adminMode />)}</div>
       )}
 
-      <SectionTitle>Trabaho ({jobs.data.length})</SectionTitle>
+      <SectionTitle>Hiring: bakante ({openings.data.length})</SectionTitle>
+      {openings.data.length === 0 ? (
+        <EmptyState title="Walang pending na bakante" />
+      ) : (
+        <div className="space-y-3">
+          {sortNewest(openings.data).map((o) => (
+            <Card key={o.id}>
+              <p className="font-bold">{o.title} <span className="font-normal text-gray-500">· {o.slots} ang kailangan</span></p>
+              <p className="text-gray-600">{o.employer} · {o.type} · {o.salary || "walang sahod na nakalagay"}</p>
+              <p className="text-sm text-gray-500">{o.purok || "—"} · {deadlineLabel(o.deadline)} · {timeAgo(o.createdAt)}</p>
+              {o.requirements.length > 0 && <p className="mt-1 text-sm text-gray-600">Kailangan: {o.requirements.join("; ")}</p>}
+              <SellerInfo uid={o.posterId} contact={o.contact} kind="jobs" />
+              <ApproveButtons busy={openingBusy === o.id} onApprove={() => decideOpening(o, "approved")} onReject={() => decideOpening(o, "rejected")} />
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <SectionTitle>Sideline ({jobs.data.length})</SectionTitle>
       {jobs.data.length === 0 ? (
         <EmptyState title="Walang pending na trabaho" />
       ) : (

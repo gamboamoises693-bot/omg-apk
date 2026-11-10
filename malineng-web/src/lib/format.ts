@@ -86,6 +86,19 @@ export function friendlyError(err: unknown): string {
   return "May problema. Subukan ulit mamaya.";
 }
 
+/**
+ * "  welder  " / "WELDER" / "welder" -> "Welder". Used for skills that residents write themselves,
+ * so the same skill typed in different ways is grouped as one.
+ */
+export function normalizeSkillLabel(raw: string): string {
+  return raw
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 40)
+    .toLowerCase()
+    .replace(/(^|[\s/-])(\p{L})/gu, (_m, sep: string, ch: string) => sep + ch.toUpperCase());
+}
+
 /** Lowercase + collapse spaces. Used for ayuda.nameLower matching. */
 export function normalizeName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
