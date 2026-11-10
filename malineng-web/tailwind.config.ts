@@ -22,9 +22,11 @@ const config: Config = {
       // Everything is rem-based; the root font size (14/16/18px) is set by the "Aa" text-size setting.
       keyframes: {
         "drawer-in": { from: { transform: "translateX(-100%)" }, to: { transform: "translateX(0)" } },
+        "like-pop": { "0%": { transform: "scale(1)" }, "40%": { transform: "scale(1.35)" }, "100%": { transform: "scale(1)" } },
       },
       animation: {
         "drawer-in": "drawer-in 0.22s ease-out",
+        "like-pop": "like-pop 0.3s ease-out",
       },
       boxShadow: {
         card: "0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06)",
