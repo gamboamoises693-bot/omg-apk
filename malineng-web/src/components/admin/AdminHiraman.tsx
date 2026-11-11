@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, deleteDoc, doc, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
+import { collection, deleteDoc, doc, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { CheckCircle2, EyeOff, Package, Pencil, Phone, Plus, Trash2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -113,7 +113,7 @@ function ReturnDialog({ r, onClose, onSave }: { r: BorrowRequest; onClose: () =>
 /* ---------------- Request card ---------------- */
 
 function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; items: BorrowItem[]; bookings: BorrowBooking[]; now: number; verified: boolean }) {
-  const { user, profile } = useAuth();
+  const { user, profile, isSuperAdmin } = useAuth();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -242,6 +242,19 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
           className="w-full pt-1 text-center text-xs font-semibold text-red-700"
         >
           Kanselahin (hindi kinuha)
+        </button>
+      )}
+      {isSuperAdmin && ["returned", "rejected", "cancelled"].includes(r.status) && (
+        <button
+          type="button"
+          onClick={() => {
+            const unpaid = (r.damageFee ?? 0) > 0 && r.feeStatus === "unpaid";
+            if (!confirm(`Burahin ang tala ni ${r.userName} (${linesText(r.items)}) sa kasaysayan?${unpaid ? "\n\nBABALA: may singil pa na hindi bayad." : ""}\nHindi na ito maibabalik.`)) return;
+            run(() => deleteDoc(doc(db, "borrowRequests", r.id)), "Nabura ang tala.", `Binura ang tala sa kasaysayan ng Hiraman: ${what}`);
+          }}
+          className="flex w-full items-center justify-center gap-1.5 pt-1 text-center text-xs font-semibold text-red-700"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden /> Burahin sa kasaysayan
         </button>
       )}
       <Modal open={returning} onClose={() => setReturning(false)} title="Pagbabalik ng gamit">
@@ -464,6 +477,8 @@ function ItemsTab({ items, bookings, now }: { items: BorrowItem[]; bookings: Bor
 /* ---------------- Main ---------------- */
 
 export function AdminHiraman() {
+  const { isSuperAdmin } = useAuth();
+  const toast = useToast();
   const now = useNow();
   const verified = useVerifiedSet();
   const items = useCollection<BorrowItem>(itemsCol);
@@ -530,6 +545,31 @@ export function AdminHiraman() {
           <Button variant="outline" full disabled={history.length === 0} onClick={() => downloadCsv(`hiraman-kasaysayan-${new Date().toISOString().slice(0, 10)}.csv`, historyRows(history))}>
             I-download ang {history.length} sa Excel (CSV)
           </Button>
+          {isSuperAdmin && history.length > 0 && (
+            <Button
+              variant="outline"
+              full
+              className="!text-red-700"
+              onClick={async () => {
+                const unpaid = history.filter((r) => (r.damageFee ?? 0) > 0 && r.feeStatus === "unpaid").length;
+                const typed = prompt(`Burahin ang ${history.length} tala na nakikita ngayon sa kasaysayan?${unpaid ? `\n${unpaid} dito ang may singil na hindi pa bayad.` : ""}\nHindi na ito maibabalik. I-download muna ang CSV kung kailangan.\n\nI-type ang BURAHIN para magpatuloy:`);
+                if (typed?.trim().toUpperCase() !== "BURAHIN") return;
+                try {
+                  for (let i = 0; i < history.length; i += 400) {
+                    const batch = writeBatch(db);
+                    history.slice(i, i + 400).forEach((r) => batch.delete(doc(db, "borrowRequests", r.id)));
+                    await batch.commit();
+                  }
+                  logActivity("Hiraman", `Binura ang ${history.length} tala sa kasaysayan ng Hiraman`);
+                  toast(`Nabura ang ${history.length} tala.`);
+                } catch (err) {
+                  toast(friendlyError(err), "error");
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden /> Burahin ang {history.length} na nakikita
+            </Button>
+          )}
         </div>
       )}
       {tab === "gamit" ? (
