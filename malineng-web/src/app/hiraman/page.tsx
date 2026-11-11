@@ -55,7 +55,9 @@ function MyRequests() {
       // A returned request stays visible while a charge for damage is unpaid.
       (r.status === "returned" && (r.damageFee ?? 0) > 0 && r.feeStatus === "unpaid"),
   );
-  if (active.length === 0) return null;
+  const past = sortNewest(data).filter((r) => ["returned", "rejected", "cancelled"].includes(r.status) && !active.includes(r));
+  const [showPast, setShowPast] = useState(false);
+  if (active.length === 0 && past.length === 0) return null;
 
   const cancel = async (r: BorrowRequest) => {
     if (!confirm("Kanselahin ang request na ito?")) return;
@@ -103,6 +105,32 @@ function MyRequests() {
           </div>
         );
       })}
+      {past.length > 0 && (
+        <div className="rounded-2xl bg-white shadow-card">
+          <button type="button" onClick={() => setShowPast((v) => !v)} aria-expanded={showPast} className="flex w-full items-center justify-between px-4 py-3 text-sm font-bold text-brand-dark">
+            Kasaysayan ko ({past.length})
+            <span aria-hidden>{showPast ? "▲" : "▼"}</span>
+          </button>
+          {showPast && (
+            <ul className="divide-y divide-line border-t border-line">
+              {past.slice(0, 30).map((r) => (
+                <li key={r.id} className="px-4 py-2.5 text-sm">
+                  <p className="font-bold">{linesText(r.items)}</p>
+                  <p className="text-xs text-gray-600">
+                    {formatWhen(r.start)} → {formatWhen(r.end)} · {r.status === "returned" ? "Naibalik" : r.status === "rejected" ? `Hindi naaprubahan${r.rejectReason ? `: ${r.rejectReason}` : ""}` : "Kinansela"}
+                  </p>
+                  {r.status === "returned" && reportSummary(r.returnReport) && (
+                    <p className="text-xs font-semibold text-red-700">
+                      {reportSummary(r.returnReport)}
+                      {(r.damageFee ?? 0) > 0 ? ` · singil ₱${(r.damageFee ?? 0).toLocaleString("en-PH")} (${r.feeStatus === "paid" ? "bayad na" : r.feeStatus === "waived" ? "pinatawad" : "hindi pa bayad"})` : ""}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }

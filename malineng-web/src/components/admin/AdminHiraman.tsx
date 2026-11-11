@@ -10,12 +10,14 @@ import { useVerifiedSet } from "@/lib/useVerifiedSet";
 import { logActivity } from "@/lib/activity";
 import { compressToDataUrl } from "@/lib/upload";
 import { friendlyError, telHref, timeAgo, tsToMillis } from "@/lib/format";
+import { downloadCsv } from "@/lib/csv";
 import {
   BORROW_REJECT_REASONS,
   approveRequest,
   availableQty,
   feeLabel,
   formatWhen,
+  historyRows,
   isLate,
   linesText,
   markBorrowed,
@@ -35,6 +37,7 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useToast } from "@/components/Toast";
 
 type Tab = "request" | "hiram" | "naibalik" | "gamit";
+type HistoryFilter = "lahat" | "problema" | "singil";
 
 const itemsCol = collection(db, "borrowItems");
 const bookingsCol = collection(db, "borrowBookings");
@@ -468,6 +471,8 @@ export function AdminHiraman() {
   const open = useCollection<BorrowRequest>(openQ);
   const done = useCollection<BorrowRequest>(doneQ);
   const [tab, setTab] = useState<Tab>("request");
+  const [histFilter, setHistFilter] = useState<HistoryFilter>("lahat");
+  const [histSearch, setHistSearch] = useState("");
 
   const sortedItems = useMemo(() => [...items.data].sort((a, b) => a.name.localeCompare(b.name)), [items.data]);
   const pending = open.data.filter((r) => r.status === "pending").sort((a, b) => tsToMillis(a.createdAt) - tsToMillis(b.createdAt));
@@ -476,7 +481,14 @@ export function AdminHiraman() {
     .filter((r) => r.status === "approved" || r.status === "borrowed")
     .sort((a, b) => Number(isLate(b, now)) - Number(isLate(a, now)) || ms(a.end) - ms(b.end));
   const lateCount = out.filter((r) => isLate(r, now)).length;
-  const history = [...done.data].sort((a, b) => tsToMillis(b.returnedAt ?? b.createdAt) - tsToMillis(a.returnedAt ?? a.createdAt)).slice(0, 50);
+  const allHistory = useMemo(() => [...done.data].sort((a, b) => tsToMillis(b.returnedAt ?? b.createdAt) - tsToMillis(a.returnedAt ?? a.createdAt)), [done.data]);
+  const unpaidCount = allHistory.filter((r) => (r.damageFee ?? 0) > 0 && r.feeStatus === "unpaid").length;
+  const history = useMemo(() => {
+    const t = histSearch.trim().toLowerCase();
+    return allHistory
+      .filter((r) => (histFilter === "problema" ? !!reportSummary(r.returnReport) : histFilter === "singil" ? (r.damageFee ?? 0) > 0 && r.feeStatus === "unpaid" : true))
+      .filter((r) => !t || `${r.userName} ${r.purok} ${linesText(r.items)} ${r.purpose}`.toLowerCase().includes(t));
+  }, [allHistory, histFilter, histSearch]);
 
   if (items.loading || open.loading) return <Spinner />;
   if (open.error) return <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{open.error}</p>;
@@ -492,19 +504,43 @@ export function AdminHiraman() {
         options={[
           { value: "request", label: "Request", count: pending.length },
           { value: "hiram", label: "Hiram", count: lateCount || out.length, tone: lateCount ? "alert" : "neutral" },
-          { value: "naibalik", label: "Naibalik" },
+          { value: "naibalik", label: "Kasaysayan", count: unpaidCount, tone: "alert" },
           { value: "gamit", label: "Gamit" },
         ]}
       />
+      {tab === "naibalik" && (
+        <div className="mb-3 space-y-2">
+          <input
+            value={histSearch}
+            onChange={(e) => setHistSearch(e.target.value)}
+            placeholder="Hanapin: pangalan, gamit, layunin..."
+            aria-label="Hanapin sa kasaysayan"
+            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5"
+          />
+          <FilterTabs<HistoryFilter>
+            label="Salain ang kasaysayan"
+            value={histFilter}
+            onChange={setHistFilter}
+            options={[
+              { value: "lahat", label: "Lahat" },
+              { value: "problema", label: "May sira" },
+              { value: "singil", label: "Hindi bayad", count: unpaidCount, tone: "alert" },
+            ]}
+          />
+          <Button variant="outline" full disabled={history.length === 0} onClick={() => downloadCsv(`hiraman-kasaysayan-${new Date().toISOString().slice(0, 10)}.csv`, historyRows(history))}>
+            I-download ang {history.length} sa Excel (CSV)
+          </Button>
+        </div>
+      )}
       {tab === "gamit" ? (
         <ItemsTab items={sortedItems} bookings={bookings.data} now={now} />
       ) : list.length === 0 ? (
         <EmptyState
-          title={tab === "request" ? "Walang naghihintay na request" : tab === "hiram" ? "Walang nakahiram ngayon" : "Wala pang naibalik"}
+          title={tab === "request" ? "Walang naghihintay na request" : tab === "hiram" ? "Walang nakahiram ngayon" : "Walang nahanap sa kasaysayan"}
         />
       ) : (
         <div className="space-y-2.5">
-          {list.map((r) => (
+          {list.slice(0, 200).map((r) => (
             <RequestCard key={r.id} r={r} items={items.data} bookings={bookings.data} now={now} verified={verified.has(r.userId)} />
           ))}
         </div>
