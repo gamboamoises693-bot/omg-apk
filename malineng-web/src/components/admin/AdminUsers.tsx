@@ -1,7 +1,8 @@
 "use client";
 
+import { IdPhotoUpload } from "@/components/IdPhotoUpload";
 import { verifiedSetAdd, verifiedSetRef, verifiedSetRemove } from "@/lib/verified";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, where, writeBatch, setDoc } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { Ban, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2, UserPlus } from "lucide-react";
@@ -35,9 +36,14 @@ const FILTERS: { key: Filter; label: string }[] = [
 export type UserRow = UserProfile & { id: string };
 
 export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; onClose: () => void }) {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const toast = useToast();
   const isMe = user?.uid === u.id;
+  const [idPhoto, setIdPhoto] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    getDoc(doc(db, "verifications", u.id)).then((s) => setIdPhoto(s.exists() ? ((s.data().selfie as string) ?? "") : null)).catch(() => setIdPhoto(null));
+  }, [isSuperAdmin, u.id]);
   const [role, setRole] = useState<"resident" | "admin">(u.role === "admin" ? "admin" : "resident");
   const [position, setPosition] = useState<string>(u.position || "Secretary");
   const [busy, setBusy] = useState(false);
@@ -167,6 +173,19 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
         <p className="mt-1 text-xs text-gray-400">Nag-register {timeAgo(u.createdAt)}</p>
         </div>
       </div>
+
+      {isSuperAdmin && (
+        <Card className="space-y-2 bg-gray-50 shadow-none">
+          <p className="font-bold">Litrato sa Barangay ID</p>
+          {idPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={idPhoto} alt={`Litrato ni ${u.fullName} sa ID`} className="mx-auto h-40 w-32 rounded-xl object-cover ring-2 ring-gold" />
+          ) : (
+            <p className="text-sm text-gray-500">{idPhoto === null ? "Wala pang selfie ang account na ito." : "Walang litrato."}</p>
+          )}
+          {idPhoto !== null && <IdPhotoUpload uid={u.id} name={u.fullName} onSaved={setIdPhoto} />}
+        </Card>
+      )}
 
       {isMe || u.role === "superadmin" ? (
         <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Hindi pwedeng baguhin dito ang role ng Super Admin, para hindi ma-lock out ang website.</p>

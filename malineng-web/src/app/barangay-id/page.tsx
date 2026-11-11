@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/format";
 import { roleLabel } from "@/lib/activity";
 import { BARANGAY_CITY } from "@/lib/constants";
 import { LogoMark } from "@/components/BarangayLogo";
+import { IdPhotoUpload } from "@/components/IdPhotoUpload";
 import { Button, PageHeader, Spinner } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 
@@ -21,7 +22,7 @@ function barangayIdNo(uid: string, year: number): string {
 }
 
 function IdCard() {
-  const { user, profile, isStaff } = useAuth();
+  const { user, profile, isStaff, isSuperAdmin } = useAuth();
   const [selfie, setSelfie] = useState<string | null>(null);
   const [flag, setFlag] = useState<boolean | null>(null);
   const [qr, setQr] = useState("");
@@ -149,6 +150,7 @@ function IdCard() {
           <Printer className="h-4 w-4" /> I-print / I-save bilang PDF
         </Button>
         <p className="text-center text-xs text-gray-500">Pwede ring i-screenshot at ipakita sa phone.</p>
+        {isSuperAdmin && <IdPhotoUpload uid={user.uid} name={profile.fullName} onSaved={setSelfie} />}
       </div>
     </div>
   );
