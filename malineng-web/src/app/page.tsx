@@ -218,7 +218,7 @@ export default function HomePage() {
           {profile ? (
             <Avatar name={profile.fullName} photo={profile.photoURL} size="h-14 w-14" textClass="text-lg" ring="ring-2 ring-gold/80" />
           ) : (
-            <MgMark size="h-14 w-14" className="rounded-full ring-2 ring-white/30" />
+            <MgMark size="h-14 w-14" className="drop-shadow" />
           )}
           <div className="min-w-0 leading-tight">
             <p className="text-xs text-white/70">{hello},</p>
