@@ -11,16 +11,17 @@ import { compressLogo } from "@/lib/upload";
 import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
 import { Button, ErrorText, Modal } from "./ui";
+import { MgMark } from "./MgMark";
 import { useToast } from "./Toast";
 
-/** The barangay seal, or the default gold "M" mark when none is uploaded. */
+/** The barangay seal, or the default MG mark when none is uploaded. */
 export function LogoMark({ size = "h-8 w-8", textClass = "text-sm" }: { size?: string; textClass?: string }) {
   const { settings } = useSettings();
   if (settings.logoURL) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={settings.logoURL} alt="Logo ng Barangay Malineng" className={`${size} shrink-0 rounded-full bg-white object-cover`} />;
   }
-  return <span className={`flex ${size} shrink-0 items-center justify-center rounded-full bg-gold font-black text-brand-deep ${textClass}`}>M</span>;
+  return <MgMark size={size} />;
 }
 
 /**
@@ -81,7 +82,7 @@ export function LogoButton({ children, className = "" }: { children: React.React
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={shown} alt="Preview ng logo" className="h-32 w-32 rounded-full bg-gray-50 object-cover ring-1 ring-gray-200" />
               ) : (
-                <span className="flex h-32 w-32 items-center justify-center rounded-full bg-gold text-5xl font-black text-brand-deep">M</span>
+                <MgMark size="h-32 w-32" />
               )}
               <span className="absolute bottom-1 right-1 rounded-full bg-brand p-2 text-white"><Camera className="h-4 w-4" /></span>
             </div>
