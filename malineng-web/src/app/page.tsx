@@ -38,6 +38,7 @@ import { MembersList } from "@/components/MembersList";
 import { InstallBanner } from "@/components/InstallApp";
 import { ServicesMenu } from "@/components/ServicesMenu";
 import { SiteFooter } from "@/components/SiteFooter";
+import { MgMark } from "@/components/MgMark";
 import { WatchVideos } from "@/components/WatchVideos";
 import { useWebAccess } from "@/lib/webAccess";
 import type { PrecinctMeta } from "@/lib/presinto";
@@ -217,7 +218,7 @@ export default function HomePage() {
           {profile ? (
             <Avatar name={profile.fullName} photo={profile.photoURL} size="h-14 w-14" textClass="text-lg" ring="ring-2 ring-gold/80" />
           ) : (
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gold text-lg font-black text-brand-deep ring-2 ring-white/30">M</span>
+            <MgMark size="h-14 w-14" className="drop-shadow" />
           )}
           <div className="min-w-0 leading-tight">
             <p className="text-xs text-white/70">{hello},</p>

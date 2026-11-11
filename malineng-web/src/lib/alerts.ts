@@ -58,8 +58,9 @@ export async function showSystemNotification(title: string, body: string, kind: 
   const options: NotificationOptions & { vibrate?: number[]; requireInteraction?: boolean } = {
     body,
     tag,
-    icon: "/icon.svg",
-    badge: "/icon.svg",
+    // Large picture inside the notification, and the small one-colour icon next to the clock (Android needs a white-on-transparent PNG).
+    icon: "/icon-192.png",
+    badge: "/badge-96.png",
     requireInteraction: kind === "emergency",
     vibrate: kind === "emergency" ? [400, 150, 400, 150, 400] : [200, 100, 200],
     data: { url },

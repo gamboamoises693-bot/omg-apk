@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#1F5FAE"/><circle cx="256" cy="256" r="170" fill="#F2B705"/><text x="256" y="330" font-family="Arial, sans-serif" font-size="230" font-weight="900" text-anchor="middle" fill="#1F5FAE">M</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1D5499"/><stop offset="1" stop-color="#0B2B57"/></linearGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F3DB85"/><stop offset=".5" stop-color="#D4AF37"/><stop offset="1" stop-color="#9A7B12"/></linearGradient>
+<clipPath id="c"><circle cx="100" cy="92" r="60"/></clipPath></defs><rect width="200" height="200" rx="44" fill="#0B2B57"/><g transform="translate(4.0000000000000036 4.0000000000000036) scale(0.96)"><polygon points="100.0,10.0 177.9,55.0 177.9,145.0 100.0,190.0 22.1,145.0 22.1,55.0" fill="url(#bg)" stroke="url(#gold)" stroke-width="7" stroke-linejoin="round"/>
+<image href="/seal.png" x="40" y="32" width="120" height="120" clip-path="url(#c)" preserveAspectRatio="xMidYMid slice"/>
+<circle cx="100" cy="92" r="60" fill="none" stroke="url(#gold)" stroke-width="3"/>
+<rect x="62" y="140" width="76" height="30" rx="15" fill="#0B2B57" stroke="url(#gold)" stroke-width="3"/>
+<text x="100" y="161.6" text-anchor="middle" font-family="Georgia,'DejaVu Serif',serif" font-weight="700" font-size="24" letter-spacing="-1" fill="url(#gold)">MG</text></g></svg>

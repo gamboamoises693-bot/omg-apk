@@ -40,6 +40,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { roleLabel } from "@/lib/activity";
 import { Avatar } from "@/components/Avatar";
+import { MgMark } from "@/components/MgMark";
 import { levelOf, useWebAccess } from "@/lib/webAccess";
 
 interface Service {
@@ -136,7 +137,7 @@ export function ServicesMenu({ pinPresinto }: { pinPresinto: boolean }) {
               {user && profile ? (
                 <Avatar name={profile.fullName} photo={profile.photoURL} size="h-11 w-11" textClass="text-base" ring="ring-2 ring-white/40" />
               ) : (
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gold text-base font-black text-brand-deep">M</span>
+                <MgMark size="h-11 w-11" />
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-bold">{user && profile ? profile.fullName : "Kabarangay"}</p>
