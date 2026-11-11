@@ -10,10 +10,10 @@ import { useSettings } from "@/lib/useSettings";
 import { compressToDataUrl } from "@/lib/upload";
 import { logActivity } from "@/lib/activity";
 import { FUND_SOURCES, INFRA_CATEGORY, PROJECT_CATEGORIES, PROJECT_STATUS_LABEL } from "@/lib/constants";
-import { formatPeso, friendlyError, todayISO, tsToMillis } from "@/lib/format";
+import { formatDate, formatPeso, friendlyError, todayISO } from "@/lib/format";
 import type { InfraProject, InfraProjectStatus, ProjectUpdate } from "@/lib/types";
 import { Button, Card, EmptyState, ErrorText, Input, Modal, Select, Spinner, Textarea, SelectOther } from "@/components/ui";
-import { ProgressBar, ProjectStatusPill, projectSortKey } from "@/components/ProjectBits";
+import { ProgressBar, ProjectStatusPill, compareProjects } from "@/components/ProjectBits";
 import { useToast } from "@/components/Toast";
 
 const projectsCollection = collection(db, "projects");
@@ -85,12 +85,16 @@ function ProjectForm({ project, onClose }: { project: InfraProject | null; onClo
   const [newUpdate, setNewUpdate] = useState<ProjectUpdate>({ date: todayISO(), note: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // New project only: an older project that is already finished (its photos, budget and dates are recorded as history).
+  const [past, setPast] = useState(false);
   const isInfra = d.category === INFRA_CATEGORY;
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }));
 
   const save = async () => {
     if (!d.name.trim()) return setError("Ilagay ang pangalan ng proyekto.");
+    if ((past || d.status === "completed") && d.completedDate && d.startDate && d.completedDate < d.startDate) return setError("Hindi pwedeng mas maaga ang petsa ng pagtatapos kaysa sa simula.");
+    if (past && !d.completedDate) return setError("Ilagay kung kailan natapos ang dating proyekto.");
     setBusy(true);
     setError("");
     try {
@@ -150,8 +154,21 @@ function ProjectForm({ project, onClose }: { project: InfraProject | null; onClo
     }
   };
 
+  const choosePast = (value: boolean) => {
+    setPast(value);
+    // An older, finished project: completed at 100%, and the finish date must be written (not today by default).
+    setD((x) => (value ? { ...x, status: "completed", progress: 100, completedDate: "" } : { ...EMPTY, name: x.name, category: x.category, description: x.description, location: x.location, budget: x.budget, fundSource: x.fundSource, implementer: x.implementer }));
+  };
+
   return (
     <div className="space-y-4">
+      {!project && (
+        <div className="grid grid-cols-2 gap-1 rounded-2xl bg-[#E4EAF3] p-1 text-sm font-bold" role="radiogroup" aria-label="Uri ng idadagdag">
+          <button type="button" role="radio" aria-checked={!past} onClick={() => choosePast(false)} className={`rounded-xl py-2 ${!past ? "bg-white text-brand-deep shadow-sm" : "text-gray-600"}`}>Bagong proyekto</button>
+          <button type="button" role="radio" aria-checked={past} onClick={() => choosePast(true)} className={`rounded-xl py-2 ${past ? "bg-white text-brand-deep shadow-sm" : "text-gray-600"}`}>Dating proyekto</button>
+        </div>
+      )}
+      {past && <p className="-mt-1 rounded-xl bg-brand-light p-2.5 text-xs text-brand-deep">Para sa mga proyektong <b>natapos na</b> noon. Ilagay ang petsa ng pagtatapos, ang budget at ang mga larawan (kahit isa lang) para maging bahagi ng kasaysayan ng Barangay.</p>}
       <Input label="Pangalan ng proyekto" placeholder="Hal. Pagsemento ng Purok 2 Road" value={d.name} onChange={(e) => set("name", e.target.value)} maxLength={120} />
       <div className="grid grid-cols-2 gap-2">
         <SelectOther label="Uri" options={PROJECT_CATEGORIES} value={d.category} onChange={(v) => set("category", v)} />
@@ -168,16 +185,24 @@ function ProjectForm({ project, onClose }: { project: InfraProject | null; onClo
 
       <Card className="space-y-3 bg-gray-50 shadow-none">
         <p className="text-sm font-bold">📅 Status at petsa</p>
-        <Select label="Status" options={STATUSES.map((s) => PROJECT_STATUS_LABEL[s])} value={PROJECT_STATUS_LABEL[d.status]} onChange={(e) => set("status", STATUSES.find((s) => PROJECT_STATUS_LABEL[s] === e.target.value) ?? "planned")} />
-        <div>
+        {past ? (
+          <p className="text-sm text-gray-600">Status: <b>Tapos na</b> · 100%</p>
+        ) : (
+          <Select label="Status" options={STATUSES.map((s) => PROJECT_STATUS_LABEL[s])} value={PROJECT_STATUS_LABEL[d.status]} onChange={(e) => set("status", STATUSES.find((s) => PROJECT_STATUS_LABEL[s] === e.target.value) ?? "planned")} />
+        )}
+        {!past && <div>
           <span className="mb-1 flex justify-between text-[0.85rem] font-semibold text-gray-700"><span>Progress</span><span className="text-brand">{d.status === "completed" ? 100 : d.progress}%</span></span>
           <input type="range" min={0} max={100} step={5} value={d.status === "completed" ? 100 : d.progress} disabled={d.status === "completed"} onChange={(e) => set("progress", Number(e.target.value))} className="w-full accent-brand" aria-label="Progress" />
-        </div>
+        </div>}
         <div className="grid grid-cols-2 gap-2">
-          <Input label="Sinimulan" type="date" value={d.startDate} onChange={(e) => set("startDate", e.target.value)} />
-          <Input label="Target matapos" type="date" value={d.targetDate} onChange={(e) => set("targetDate", e.target.value)} />
+          <Input label="Sinimulan" type="date" max={todayISO()} value={d.startDate} onChange={(e) => set("startDate", e.target.value)} />
+          {past ? (
+            <Input label="Natapos noong" type="date" max={todayISO()} value={d.completedDate} onChange={(e) => set("completedDate", e.target.value)} />
+          ) : (
+            <Input label="Target matapos" type="date" value={d.targetDate} onChange={(e) => set("targetDate", e.target.value)} />
+          )}
         </div>
-        {d.status === "completed" && <Input label="Natapos noong" type="date" value={d.completedDate || todayISO()} onChange={(e) => set("completedDate", e.target.value)} />}
+        {!past && d.status === "completed" && <Input label="Natapos noong" type="date" max={todayISO()} value={d.completedDate || todayISO()} onChange={(e) => set("completedDate", e.target.value)} />}
       </Card>
 
       <div className="grid grid-cols-2 gap-2">
@@ -226,7 +251,7 @@ export function AdminProjects() {
   const { data, loading } = useCollection<InfraProject>(projectsCollection);
   const [editing, setEditing] = useState<InfraProject | "new" | null>(null);
 
-  const list = useMemo(() => [...data].sort((a, b) => projectSortKey(a.status) - projectSortKey(b.status) || tsToMillis(b.updatedAt) - tsToMillis(a.updatedAt)), [data]);
+  const list = useMemo(() => [...data].sort(compareProjects), [data]);
   const legacy = settings.projects.filter((p) => p.name.trim());
 
   /** One-time move of the old simple progress bars (Settings) into detailed projects. */
@@ -283,7 +308,7 @@ export function AdminProjects() {
                     <p className="truncate text-sm font-bold">{p.name}</p>
                     <ProjectStatusPill status={p.status} />
                   </div>
-                  <p className="truncate text-xs text-gray-500">{p.category}{p.budget > 0 ? ` · ${formatPeso(p.budget)}` : ""}</p>
+                  <p className="truncate text-xs text-gray-500">{p.category}{p.budget > 0 ? ` · ${formatPeso(p.budget)}` : ""}{p.status === "completed" && p.completedDate ? ` · Natapos ${formatDate(p.completedDate)}` : ""}</p>
                   <div className="mt-1 flex items-center gap-2"><div className="flex-1"><ProgressBar value={p.progress} /></div><span className="text-xs font-bold text-brand">{p.progress}%</span></div>
                   {p.category === INFRA_CATEGORY && (
                     <p className="mt-0.5 text-[0.7rem] text-gray-500">Before {p.beforeThumb ? "✓" : "—"} · After {p.afterThumb ? "✓" : "—"}</p>

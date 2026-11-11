@@ -24,7 +24,7 @@ import { APPOINTMENT_STATUS_LABEL, BARANGAY_CITY } from "@/lib/constants";
 import { REQUEST_STATUS_LABEL, formatTime12 } from "@/lib/ambulance";
 import { formatDate, sortNewest, telHref, todayISO, tsToMillis } from "@/lib/format";
 import type { AmbulanceRequest, Appointment, InfraProject, Listing } from "@/lib/types";
-import { ProgressBar, ProjectStatusPill, projectSortKey } from "@/components/ProjectBits";
+import { ProgressBar, ProjectStatusPill, compareProjects } from "@/components/ProjectBits";
 import { LinkButton, Modal, SectionTitle, Spinner } from "@/components/ui";
 import { AdminShieldLink } from "@/components/AdminShieldLink";
 import { PabatidBell } from "@/components/PabatidBell";
@@ -192,7 +192,7 @@ export default function HomePage() {
   const electionOn = access?.electionMode === true && !!electionMeta && electionMeta.count > 0;
   const projects = useCollection<InfraProject>(projectsCollection);
   const topProjects = useMemo(
-    () => [...projects.data].sort((a, b) => projectSortKey(a.status) - projectSortKey(b.status) || tsToMillis(b.updatedAt) - tsToMillis(a.updatedAt)).slice(0, 3),
+    () => [...projects.data].sort(compareProjects).slice(0, 3),
     [projects.data],
   );
 

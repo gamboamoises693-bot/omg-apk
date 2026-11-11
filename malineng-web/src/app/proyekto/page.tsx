@@ -7,10 +7,10 @@ import { HardHat, ImageOff, MapPin, Wallet } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useCollection } from "@/lib/useCollection";
 import { PROJECT_STATUS_LABEL } from "@/lib/constants";
-import { formatPeso, tsToMillis } from "@/lib/format";
+import { formatDate, formatPeso } from "@/lib/format";
 import type { InfraProject, InfraProjectStatus } from "@/lib/types";
 import { EmptyState, PageHeader, Spinner } from "@/components/ui";
-import { ProgressBar, ProjectStatusPill, projectSortKey } from "@/components/ProjectBits";
+import { ProgressBar, ProjectStatusPill, compareProjects } from "@/components/ProjectBits";
 
 const projectsCollection = collection(db, "projects");
 type Filter = "lahat" | InfraProjectStatus;
@@ -23,7 +23,7 @@ export default function ProyektoPage() {
     () =>
       data
         .filter((p) => filter === "lahat" || p.status === filter)
-        .sort((a, b) => projectSortKey(a.status) - projectSortKey(b.status) || tsToMillis(b.updatedAt) - tsToMillis(a.updatedAt)),
+        .sort(compareProjects),
     [data, filter],
   );
   const total = data.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
@@ -76,6 +76,7 @@ export default function ProyektoPage() {
                   </div>
                   <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-gray-500"><MapPin className="h-3 w-3" /> {p.location || "Barangay Malineng"} · {p.category}</p>
                   {p.budget > 0 && <p className="flex items-center gap-1 text-xs font-semibold text-gray-700"><Wallet className="h-3 w-3" /> {formatPeso(p.budget)}</p>}
+                  {p.status === "completed" && p.completedDate && <p className="text-xs font-semibold text-brand-dark">Natapos {formatDate(p.completedDate)}</p>}
                   <div className="mt-1.5 flex items-center gap-2">
                     <div className="flex-1"><ProgressBar value={p.progress} /></div>
                     <span className="text-xs font-bold text-brand">{p.progress}%</span>

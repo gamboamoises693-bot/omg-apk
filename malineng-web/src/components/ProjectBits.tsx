@@ -25,3 +25,21 @@ export function ProgressBar({ value }: { value: number }) {
 export function projectSortKey(status: InfraProjectStatus): number {
   return { ongoing: 0, delayed: 1, planned: 2, completed: 3 }[status];
 }
+
+/**
+ * Order for every project list: ongoing first, then delayed, planned and finished ones.
+ * Finished projects go by the date they were completed (newest first), so an older project added later
+ * still sits in its real place; the others go by the last update.
+ */
+export function compareProjects(
+  a: { status: InfraProjectStatus; completedDate?: string; updatedAt?: { toMillis(): number } | null },
+  b: { status: InfraProjectStatus; completedDate?: string; updatedAt?: { toMillis(): number } | null },
+): number {
+  const byStatus = projectSortKey(a.status) - projectSortKey(b.status);
+  if (byStatus) return byStatus;
+  if (a.status === "completed" && b.status === "completed") {
+    const byDone = (b.completedDate ?? "").localeCompare(a.completedDate ?? "");
+    if (byDone) return byDone;
+  }
+  return (b.updatedAt?.toMillis?.() ?? 0) - (a.updatedAt?.toMillis?.() ?? 0);
+}
