@@ -288,6 +288,9 @@ service cloud.firestore {
         && incoming().status == 'pending'
         && incoming().selfie is string && incoming().selfie.size() < 400000
         && incoming().submittedAt == request.time;
+      // The Super Admin can replace the photo that is printed on a Barangay ID (e.g. a dark or blurry selfie).
+      allow update: if isSuperAdmin() && changedOnly(['selfie'])
+        && incoming().selfie is string && incoming().selfie.size() > 0 && incoming().selfie.size() < 400000;
       // Admin review.
       allow update: if isAdmin()
         && (existing().uid != request.auth.uid || isSuperAdmin())
