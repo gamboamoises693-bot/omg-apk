@@ -18,6 +18,7 @@ import { Badge, Button, Card, ErrorText, Input, LinkButton, Modal, PageHeader, S
 import { LoginGate } from "@/components/LoginGate";
 import { TextSizeSetting } from "@/components/TextSizeSetting";
 import { InstallAppCard } from "@/components/InstallApp";
+import { NotifySettings } from "@/components/NotifySettings";
 import { useToast } from "@/components/Toast";
 import { PHONE_TAKEN_MESSAGE, claimPhoneInBatch, normalizePhone, phoneOwner, releasePhone } from "@/lib/phone";
 import { Avatar } from "@/components/Avatar";
@@ -414,6 +415,11 @@ export default function AccountPage() {
       {/* Available to everyone, even without logging in (e.g. senior citizens). */}
       <SectionTitle>I-install ang app</SectionTitle>
       <InstallAppCard />
+
+      <SectionTitle>Mga Notification</SectionTitle>
+      <Card>
+        <NotifySettings />
+      </Card>
 
       <SectionTitle>Laki ng text (Aa)</SectionTitle>
       <Card>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { collection, limit, onSnapshot, orderBy, query, where, type Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { CHAT_READ_EVENT, ROOM_ALL, ROOM_STAFF_ADMIN, ROOM_STAFF_OFFICIALS, cutoffTimestamp, getLastRead } from "@/lib/chat";
+import { isFresh, notifyNew } from "@/lib/notifyPrefs";
+import { CHAT_READ_EVENT, ROOM_ALL, ROOM_STAFF_ADMIN, ROOM_STAFF_OFFICIALS, cutoffTimestamp, getLastRead, isStaffRoom, parseCall, roomTitle } from "@/lib/chat";
 
 /**
  * Number of chat rooms with a message the person has not opened yet (for the bottom-nav badge).
@@ -16,6 +17,8 @@ export function useChatUnread(): number {
   const { user, profile, isVerified, isStaff, isAdmin } = useAuth();
   const [latest, setLatest] = useState<Record<string, { at: number; mine: boolean }>>({});
   const [, bump] = useState(0);
+  // Newest message id seen per room, to notify only about messages that arrive while the app is open.
+  const seen = useRef<Record<string, string>>({});
 
   const rooms = useMemo(() => {
     if (!user || !isVerified) return [];
@@ -34,7 +37,20 @@ export function useChatUnread(): number {
       onSnapshot(
         query(collection(db, "chatRooms", room, "messages"), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc"), limit(1)),
         (snap) => {
-          const d = snap.docs[0]?.data() as { createdAt?: Timestamp; authorId?: string } | undefined;
+          const doc0 = snap.docs[0];
+          if (!doc0 && seen.current[room] === undefined) seen.current[room] = ""; // empty room: the next message is new
+          const d = doc0?.data() as { createdAt?: Timestamp; authorId?: string; authorName?: string; text?: string } | undefined;
+          if (doc0 && d) {
+            const known = seen.current[room];
+            seen.current[room] = doc0.id;
+            const viewing = window.location.pathname.startsWith("/chat") && document.visibilityState === "visible" && new URLSearchParams(window.location.search).get("room") === room;
+            if (known !== undefined && known !== doc0.id && d.authorId !== user?.uid && isFresh(d.createdAt?.toMillis()) && !viewing) {
+              const who = (d.authorName ?? "").split(" ")[0];
+              // Staff rooms are private: keep the lock-screen text generic.
+              const body = isStaffRoom(room) ? "May bagong mensahe" : `${who}: ${d.text ? (parseCall(d.text) ? "📹 Video call" : d.text.slice(0, 120)) : "📷 Larawan"}`;
+              notifyNew("chat", `💬 ${roomTitle(room)}`, body, `chat:${room}`, `/chat/?room=${encodeURIComponent(room)}`);
+            }
+          }
           setLatest((prev) => ({ ...prev, [room]: { at: d?.createdAt?.toMillis() ?? 0, mine: d?.authorId === user?.uid } }));
         },
         () => {}, // No access to this room: nothing to show.
