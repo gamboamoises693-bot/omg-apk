@@ -892,6 +892,17 @@ service cloud.firestore {
       }
     }
 
+    // "Nagta-type..." marks: one tiny document per person per room, written at most every few
+    // seconds while typing and deleted on send. Only the owner writes it, with the server time.
+    match /chatRooms/{room}/typing/{uid} {
+      allow read: if canReadRoom(room);
+      allow create, update: if isSelf(uid) && canReadRoom(room) && chatOpen() && !chatMuted()
+        && incoming().keys().hasOnly(['name', 'at'])
+        && incoming().name == me().fullName
+        && incoming().at == request.time;
+      allow delete: if isSelf(uid);
+    }
+
     // Temporary mutes set by officers.
     match /chatMutes/{uid} {
       allow read: if isSelf(uid) || isOfficer();
