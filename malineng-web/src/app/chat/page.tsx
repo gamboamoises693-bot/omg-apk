@@ -270,7 +270,16 @@ function Conversation({ room }: { room: string }) {
                         {m.authorRole && <span className={`ml-1.5 rounded-full px-1.5 py-px text-[0.6rem] font-extrabold uppercase text-white ${ROLE_STYLE[m.authorRole] ?? "bg-gray-600"}`}>{roleText(m.authorRole)}</span>}
                       </p>
                     )}
-                    <div className={`group relative rounded-2xl px-3 py-2 shadow-sm ${me ? "rounded-br-sm bg-brand text-white" : "rounded-bl-sm bg-white text-gray-900"}`}>
+                    <div
+                      // Tapping the bubble opens the same action menu as the "..." button (delete, pin, report...).
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest("a, button")) return;
+                        setPicked(m);
+                        setMode("menu");
+                        setError("");
+                      }}
+                      className={`group relative cursor-pointer rounded-2xl px-3 py-2 shadow-sm ${me ? "rounded-br-sm bg-brand text-white" : "rounded-bl-sm bg-white text-gray-900"}`}
+                    >
                       {m.text && parseCall(m.text) ? (
                         <div className="space-y-2">
                           <p className="flex items-center gap-1.5 text-[0.95rem] font-bold"><Video className="h-4 w-4" aria-hidden /> Video call</p>
@@ -292,8 +301,8 @@ function Conversation({ room }: { room: string }) {
                       )}
                       <div className={`mt-0.5 flex items-center justify-end gap-1.5 text-[0.62rem] ${me ? "text-white/75" : "text-gray-400"}`}>
                         {timeLabel(m.createdAt)}
-                        <button type="button" aria-label="Mga aksyon sa mensahe" onClick={() => { setPicked(m); setMode("menu"); setError(""); }} className="-mr-1 rounded p-0.5 active:bg-black/10">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <button type="button" aria-label="Mga aksyon sa mensahe" onClick={() => { setPicked(m); setMode("menu"); setError(""); }} className="-mr-1.5 flex h-7 w-8 items-center justify-center rounded-lg bg-black/10 active:bg-black/20">
+                          <MoreHorizontal className="h-5 w-5" />
                         </button>
                       </div>
                     </div>
@@ -449,6 +458,9 @@ function Conversation({ room }: { room: string }) {
                   <Button variant="outline" full onClick={() => setMode("report")}>
                     <Flag className="h-4 w-4" /> I-report ang mensahe
                   </Button>
+                )}
+                {mine(picked) && !withinOwnWindow(picked) && !isOfficer && (
+                  <p className="rounded-xl bg-gray-100 px-3 py-2 text-xs text-gray-600">Mabubura mo lang ang sarili mong mensahe sa loob ng {OWN_DELETE_MINUTES} minuto. Pagkatapos nito, ang opisyal na lang ang makakabura.</p>
                 )}
                 {mine(picked) && withinOwnWindow(picked) && (
                   <Button variant="danger" full onClick={() => run(() => deleteDoc(doc(db, "chatRooms", room, "messages", picked.id)), "Nabura ang mensahe.")}>
