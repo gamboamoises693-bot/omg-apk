@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, Megaphone, X } from "lucide-react";
-import { notificationPermission, showSystemNotification } from "@/lib/alerts";
+import { showSystemNotification } from "@/lib/alerts";
+import { notifyAllowed } from "@/lib/notifyPrefs";
 import { categoryBadge, isUrgent, markAllSeen, useMyAnnouncements, type Announcement } from "@/lib/pabatid";
 
 /** Bell with an unread badge; links to /pabatid. */
@@ -51,7 +52,7 @@ export function PabatidWatcher() {
     }
     const fresh = unread.filter((a) => !known.current!.has(a.id));
     fresh.forEach((a) => known.current!.add(a.id));
-    if (fresh.length && notificationPermission() === "granted") {
+    if (fresh.length && notifyAllowed("pabatid")) {
       const top = fresh[0];
       void showSystemNotification(`📢 ${top.title}`, top.body.slice(0, 140), isUrgent(top) ? "emergency" : "schedule", `pabatid:${top.id}`, "/pabatid");
     }
