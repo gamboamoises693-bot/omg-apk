@@ -65,7 +65,11 @@ export function setLastRead(room: string, millis: number): void {
   } catch {
     // Storage blocked: the "Bago" dot just shows again.
   }
+  // Tell the bottom-nav badge (same tab) that a room was read.
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(CHAT_READ_EVENT));
 }
+
+export const CHAT_READ_EVENT = "malineng-chat-read";
 
 export function timeLabel(ts?: Timestamp | null): string {
   if (!ts) return "";
