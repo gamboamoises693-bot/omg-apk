@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Store, MessagesSquare, UserCircle, Phone } from "lucide-react";
+import { Home, MessageCircle, MessagesSquare, UserCircle, Phone } from "lucide-react";
+import { useChatUnread } from "@/lib/useChatUnread";
 
 const NAV = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/tindahan", label: "Tindahan", icon: Store },
+  { href: "/chat", label: "Chat", icon: MessageCircle },
   { href: "/emergency", label: "SOS", icon: Phone, sos: true },
   { href: "/board", label: "Board", icon: MessagesSquare },
   { href: "/account", label: "Account", icon: UserCircle },
@@ -14,6 +15,7 @@ const NAV = [
 
 export function BottomNav() {
   const pathname = usePathname() ?? "/";
+  const unread = useChatUnread();
 
   return (
     <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur" aria-label="Main">
@@ -40,7 +42,14 @@ export function BottomNav() {
                 aria-current={active ? "page" : undefined}
               >
                 <span className={`flex h-8 w-14 items-center justify-center rounded-full transition-colors ${active ? "bg-brand-light" : ""}`}>
-                  <Icon className="h-[1.35rem] w-[1.35rem]" strokeWidth={active ? 2.4 : 2} aria-hidden />
+                  <span className="relative">
+                    <Icon className="h-[1.35rem] w-[1.35rem]" strokeWidth={active ? 2.4 : 2} aria-hidden />
+                    {href === "/chat" && unread > 0 && !active && (
+                      <span className="absolute -right-2.5 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[0.6rem] font-black leading-none text-white ring-2 ring-white" aria-label={`${unread} bagong chat`}>
+                        {unread > 9 ? "9+" : unread}
+                      </span>
+                    )}
+                  </span>
                 </span>
                 {label}
               </Link>
