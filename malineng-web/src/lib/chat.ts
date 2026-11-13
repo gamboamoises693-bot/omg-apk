@@ -24,7 +24,17 @@ export const OWN_DELETE_MINUTES = 5;
 export const MAX_TEXT = 500;
 export const MESSAGE_LIMIT = 60;
 
+/** Private staff rooms. Access is enforced by firestore.rules (canReadRoom). */
+export const ROOM_STAFF_ADMIN = "staff-admin";
+export const ROOM_STAFF_OFFICIALS = "staff-officials";
+
+export function isStaffRoom(room: string): boolean {
+  return room === ROOM_STAFF_ADMIN || room === ROOM_STAFF_OFFICIALS;
+}
+
 export function roomTitle(room: string): string {
+  if (room === ROOM_STAFF_ADMIN) return "GC ng mga Admin";
+  if (room === ROOM_STAFF_OFFICIALS) return "GC ng mga Opisyal";
   return room === ROOM_ALL ? "Buong Barangay" : room;
 }
 
