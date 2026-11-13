@@ -96,10 +96,15 @@ service cloud.firestore {
       return request.auth.token.email_verified == true || isStaff();
     }
 
-    // Chat rooms: "all" (whole barangay) or the exact Purok name. Verified residents read the
-    // barangay room and their own Purok; staff read every room.
+    // Chat rooms: "all" (whole barangay), the exact Purok name, and two private staff rooms.
+    // Verified residents read the barangay room and their own Purok; staff read every public room.
+    // 'staff-admin' = every admin account (BHW included); 'staff-officials' = admins without BHW,
+    // which includes the Developer (Super Admin). Residents can never read either, even with a Purok
+    // named like them, because the staff rooms are matched first.
     function canReadRoom(room) {
-      return verifiedPoster() && (room == 'all' || room == me().get('purok', '') || isStaff());
+      return room == 'staff-admin' ? (isStaff() && notSuspended())
+        : room == 'staff-officials' ? (isAdmin() && notSuspended())
+        : verifiedPoster() && (room == 'all' || room == me().get('purok', '') || isStaff());
     }
 
     function chatMuted() {

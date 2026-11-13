@@ -9,7 +9,7 @@ import { useCollection } from "@/lib/useCollection";
 import { useSettings } from "@/lib/useSettings";
 import { logActivity } from "@/lib/activity";
 import { friendlyError, timeAgo } from "@/lib/format";
-import { CHAT_DAYS, MUTE_OPTIONS, ROOM_ALL, cutoffTimestamp, roomTitle } from "@/lib/chat";
+import { CHAT_DAYS, MUTE_OPTIONS, ROOM_ALL, ROOM_STAFF_ADMIN, ROOM_STAFF_OFFICIALS, cutoffTimestamp, roomTitle } from "@/lib/chat";
 import { Button, Card, EmptyState, ErrorText, FilterTabs, Spinner } from "@/components/ui";
 import type { Timestamp as Ts } from "firebase/firestore";
 
@@ -87,7 +87,7 @@ export function AdminChat() {
     let cancelled = false;
     (async () => {
       let removed = 0;
-      for (const room of [ROOM_ALL, ...settings.puroks]) {
+      for (const room of [ROOM_ALL, ROOM_STAFF_ADMIN, ROOM_STAFF_OFFICIALS, ...settings.puroks]) {
         const snap = await getDocs(query(collection(db, "chatRooms", room, "messages"), where("createdAt", "<", cutoffTimestamp()), orderBy("createdAt"), limit(200)));
         if (snap.empty || cancelled) continue;
         const batch = writeBatch(db);

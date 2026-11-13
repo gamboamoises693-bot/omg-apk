@@ -32,6 +32,9 @@ import {
   OWN_DELETE_MINUTES,
   REPORT_REASONS,
   ROOM_ALL,
+  ROOM_STAFF_ADMIN,
+  ROOM_STAFF_OFFICIALS,
+  isStaffRoom,
   cutoffTimestamp,
   dayLabel,
   getLastRead,
@@ -59,11 +62,12 @@ function RoomRow({ room }: { room: string }) {
   const { data } = useCollection<ChatMessage>(q);
   const last = data[0];
   const fresh = !!last?.createdAt && last.createdAt.toMillis() > getLastRead(room);
-  const initial = room === ROOM_ALL ? "🏘" : room.replace(/\D+/g, "") || room[0];
+  const staff = isStaffRoom(room);
+  const initial = staff ? (room === ROOM_STAFF_OFFICIALS ? "★" : "🛡") : room === ROOM_ALL ? "🏘" : room.replace(/\D+/g, "") || room[0];
 
   return (
     <Link href={`/chat/?room=${encodeURIComponent(room)}`} className="flex items-center gap-3 border-b border-gray-100 px-3 py-3 last:border-0 active:bg-gray-50">
-      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-extrabold text-white ${room === ROOM_ALL ? "bg-brand" : "bg-teal-600"}`}>{initial}</span>
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-extrabold text-white ${staff ? "bg-brand-deep" : room === ROOM_ALL ? "bg-brand" : "bg-teal-600"}`}>{initial}</span>
       <span className="min-w-0 flex-1">
         <span className="block font-bold">{roomTitle(room)}</span>
         <span className="block truncate text-xs text-gray-500">
@@ -79,13 +83,25 @@ function RoomRow({ room }: { room: string }) {
 }
 
 function RoomList() {
-  const { profile, isStaff } = useAuth();
+  const { profile, isStaff, isAdmin } = useAuth();
   const { settings } = useSettings();
+  // Private staff rooms come first. Officials = admins without BHW (and the Developer).
+  const staffRooms = [...(isStaff ? [ROOM_STAFF_ADMIN] : []), ...(isAdmin ? [ROOM_STAFF_OFFICIALS] : [])];
   const rooms = [ROOM_ALL, ...(isStaff ? settings.puroks : profile?.purok ? [profile.purok] : [])];
   return (
     <div className="space-y-3">
       <PageHeader title="Chat ng Barangay" subtitle="Verified na residente lang" />
       <p className="rounded-xl bg-brand-light px-3 py-2 text-xs text-brand-deep">Magalang na usapan lang po. Ang mga mensahe ay nabubura pagkatapos ng <b>7 araw</b>.</p>
+      {staffRooms.length > 0 && (
+        <>
+          <p className="px-1 text-xs font-bold tracking-wide text-gray-600">PRIBADO · PARA SA STAFF LANG</p>
+          <div className="overflow-hidden rounded-2xl bg-white shadow-card">
+            {staffRooms.map((r) => (
+              <RoomRow key={r} room={r} />
+            ))}
+          </div>
+        </>
+      )}
       <p className="px-1 text-xs font-bold tracking-wide text-gray-600">MGA CHAT ROOM</p>
       <div className="overflow-hidden rounded-2xl bg-white shadow-card">
         {rooms.map((r) => (
@@ -207,7 +223,7 @@ function Conversation({ room }: { room: string }) {
   let lastDay = "";
   return (
     <div className="flex min-h-[calc(100dvh-13rem)] flex-col">
-      <PageHeader title={roomTitle(room)} subtitle="Verified na residente lang" />
+      <PageHeader title={roomTitle(room)} subtitle={isStaffRoom(room) ? "Pribado · staff lang" : "Verified na residente lang"} />
 
       {pin?.pinText && (
         <div className="mb-3 flex items-start gap-2 rounded-xl bg-yellow-100 px-3 py-2 text-xs text-yellow-900">
