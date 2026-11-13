@@ -32,6 +32,27 @@ export function isStaffRoom(room: string): boolean {
   return room === ROOM_STAFF_ADMIN || room === ROOM_STAFF_OFFICIALS;
 }
 
+/* ---- Video call (Jitsi Meet): a call is a chat message holding a random room name ---- */
+const CALL_RE = /^\[\[call:(Malineng-[A-Za-z0-9]{16})\]\]$/;
+
+/** Returns the Jitsi room name when the text is a call message, else null. */
+export function parseCall(text: string): string | null {
+  return CALL_RE.exec(text)?.[1] ?? null;
+}
+
+/** A new unguessable call message ("[[call:Malineng-xxxxxxxxxxxxxxxx]]"). */
+export function newCallMessage(): string {
+  const alphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  const id = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+  return `[[call:Malineng-${id}]]`;
+}
+
+export function callUrl(callRoom: string, displayName: string): string {
+  return `https://meet.jit.si/${callRoom}#userInfo.displayName=${encodeURIComponent(JSON.stringify(displayName))}`;
+}
+
 export function roomTitle(room: string): string {
   if (room === ROOM_STAFF_ADMIN) return "GC ng mga Admin";
   if (room === ROOM_STAFF_OFFICIALS) return "GC ng mga Opisyal";
