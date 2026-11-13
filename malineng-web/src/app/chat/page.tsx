@@ -25,6 +25,7 @@ import { useSettings } from "@/lib/useSettings";
 import { compressToDataUrl } from "@/lib/upload";
 import { friendlyError } from "@/lib/format";
 import { logActivity } from "@/lib/activity";
+import { typingLabel, useTyping } from "@/lib/useTyping";
 import {
   MAX_TEXT,
   MESSAGE_LIMIT,
@@ -135,6 +136,7 @@ function Conversation({ room }: { room: string }) {
   const [reason, setReason] = useState<string>(REPORT_REASONS[0]);
   const [notice, setNotice] = useState("");
   const lastSent = useRef(0);
+  const { typers, pingTyping, stopTyping } = useTyping(room);
   const bottom = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -197,6 +199,7 @@ function Conversation({ room }: { room: string }) {
         createdAt: serverTimestamp(),
       });
       lastSent.current = Date.now();
+      stopTyping();
       if (!callMessage) {
         setText("");
         setPhoto("");
@@ -315,6 +318,17 @@ function Conversation({ room }: { room: string }) {
         <div ref={bottom} />
       </div>
 
+      {typers.length > 0 && (
+        <p className="mt-2 flex items-center gap-1.5 px-2 text-xs font-semibold text-brand" role="status" aria-live="polite">
+          <span className="flex gap-0.5" aria-hidden>
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand [animation-delay:-0.3s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand [animation-delay:-0.15s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand" />
+          </span>
+          {typingLabel(typers)}…
+        </p>
+      )}
+
       {/* Composer */}
       <div className="sticky bottom-[4.4rem] z-20 -mx-4 mt-3 border-t border-gray-200 bg-white px-3 pb-2 pt-2">
         {!chat.enabled ? (
@@ -361,7 +375,13 @@ function Conversation({ room }: { room: string }) {
               )}
               <input
                 value={text}
-                onChange={(e) => setText(e.target.value.slice(0, MAX_TEXT))}
+                onChange={(e) => {
+                  const v = e.target.value.slice(0, MAX_TEXT);
+                  setText(v);
+                  if (v.trim()) pingTyping();
+                  else stopTyping();
+                }}
+                onBlur={stopTyping}
                 placeholder="Mag-type ng mensahe…"
                 aria-label="Mensahe"
                 maxLength={MAX_TEXT}
