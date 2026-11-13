@@ -17,7 +17,7 @@ import {
   Timestamp,
   where,
 } from "firebase/firestore";
-import { Copy, Flag, ImagePlus, MoreHorizontal, Pin, PinOff, Send, Trash2, VolumeX, X } from "lucide-react";
+import { Copy, Flag, Video, ImagePlus, MoreHorizontal, Pin, PinOff, Send, Trash2, VolumeX, X } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
@@ -33,6 +33,9 @@ import {
   REPORT_REASONS,
   ROOM_ALL,
   ROOM_STAFF_ADMIN,
+  callUrl,
+  newCallMessage,
+  parseCall,
   ROOM_STAFF_OFFICIALS,
   isStaffRoom,
   cutoffTimestamp,
@@ -71,7 +74,7 @@ function RoomRow({ room }: { room: string }) {
       <span className="min-w-0 flex-1">
         <span className="block font-bold">{roomTitle(room)}</span>
         <span className="block truncate text-xs text-gray-500">
-          {last ? `${last.authorName.split(" ")[0]}: ${last.text || "📷 Larawan"}` : "Walang mensahe pa"}
+          {last ? `${last.authorName.split(" ")[0]}: ${last.text && parseCall(last.text) ? "📹 Video call" : last.text || "📷 Larawan"}` : "Walang mensahe pa"}
         </span>
       </span>
       <span className="flex shrink-0 flex-col items-end gap-1">
@@ -170,9 +173,12 @@ function Conversation({ room }: { room: string }) {
     }
   }
 
-  async function send() {
+  // Officers and the Developer can start a video call in the private staff rooms.
+  const canStartCall = isOfficer && isStaffRoom(room);
+
+  async function send(callMessage?: string) {
     if (!user || !profile) return;
-    const body = text.trim();
+    const body = callMessage ?? text.trim();
     if (!body && !photo) return;
     if (Date.now() - lastSent.current < 2000) {
       setError("Dahan-dahan po. Maghintay ng ilang segundo.");
@@ -184,15 +190,17 @@ function Conversation({ room }: { room: string }) {
       const role = isSuperAdmin ? "Super Admin" : isAdmin ? (profile.position ?? "") : "";
       await addDoc(collection(db, "chatRooms", room, "messages"), {
         text: body,
-        photo,
+        photo: callMessage ? "" : photo,
         authorId: user.uid,
         authorName: profile.fullName,
         authorRole: role,
         createdAt: serverTimestamp(),
       });
       lastSent.current = Date.now();
-      setText("");
-      setPhoto("");
+      if (!callMessage) {
+        setText("");
+        setPhoto("");
+      }
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -263,7 +271,21 @@ function Conversation({ room }: { room: string }) {
                       </p>
                     )}
                     <div className={`group relative rounded-2xl px-3 py-2 shadow-sm ${me ? "rounded-br-sm bg-brand text-white" : "rounded-bl-sm bg-white text-gray-900"}`}>
-                      {m.text && <p className="whitespace-pre-wrap break-words text-[0.95rem]">{m.text}</p>}
+                      {m.text && parseCall(m.text) ? (
+                        <div className="space-y-2">
+                          <p className="flex items-center gap-1.5 text-[0.95rem] font-bold"><Video className="h-4 w-4" aria-hidden /> Video call</p>
+                          <a
+                            href={callUrl(parseCall(m.text)!, profile?.fullName ?? "Malineng")}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block rounded-xl bg-gold px-4 py-2 text-center text-sm font-extrabold text-brand-deep active:opacity-80"
+                          >
+                            Sumali sa call
+                          </a>
+                        </div>
+                      ) : (
+                        m.text && <p className="whitespace-pre-wrap break-words text-[0.95rem]">{m.text}</p>
+                      )}
                       {m.photo && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={m.photo} alt="Larawan sa chat" loading="lazy" className="mt-1 max-h-64 w-full rounded-lg object-cover" />
@@ -309,6 +331,17 @@ function Conversation({ room }: { room: string }) {
               }}
               className="flex items-end gap-2"
             >
+              {canStartCall && (
+                <button
+                  type="button"
+                  aria-label="Magsimula ng video call"
+                  disabled={busy}
+                  onClick={() => send(newCallMessage())}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold-light text-gold-dark active:opacity-80 disabled:opacity-50"
+                >
+                  <Video className="h-5 w-5" />
+                </button>
+              )}
               {chat.photos && (
                 <>
                   <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => pickPhoto(e.target.files?.[0])} />

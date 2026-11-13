@@ -877,6 +877,11 @@ service cloud.firestore {
               || (isAdmin() && incoming().authorRole == me().get('position', ''))
               || (isSuperAdmin() && incoming().authorRole == 'Super Admin'))
           && incoming().text is string && incoming().text.size() <= 500
+          // A video-call message is a random Jitsi room name. Only officers start one, only in the
+          // private staff rooms, and nothing else may carry the marker.
+          && (!incoming().text.matches('(?s).*\\[\\[call:.*')
+              || (isOfficer() && room in ['staff-admin', 'staff-officials']
+                  && incoming().text.matches('^\\[\\[call:Malineng-[A-Za-z0-9]{16}\\]\\]$') && incoming().photo == ''))
           && incoming().photo is string && incoming().photo.size() <= 200000
           && (incoming().photo == '' || chatPhotosOpen())
           && (incoming().text.size() > 0 || incoming().photo.size() > 0)
