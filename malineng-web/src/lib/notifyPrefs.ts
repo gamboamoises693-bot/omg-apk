@@ -5,7 +5,7 @@ import { notificationPermission, playAlertSound, showSystemNotification, vibrate
  * Free plan: these only ring while the website is open (also in the background),
  * because true push while the app is closed needs a paid server.
  */
-export type NotifyKind = "chat" | "board" | "pabatid";
+export type NotifyKind = "chat" | "board" | "pabatid" | "donation";
 
 const KEY = "malineng-notify";
 export const NOTIFY_EVENT = "malineng-notify-changed";

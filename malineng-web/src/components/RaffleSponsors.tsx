@@ -8,9 +8,17 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { formatPeso, friendlyError, sortNewest } from "@/lib/format";
-import { DONATION_STATUS_LABEL, pledgeDonation, useSponsors, type Donation, type DonationKind } from "@/lib/raffleDonations";
+import { pledgeDonation, useSponsors, type Donation, type DonationKind } from "@/lib/raffleDonations";
 import { Button, Input, Modal, Select } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+
+/** What the donor reads about each step of their pledge. */
+const DONOR_LABEL = {
+  new: "Naipadala · hinihintay ang Barangay",
+  accepted: "Natanggap ng Barangay · tatawagan ka",
+  received: "Natanggap na ang donasyon",
+  declined: "Hindi natanggap",
+} as const;
 
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
@@ -143,7 +151,7 @@ function MyDonations({ uid }: { uid: string }) {
         <div key={d.id} className="flex items-center justify-between gap-2 rounded-xl bg-surface p-3 text-sm">
           <div className="min-w-0">
             <p className="truncate font-bold">{d.what}</p>
-            <p className="text-xs text-gray-500">{DONATION_STATUS_LABEL[d.status]}{d.receiptNo ? ` · ${d.receiptNo}` : ""}</p>
+            <p className="text-xs text-gray-500">{DONOR_LABEL[d.status]}{d.receiptNo ? ` · ${d.receiptNo}` : ""}</p>
           </div>
           {d.status === "received" && (
             <Link href={`/raffle/resibo/?id=${d.id}`} className="flex shrink-0 items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-xs font-bold text-white">

@@ -643,6 +643,22 @@ export const EN: Record<string, string> = {
   "📷 Larawan": "📷 Photo",
   "🚑 Ambulansya": "🚑 Ambulance",
   "🚨 Ipadala ang Emergency Request": "🚨 Send the Emergency Request",
+  "Naipadala · hinihintay ang Barangay": "Sent · waiting for the Barangay",
+  "Natanggap ng Barangay · tatawagan ka": "Received by the Barangay · we will call you",
+  "Natanggap na ang donasyon": "Donation received",
+  "Hindi natanggap": "Not accepted",
+  "Donasyon ko": "My donation",
+  "Kapag natanggap na ng Barangay ang pangako mo": "When the Barangay receives your pledge",
+  "Natanggap ang pangako mo": "Your pledge was received",
+  "Natanggap na ang donasyon mo": "Your donation was received",
+  "Tungkol sa pangako mo": "About your pledge",
+  "Natanggap na ng Barangay ang pangako mo. Salamat!": "The Barangay received your pledge. Thank you!",
+  "Tatawagan ka ng Barangay sa": "The Barangay will call you at",
+  "Maraming salamat sa pagtulong! Ang resibo mo ay": "Thank you for helping! Your receipt is",
+  ", at makikita mo ito sa Raffle → Mga donasyon ko.": ", and you can see it in Raffle → My donations.",
+  "Tingnan ang resibo": "View the receipt",
+  "Salamat sa pangako mo (": "Thank you for your pledge (",
+  "). Hindi ito natanggap ngayon. Makipag-ugnayan sa Barangay Hall kung may tanong ka.": "). It was not accepted this time. Contact the Barangay Hall if you have questions.",
 };
 
 /** For texts that include a number or a name. $1, $2... are the captured parts. */

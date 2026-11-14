@@ -8,6 +8,7 @@ import { useCollection } from "@/lib/useCollection";
 import { formatTime12 } from "@/lib/ambulance";
 import { isLate, linesText, type BorrowRequest } from "@/lib/hiraman";
 import type { AmbulanceRequest, Appointment, Job, Listing, Post, Verification } from "@/lib/types";
+import type { Donation } from "@/lib/raffleDonations";
 
 /** Admin tab that handles each kind of pending item (see app/admin/page.tsx). */
 export const PENDING_TAB = {
@@ -22,6 +23,7 @@ export const PENDING_TAB = {
   opening: "approve",
   blotter: "blotter",
   borrowLate: "hiraman",
+  pledge: "rafflepledge",
 } as const;
 
 export type PendingKind = keyof typeof PENDING_TAB;
@@ -56,6 +58,9 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
     [isAdmin],
   );
   const borrow = useCollection<BorrowRequest>(borrowQ);
+  // New raffle donation pledges (every admin except BHW, the Developer included).
+  const pledgeQ = useMemo(() => (isAdmin ? query(collection(db, "raffleDonations"), where("status", "==", "new")) : null), [isAdmin]);
+  const pledges = useCollection<Donation>(pledgeQ);
   // New complaints (officers only).
   const blotterQ = useMemo(() => (canBorrowAdmin ? query(collection(db, "blotters"), where("status", "==", "natanggap")) : null), [canBorrowAdmin]);
   const blotters = useCollection<{ id: string; caseNo: string; type: string; purok: string }>(blotterQ);
@@ -105,6 +110,7 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       ...blotters.data.map((b) => ({ key: `blotter:${b.id}`, kind: "blotter" as const, emergency: false, title: "📝 Bagong reklamo", body: `${b.caseNo} · ${b.type} · ${b.purok || "—"}` })),
       ...openings.data.map((o) => ({ key: `opening:${o.id}`, kind: "opening" as const, emergency: false, title: "💼 Bagong bakante sa Hiring", body: `${o.posterName}: ${o.title} (${o.employer})` })),
       ...places.data.map((p) => ({ key: `place:${p.id}`, kind: "place" as const, emergency: false, title: "📍 Bagong pin sa Mapa", body: `${p.ownerName}: ${p.name} (${p.category})` })),
+      ...pledges.data.map((d) => ({ key: `pledge:${d.id}`, kind: "pledge" as const, emergency: false, title: "🎁 Bagong pangako ng donasyon", body: `${d.anon ? "Hindi nagpakilala" : d.name}: ${d.what}` })),
       ...borrow.data
         .filter((r) => r.status === "pending")
         .map((r) => ({ key: `borrow:${r.id}`, kind: "borrow" as const, emergency: false, title: "📦 Bagong request sa Hiraman", body: `${r.userName}: ${linesText(r.items)}` })),
@@ -121,9 +127,9 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       items,
       total: items.length,
       byTab,
-      loading: openings.loading || blotters.loading || places.loading || borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
+      loading: pledges.loading || openings.loading || blotters.loading || places.loading || borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
     };
-  }, [isAdmin, amb, listings, posts, jobs, ver, appts, places, openings, borrow, blotters, now]);
+  }, [isAdmin, amb, listings, posts, jobs, ver, appts, places, openings, borrow, blotters, pledges, now]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
