@@ -24,6 +24,7 @@ import {
   type RaffleRoundCfg,
 } from "@/lib/raffle";
 import { Button, Card, Input, Spinner } from "@/components/ui";
+import { AdminRaffleReset } from "@/components/admin/AdminRaffleReset";
 import { useToast } from "@/components/Toast";
 
 interface Person {
@@ -311,33 +312,6 @@ export function AdminRaffle() {
     }
   };
 
-  /** For tests only: clears the entries, all rounds, claims and the old single-draw documents. */
-  const reset = async () => {
-    const typed = prompt('PANGTEST LANG. Buburahin ang LAHAT ng entries, resulta at claims ng raffle. I-type ang RESET para ituloy.');
-    if (typed?.trim().toUpperCase() !== "RESET") return;
-    setBusy("reset");
-    try {
-      let total = 0;
-      for (const name of ["raffleEntries", "raffleRounds", "rafflePublicRounds", "raffleClaims", "rafflePublic", "raffleResult"]) {
-        const snap = await getDocs(collection(db, name));
-        for (let i = 0; i < snap.docs.length; i += 400) {
-          const batch = writeBatch(db);
-          snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
-          await batch.commit();
-          total += Math.min(400, snap.docs.length - i);
-        }
-      }
-      logActivity("Raffle", `Na-reset ang raffle (${total} dokumento ang binura)`);
-      toast("Na-reset na ang raffle.");
-      setReel("");
-      refresh();
-    } catch (err) {
-      toast(friendlyError(err), "error");
-    } finally {
-      setBusy("");
-    }
-  };
-
   const phaseText = done ? "Tapos na" : drawn > 0 ? `Round ${drawn} ng ${savedRounds.length}` : !config?.enabled ? "Sarado (naka-off)" : now < (config.startAt?.toMillis() ?? 0) ? "Hindi pa nagsisimula" : now < cutoffMs ? "Bukas ang entries" : "Sarado na ang entries";
 
   return (
@@ -510,7 +484,7 @@ export function AdminRaffle() {
         );
       })}
 
-      <Button variant="outline" full className="!text-red-700" loading={busy === "reset"} onClick={reset}>I-reset ang raffle (pangtest lang)</Button>
+      <AdminRaffleReset onDone={() => { setReel(""); refresh(); }} />
     </div>
   );
 }
