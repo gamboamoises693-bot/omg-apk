@@ -305,6 +305,8 @@ export type AmbulanceAvailability = "available" | "busy" | "maintenance";
 export interface AmbulanceSettings {
   phone: string;
   drivers: string[];
+  /** Drivers who are off duty or not available now (a subset of `drivers`). They cannot be chosen for a trip. */
+  offDrivers?: string[];
   status: AmbulanceAvailability;
   /** Blank = Libre. Otherwise shown as-is, e.g. "₱200 para sa gas". */
   fee: string;
