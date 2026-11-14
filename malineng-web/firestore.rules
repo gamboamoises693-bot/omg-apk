@@ -67,9 +67,65 @@ service cloud.firestore {
       return hasProfile() && me().role == 'superadmin';
     }
 
-    // Ambulance approvals: Kapitan (and the Super Admin) only.
+    // Ambulance releases: Kapitan (and the Super Admin).
     function isKapitan() {
       return isSuperAdmin() || (isAdmin() && me().get('position', '') == 'Kapitan');
+    }
+
+    // ---- Three-step approval (Hiraman, Ambulansya): Secretary reviews -> Admin agrees -> Kapitan releases ----
+    // While status is 'pending', `stage` (missing = 0) says whose turn it is. The Developer can act at any stage.
+    function isSecretaryOnly() {
+      return isAdmin() && me().get('position', '') == 'Secretary';
+    }
+
+    function isKapitanOnly() {
+      return isAdmin() && me().get('position', '') == 'Kapitan';
+    }
+
+    // Any other admin (Treasurer, Kagawad, SK Chairman...); BHW is not an admin.
+    function isAgreeAdmin() {
+      return isAdmin() && !(me().get('position', '') in ['Secretary', 'Kapitan']);
+    }
+
+    function mayActAtStage(stage) {
+      return isSuperAdmin()
+        || (stage == 0 && isSecretaryOnly())
+        || (stage == 1 && isAgreeAdmin())
+        || (stage == 2 && isKapitanOnly());
+    }
+
+    // Exactly one new log entry per change, so nobody can erase the trail.
+    function trailGrewByOne() {
+      return incoming().trail is list
+        && incoming().trail.size() == existing().get('trail', []).size() + 1;
+    }
+
+    // After release nobody except the Developer may touch the approval log.
+    function trailUntouched() {
+      return !incoming().diff(existing()).affectedKeys().hasAny(['trail', 'stage', 'urgent']);
+    }
+
+    function approvalFieldsOnly() {
+      return incoming().diff(existing()).affectedKeys().hasOnly(
+        ['status', 'stage', 'trail', 'urgent', 'rejectReason', 'decidedBy', 'decidedByName', 'decidedAt', 'updatedAt', 'driver', 'durationHours', 'adminNote']);
+    }
+
+    function approvalMove() {
+      return existing().status == 'pending' && trailGrewByOne() && approvalFieldsOnly()
+        && (
+          // forward: Secretary -> Admin, Admin -> Kapitan
+          (incoming().status == 'pending' && existing().get('stage', 0) < 2
+            && incoming().stage == existing().get('stage', 0) + 1 && mayActAtStage(existing().get('stage', 0)))
+          // back one step, with a reason in the trail
+          || (incoming().status == 'pending' && existing().get('stage', 0) > 0
+            && incoming().stage == existing().get('stage', 0) - 1 && mayActAtStage(existing().get('stage', 0)))
+          // Kapitan releases only after the Admin agreed
+          || (incoming().status == 'approved' && existing().get('stage', 0) == 2 && mayActAtStage(2))
+          // the person whose turn it is may reject
+          || (incoming().status == 'rejected' && mayActAtStage(existing().get('stage', 0)))
+          // emergency "agaran": Kapitan (or Developer) approves at once
+          || (incoming().status == 'approved' && incoming().get('urgent', false) == true && (isKapitanOnly() || isSuperAdmin()))
+        );
     }
 
     function notSuspended() {
@@ -262,7 +318,7 @@ service cloud.firestore {
     }
 
     match /borrowRequests/{id} {
-      allow read: if (signedIn() && resource.data.userId == request.auth.uid) || isBorrowAdmin();
+      allow read: if (signedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       // Verified, not suspended residents only.
       allow create: if verifiedPoster() && validBorrowRequest();
       // The borrower can only cancel while still waiting.
@@ -270,7 +326,10 @@ service cloud.firestore {
           && existing().status == 'pending'
           && incoming().status == 'cancelled'
           && changedOnly(['status']))
-        || isBorrowAdmin();
+        // Once released, Kapitan / Secretary handle pick-up and return. Before that, only the approval steps apply.
+        || (existing().status != 'pending' && isBorrowAdmin() && trailUntouched())
+        || approvalMove()
+        || isSuperAdmin();
       allow delete: if isSuperAdmin();
     }
 
@@ -583,8 +642,10 @@ service cloud.firestore {
         && isNonEmptyString(incoming().pickup, 200)
         && incoming().date is string && incoming().date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && incoming().time is string && incoming().time.matches('^[0-9]{2}:[0-9]{2}$');
-      // Kapitan / Super Admin decide; a resident may only cancel their own pending request.
-      allow update: if isKapitan()
+      // Secretary -> Admin -> Kapitan decide (approvalMove); a resident may only cancel their own pending request.
+      allow update: if (existing().status != 'pending' && isKapitan() && trailUntouched())
+        || approvalMove()
+        || isSuperAdmin()
         || (signedIn()
           && existing().userId == request.auth.uid
           && existing().status == 'pending'

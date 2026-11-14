@@ -1,5 +1,6 @@
 import { Timestamp, doc, increment, serverTimestamp, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
+import { newEntry, withEntry, type Actor as ApprovalActor, type TrailEntry } from "./approval";
 
 /* ---------------- Types ---------------- */
 
@@ -53,6 +54,10 @@ export interface BorrowRequest {
   status: BorrowStatus;
   rejectReason?: string;
   decidedByName?: string;
+  /** Approval steps (see lib/approval.ts). Missing `stage` = waiting for Secretary. */
+  stage?: number;
+  trail?: TrailEntry[];
+  urgent?: boolean;
   returnNote?: string;
   /** Set when the items were returned: how many came back fine, damaged or lost. */
   returnReport?: ReturnLine[];
@@ -187,9 +192,16 @@ interface Actor {
   name: string;
 }
 
-export async function approveRequest(r: BorrowRequest, actor: Actor): Promise<void> {
+/** Kapitan's release (stage 2). `note` goes into the trail the resident can read. */
+export async function approveRequest(r: BorrowRequest, actor: ApprovalActor, note = ""): Promise<void> {
   const batch = writeBatch(db);
-  batch.update(doc(db, "borrowRequests", r.id), { status: "approved", decidedBy: actor.uid, decidedByName: actor.name, decidedAt: serverTimestamp() });
+  batch.update(doc(db, "borrowRequests", r.id), {
+    status: "approved",
+    decidedBy: actor.uid,
+    decidedByName: actor.name,
+    decidedAt: serverTimestamp(),
+    trail: withEntry(r, newEntry("release", actor, note)),
+  });
   batch.set(doc(db, "borrowBookings", r.id), {
     items: r.items.map((i) => ({ itemId: i.itemId, qty: i.qty })),
     itemIds: r.itemIds,
@@ -246,11 +258,17 @@ export async function setFeeStatus(r: BorrowRequest, status: FeeStatus): Promise
   await batch.commit();
 }
 
-export async function rejectRequest(r: BorrowRequest, reason: string, actor: Actor): Promise<void> {
+/**
+ * Rejects a request. While it is still pending the person at the current step rejects it (with a reason);
+ * cancelling an already approved request frees the booked dates.
+ */
+export async function rejectRequest(r: BorrowRequest, reason: string, actor: ApprovalActor): Promise<void> {
   const batch = writeBatch(db);
-  batch.update(doc(db, "borrowRequests", r.id), { status: "rejected", rejectReason: reason, decidedBy: actor.uid, decidedByName: actor.name, decidedAt: serverTimestamp() });
-  // Also frees the dates if an approved request is being cancelled by the barangay.
-  batch.delete(doc(db, "borrowBookings", r.id));
+  const update: Record<string, unknown> = { status: "rejected", rejectReason: reason, decidedBy: actor.uid, decidedByName: actor.name, decidedAt: serverTimestamp() };
+  if (r.status === "pending") update.trail = withEntry(r, newEntry("reject", actor, reason));
+  batch.update(doc(db, "borrowRequests", r.id), update);
+  // A pending request has no booking yet; only approved ones hold dates.
+  if (r.status !== "pending") batch.delete(doc(db, "borrowBookings", r.id));
   await batch.commit();
 }
 

@@ -76,6 +76,8 @@ interface Section {
   Component: ComponentType;
   /** Officers only: Kapitan, Secretary and Super Admin (Hiraman, Blotter, Sektor). */
   borrowOnly?: boolean;
+  /** Also open to every other admin (not BHW) because they take part in the approval steps (Hiraman). */
+  approver?: boolean;
 }
 
 interface Group {
@@ -93,7 +95,7 @@ const GROUPS: Group[] = [
       { key: "verification", label: "Verification", icon: BadgeCheck, Component: AdminVerification },
       { key: "ambulansya", label: "Ambulansya", icon: Ambulance, Component: AdminAmbulance },
       { key: "appointments", label: "Appointments", icon: CalendarCheck, Component: AdminAppointments },
-      { key: "hiraman", label: "Hiraman", icon: Package, Component: AdminHiraman, borrowOnly: true },
+      { key: "hiraman", label: "Hiraman", icon: Package, Component: AdminHiraman, borrowOnly: true, approver: true },
       { key: "blotter", label: "Blotter / Reklamo", icon: FileWarning, Component: AdminBlotter, borrowOnly: true },
     ],
   },
@@ -139,12 +141,12 @@ function Badge({ n }: { n?: number }) {
 }
 
 export default function AdminPage() {
-  const { isSuperAdmin, canBotika, canBorrowAdmin, isOfficer, canLiga, profile } = useAuth();
+  const { isSuperAdmin, isAdmin, canBotika, canBorrowAdmin, isOfficer, canLiga, profile } = useAuth();
   const { byTab, total } = useAdminPending();
   const groups = useMemo(
     () =>
-      GROUPS.filter((g) => !g.superOnly || isSuperAdmin).map((g) => ({ ...g, sections: g.sections.filter((s) => !s.borrowOnly || canBorrowAdmin) })),
-    [isSuperAdmin, canBorrowAdmin],
+      GROUPS.filter((g) => !g.superOnly || isSuperAdmin).map((g) => ({ ...g, sections: g.sections.filter((s) => !s.borrowOnly || canBorrowAdmin || (s.approver && isAdmin)) })),
+    [isSuperAdmin, canBorrowAdmin, isAdmin],
   );
   const sections = useMemo(() => groups.flatMap((g) => g.sections), [groups]);
   const [current, setCurrent] = useState("approve");

@@ -12,7 +12,6 @@ import { compressToDataUrl } from "@/lib/upload";
 import { friendlyError, telHref, timeAgo, tsToMillis } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 import {
-  BORROW_REJECT_REASONS,
   approveRequest,
   availableQty,
   feeLabel,
@@ -32,8 +31,11 @@ import {
   type BorrowRequest,
   type ReturnLine,
 } from "@/lib/hiraman";
-import { Badge, Button, EmptyState, FilterTabs, Input, Modal, Select, Spinner } from "@/components/ui";
+import { Badge, Button, EmptyState, FilterTabs, Input, Modal, Spinner } from "@/components/ui";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { ApprovalPanel } from "@/components/ApprovalPanel";
+import { ApprovalTracker } from "@/components/ApprovalTracker";
+import { advanceRequest, returnRequest } from "@/lib/approval";
 import { useToast } from "@/components/Toast";
 
 type Tab = "request" | "hiram" | "naibalik" | "gamit";
@@ -116,10 +118,8 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
   const { user, profile, isSuperAdmin } = useAuth();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const [rejecting, setRejecting] = useState(false);
   const [returning, setReturning] = useState(false);
-  const [reason, setReason] = useState<string>(BORROW_REJECT_REASONS[0]);
-  const actor = user && profile ? { uid: user.uid, name: profile.fullName } : null;
+  const actor = user && profile ? { uid: user.uid, name: profile.fullName, role: isSuperAdmin ? "Developer" : profile.position ?? "Admin" } : null;
   const late = isLate(r, now);
 
   // Re-check dates against current bookings before approving (another request may have been approved meanwhile).
@@ -142,7 +142,6 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
       await fn();
       logActivity("Hiraman", log, r.id);
       toast(ok);
-      setRejecting(false);
     } catch (err) {
       toast(friendlyError(err), "error");
     } finally {
@@ -200,23 +199,17 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
 
       {shortages.length > 0 && <p className="rounded-lg bg-red-50 p-2 text-xs font-semibold text-red-700">{shortages.join(" · ")}</p>}
 
-      {r.status === "pending" &&
-        (rejecting ? (
-          <div className="space-y-2 rounded-xl bg-red-50 p-2.5">
-            <Select label="Dahilan" options={BORROW_REJECT_REASONS} value={reason} onChange={(e) => setReason(e.target.value)} />
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={() => setRejecting(false)}>Bumalik</Button>
-              <Button variant="danger" loading={busy} onClick={() => run(() => rejectRequest(r, reason, actor!), "Tinanggihan ang request.", `Tinanggihan ang hiram: ${what} (${reason})`)}>Tanggihan</Button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <Button variant="outline" className="!text-red-700" onClick={() => setRejecting(true)}>Tanggihan</Button>
-            <Button loading={busy} disabled={shortages.length > 0} onClick={() => run(() => approveRequest(r, actor!), "Naaprubahan. Naka-reserve na ang gamit.", `Inaprubahan ang hiram: ${what}`)}>
-              Aprubahan
-            </Button>
-          </div>
-        ))}
+      {(r.status === "pending" || r.status === "approved" || r.status === "rejected") && (r.status === "pending" || (r.trail?.length ?? 0) > 0) && <ApprovalTracker r={r} />}
+      {r.status === "pending" && (
+        <ApprovalPanel
+          r={r}
+          releaseDisabled={shortages.length > 0}
+          onAdvance={(a, n) => run(() => advanceRequest("borrowRequests", r.id, r, a, n), "Naipasa na sa susunod na opisyal.", `Naipasa ang hiram: ${what}`)}
+          onReturn={(a, n) => run(() => returnRequest("borrowRequests", r.id, r, a, n), "Naibalik sa naunang opisyal.", `Ibinalik ang hiram: ${what}`)}
+          onReject={(a, n) => run(() => rejectRequest(r, n, a), "Tinanggihan ang request.", `Tinanggihan ang hiram: ${what} (${n})`)}
+          onRelease={(a, n) => run(() => approveRequest(r, a, n), "Nailabas. Naka-reserve na ang gamit.", `Inilabas ang hiram: ${what}`)}
+        />
+      )}
 
       {(r.status === "approved" || r.status === "borrowed") && (
         <div className="grid grid-cols-2 gap-2 pt-1">
@@ -477,7 +470,7 @@ function ItemsTab({ items, bookings, now }: { items: BorrowItem[]; bookings: Bor
 /* ---------------- Main ---------------- */
 
 export function AdminHiraman() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, canBorrowAdmin } = useAuth();
   const toast = useToast();
   const now = useNow();
   const verified = useVerifiedSet();
@@ -516,12 +509,17 @@ export function AdminHiraman() {
         label="Hiraman"
         value={tab}
         onChange={setTab}
-        options={[
-          { value: "request", label: "Request", count: pending.length },
-          { value: "hiram", label: "Hiram", count: lateCount || out.length, tone: lateCount ? "alert" : "neutral" },
-          { value: "naibalik", label: "Kasaysayan", count: unpaidCount, tone: "alert" },
-          { value: "gamit", label: "Gamit" },
-        ]}
+        // Admins who only take part in the approval steps (not Kapitan/Secretary) see the request list only.
+        options={
+          canBorrowAdmin
+            ? [
+                { value: "request", label: "Request", count: pending.length },
+                { value: "hiram", label: "Hiram", count: lateCount || out.length, tone: lateCount ? "alert" : "neutral" },
+                { value: "naibalik", label: "Kasaysayan", count: unpaidCount, tone: "alert" },
+                { value: "gamit", label: "Gamit" },
+              ]
+            : [{ value: "request", label: "Request", count: pending.length }]
+        }
       />
       {tab === "naibalik" && (
         <div className="mb-3 space-y-2">

@@ -317,6 +317,10 @@ export interface AmbulanceRequest {
   driver?: string;
   durationHours?: number;
   adminNote?: string;
+  /** Approval steps (see lib/approval.ts). Missing `stage` = waiting for Secretary. */
+  stage?: number;
+  trail?: import("./approval").TrailEntry[];
+  urgent?: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }

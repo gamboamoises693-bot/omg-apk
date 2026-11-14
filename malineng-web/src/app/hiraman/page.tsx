@@ -9,6 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { logActivity } from "@/lib/activity";
 import { friendlyError, sortNewest } from "@/lib/format";
+import { waitingLabel } from "@/lib/approval";
+import { ApprovalTracker } from "@/components/ApprovalTracker";
 import {
   BORROW_STATUS_LABEL,
   availableQty,
@@ -97,6 +99,12 @@ function MyRequests() {
                     ? `Naibalik na, pero ${reportSummary(r.returnReport)}. Singil: ₱${(r.damageFee ?? 0).toLocaleString("en-PH")}. Magbayad sa Barangay Hall.`
                     : BORROW_STATUS_LABEL[r.status]}
             </p>
+            {(r.status === "pending" || (r.status === "rejected" && (r.trail?.length ?? 0) > 0)) && (
+              <div className="mt-3 space-y-1.5 border-t border-white/15 pt-3">
+                {r.status === "pending" && <p className="text-xs font-extrabold text-gold">{waitingLabel(r)} ang magpapasya</p>}
+                <ApprovalTracker r={r} dark />
+              </div>
+            )}
             {r.status === "pending" && (
               <button onClick={() => cancel(r)} className="mt-2 text-xs font-semibold text-white/85 underline">
                 Kanselahin
