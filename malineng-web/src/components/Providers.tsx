@@ -10,6 +10,7 @@ import { isFirebaseConfigured } from "@/lib/firebase";
 import { PresenceBeat } from "@/lib/presence";
 import { PabatidWatcher } from "./PabatidBell";
 import { BoardNotifier } from "./BoardNotifier";
+import { RaffleEntryManager } from "./RaffleEntryManager";
 import { RegisterServiceWorker } from "./InstallApp";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -27,6 +28,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <PresenceBeat />
           <PabatidWatcher />
           <BoardNotifier />
+          <RaffleEntryManager />
           <AdminAlertWatcher />
           <ListingHousekeeping />
           {children}
