@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   title: "Barangay Malineng | Cuyapo, Nueva Ecija",
   description: "Opisyal na community website ng Barangay Malineng: serbisyo, tindahan, trabaho, ayuda checker at iba pa.",
   manifest: "/manifest.json",
+  // The site has its own TL / EN switch. The browser's automatic page translation rewrites the page text and can crash the app.
+  other: { google: "notranslate" },
   icons: { icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }, { url: "/icon.svg", type: "image/svg+xml" }], apple: "/apple-touch-icon.png" },
 };
 
@@ -24,7 +26,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fil" suppressHydrationWarning>
+    <html lang="fil" translate="no" suppressHydrationWarning>
       <head>
         {/* Apply the saved "Aa" text size before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: TEXT_SIZE_BOOT_SCRIPT }} />
