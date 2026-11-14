@@ -10,18 +10,19 @@ const ROWS: { kind: NotifyKind; label: string; hint: string }[] = [
   { kind: "pabatid", label: "Pabatid at announcement", hint: "Mga abiso ng barangay" },
   { kind: "chat", label: "Chat", hint: "Bagong mensahe sa mga room mo" },
   { kind: "board", label: "Community Board", hint: "Bagong post ng mga kapitbahay" },
+  { kind: "donation", label: "Donasyon ko", hint: "Kapag natanggap na ng Barangay ang pangako mo" },
 ];
 
 /** Account card: allow phone notifications and choose which ones ring (this device only). */
 export function NotifySettings() {
   const toast = useToast();
   const [perm, setPerm] = useState<PermissionState>("default");
-  const [on, setOn] = useState<Record<NotifyKind, boolean>>({ pabatid: true, chat: true, board: true });
+  const [on, setOn] = useState<Record<NotifyKind, boolean>>({ pabatid: true, chat: true, board: true, donation: true });
 
   useEffect(() => {
     const read = () => {
       setPerm(notificationPermission());
-      setOn({ pabatid: notifyPref("pabatid"), chat: notifyPref("chat"), board: notifyPref("board") });
+      setOn({ pabatid: notifyPref("pabatid"), chat: notifyPref("chat"), board: notifyPref("board"), donation: notifyPref("donation") });
     };
     read();
     window.addEventListener(NOTIFY_EVENT, read);

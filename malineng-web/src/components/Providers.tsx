@@ -12,6 +12,7 @@ import { PresenceBeat } from "@/lib/presence";
 import { PabatidWatcher } from "./PabatidBell";
 import { BoardNotifier } from "./BoardNotifier";
 import { RaffleEntryManager } from "./RaffleEntryManager";
+import { DonationNotifier } from "./DonationNotifier";
 import { RegisterServiceWorker } from "./InstallApp";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -31,6 +32,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <PabatidWatcher />
           <BoardNotifier />
           <RaffleEntryManager />
+          <DonationNotifier />
           <AdminAlertWatcher />
           <ListingHousekeeping />
           {children}
