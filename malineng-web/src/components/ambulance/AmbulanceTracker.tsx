@@ -2,6 +2,8 @@ import { CheckCircle2, Circle, XCircle } from "lucide-react";
 import { REQUEST_STATUS_LABEL, endTime, formatTime12, DEFAULT_DURATION } from "@/lib/ambulance";
 import { formatDate } from "@/lib/format";
 import type { AmbulanceRequest } from "@/lib/types";
+import { waitingLabel } from "@/lib/approval";
+import { ApprovalTracker } from "@/components/ApprovalTracker";
 
 const FLOW = ["pending", "approved", "enroute", "done"] as const;
 const STEP_TEXT: Record<(typeof FLOW)[number], string> = {
@@ -59,6 +61,12 @@ export function AmbulanceTracker({ req }: { req: AmbulanceRequest }) {
         </ol>
       )}
 
+      {(req.status === "pending" || (stopped && (req.trail?.length ?? 0) > 0)) && (
+        <div className="space-y-1.5 rounded-xl bg-surface p-3">
+          {req.status === "pending" && <p className="text-sm font-bold text-brand">{waitingLabel(req)} ang magpapasya</p>}
+          <ApprovalTracker r={req} />
+        </div>
+      )}
       {!stopped && req.driver && <p className="rounded-xl bg-brand-light p-3 text-brand"><b>Driver:</b> {req.driver}</p>}
       {!stopped && req.adminNote && <p className="rounded-xl bg-gold-light p-3 text-yellow-900"><b>Paalala ng Barangay:</b> {req.adminNote}</p>}
     </div>

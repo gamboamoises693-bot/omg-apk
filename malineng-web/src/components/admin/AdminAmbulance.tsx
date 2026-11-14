@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, deleteDoc, doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
+import { collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { AlertTriangle, Phone, Plus } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useSettings } from "@/lib/useSettings";
@@ -26,6 +26,9 @@ import { STATUS_PILL } from "@/components/ambulance/AmbulanceTracker";
 import { useToast } from "@/components/Toast";
 import { useAuth } from "@/context/AuthContext";
 import { logActivity } from "@/lib/activity";
+import { ApprovalPanel } from "@/components/ApprovalPanel";
+import { ApprovalTracker } from "@/components/ApprovalTracker";
+import { advanceRequest, newEntry, returnRequest, withEntry, type Actor } from "@/lib/approval";
 import { AlertsSettingsCard } from "./AlertsSettingsCard";
 
 const requestsCollection = collection(db, "ambulanceRequests");
@@ -97,6 +100,35 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
     }
   };
 
+  /** Kapitan's release (or the emergency "agaran" release): approves, saves driver and hours, and opens the public busy window. */
+  const release = async (actor: Actor, noteText: string, fast: boolean) => {
+    const batch = writeBatch(db);
+    const durationHours = Number(hours);
+    batch.update(doc(db, "ambulanceRequests", req.id), {
+      status: "approved",
+      ...(fast ? { urgent: true } : {}),
+      trail: withEntry(req, newEntry(fast ? "fast" : "release", actor, noteText)),
+      driver: driver.trim(),
+      durationHours,
+      adminNote: note.trim().slice(0, 500),
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(doc(db, "ambulanceSchedule", req.id), { date: req.date, start: req.time, end: endTime(req.time, durationHours), status: "approved" });
+    await batch.commit();
+    logActivity("Ambulansya", `${fast ? "AGARAN " : ""}Inilabas: ${req.patientName} (${req.date} ${formatTime12(req.time)})${driver.trim() ? ` · Driver: ${driver.trim()}` : ""}`, req.id);
+  };
+
+  /** Runs one approval action with a toast and closes the dialog. */
+  const step = async (fn: () => Promise<void>, ok: string) => {
+    try {
+      await fn();
+      toast(ok);
+      onClose();
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    }
+  };
+
   const remove = async () => {
     if (!confirm("Burahin nang tuluyan ang request na ito?")) return;
     try {
@@ -160,16 +192,28 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
         </>
       )}
 
-      {!isKapitan ? (
-        <p className="rounded-xl bg-gold-light p-3 text-sm text-yellow-900">Si <b>Kapitan</b> (o ang Super Admin) lang ang makaka-approve at makakapagpalit ng status ng ambulansya.</p>
-      ) : (
+      {req.status === "pending" && (
+        <div className="space-y-3">
+          <ApprovalTracker r={req} />
+          <ApprovalPanel
+            r={req}
+            onAdvance={(a, n) => step(() => advanceRequest("ambulanceRequests", req.id, req, a, n), "Naipasa na sa susunod na opisyal.")}
+            onReturn={(a, n) => step(() => returnRequest("ambulanceRequests", req.id, req, a, n), "Naibalik sa naunang opisyal.")}
+            onReject={(a, n) =>
+              step(async () => {
+                await updateDoc(doc(db, "ambulanceRequests", req.id), { status: "rejected", trail: withEntry(req, newEntry("reject", a, n)), adminNote: n.slice(0, 500), updatedAt: serverTimestamp() });
+                logActivity("Ambulansya", `Tinanggihan: ${req.patientName} (${n})`, req.id);
+              }, "Tinanggihan ang request.")
+            }
+            onRelease={(a, n) => step(() => release(a, n, false), "Nailabas na. Makakatanggap ang residente ng abiso.")}
+            onFast={req.type === "emergency" ? (a, n) => step(() => release(a, n, true), "Agarang inaprubahan.") : undefined}
+          />
+        </div>
+      )}
+      {req.status !== "pending" && !isKapitan ? (
+        <p className="rounded-xl bg-gold-light p-3 text-sm text-yellow-900">Si <b>Kapitan</b> (o ang Developer) lang ang makakapagpalit ng status ng ambulansya pagkatapos ma-release.</p>
+      ) : req.status !== "pending" ? (
       <div className="grid grid-cols-2 gap-2">
-        {req.status === "pending" && (
-          <>
-            <Button loading={busy} onClick={() => setStatus("approved")}>✓ Approve</Button>
-            <Button variant="danger" loading={busy} onClick={() => setStatus("rejected")}>✕ Reject</Button>
-          </>
-        )}
         {req.status === "approved" && (
           <>
             <Button loading={busy} onClick={() => setStatus("enroute")}>🚑 Papunta na</Button>
@@ -184,7 +228,7 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
           <Button variant="outline" className="col-span-2" onClick={remove}>Burahin ang record</Button>
         )}
       </div>
-      )}
+      ) : null}
     </div>
   );
 }

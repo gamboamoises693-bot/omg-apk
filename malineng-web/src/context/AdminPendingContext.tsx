@@ -52,8 +52,8 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
   const { isAdmin, canBorrowAdmin } = useAuth();
   // Hiraman: only the approvers listen. Waiting requests + borrowed items past their return time.
   const borrowQ = useMemo(
-    () => (canBorrowAdmin ? query(collection(db, "borrowRequests"), where("status", "in", ["pending", "approved", "borrowed"])) : null),
-    [canBorrowAdmin],
+    () => (isAdmin ? query(collection(db, "borrowRequests"), where("status", "in", ["pending", "approved", "borrowed"])) : null),
+    [isAdmin],
   );
   const borrow = useCollection<BorrowRequest>(borrowQ);
   // New complaints (officers only).
