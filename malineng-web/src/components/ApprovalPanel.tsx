@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Lock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { STAGE_NAMES, isMyTurn, roleStage, stageOf, type Actor, type Approvable } from "@/lib/approval";
+import { isMyTurn, stageOf, type Actor, type Approvable } from "@/lib/approval";
+import { stepLabel } from "@/lib/approvalConfig";
 import { Button } from "@/components/ui";
 import { friendlyError } from "@/lib/format";
 
@@ -13,6 +14,8 @@ import { friendlyError } from "@/lib/format";
  */
 export function ApprovalPanel({
   r,
+  steps,
+  fastBy,
   onAdvance,
   onReturn,
   onReject,
@@ -22,13 +25,17 @@ export function ApprovalPanel({
   releaseNote,
 }: {
   r: Approvable;
-  /** Secretary / Admin: pass it to the next person. */
+  /** The approvers the Developer set for this action, in order. */
+  steps: string[];
+  /** Who may use the emergency release ("Kapitan", "Secretary" or "Kapitan o Secretary"); leave out when it is off. */
+  fastBy?: string;
+  /** Not the last approver: pass it to the next person. */
   onAdvance: (actor: Actor, note: string) => Promise<void>;
   onReturn: (actor: Actor, note: string) => Promise<void>;
   onReject: (actor: Actor, note: string) => Promise<void>;
-  /** Kapitan: release (approve). */
+  /** The last approver: release (approve). */
   onRelease: (actor: Actor, note: string) => Promise<void>;
-  /** Emergency: Kapitan or Developer approves at once. Leave out when not applicable. */
+  /** Emergency release. Leave out when not applicable. */
   onFast?: (actor: Actor, note: string) => Promise<void>;
   releaseDisabled?: boolean;
   releaseNote?: string;
@@ -37,10 +44,12 @@ export function ApprovalPanel({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const role = roleStage({ isSuperAdmin, isAdmin, position: profile?.position });
-  const s = stageOf(r);
-  const mine = isMyTurn(r, role);
-  const canFast = !!onFast && r.status === "pending" && (isSuperAdmin || (isAdmin && profile?.position === "Kapitan"));
+  const who = { isSuperAdmin, isAdmin, position: profile?.position };
+  const s = stageOf(r, steps);
+  const last = steps.length - 1;
+  const mine = isMyTurn(r, steps, who);
+  const fastOk = isSuperAdmin || (isAdmin && !!fastBy && (fastBy === "Kapitan o Secretary" ? ["Kapitan", "Secretary"].includes(profile?.position ?? "") : profile?.position === fastBy));
+  const canFast = !!onFast && r.status === "pending" && fastOk;
   const actor: Actor | null = user && profile ? { uid: user.uid, name: profile.fullName, role: isSuperAdmin ? "Developer" : profile.position ?? "Admin" } : null;
 
   async function run(fn: (a: Actor, n: string) => Promise<void>, needNote: boolean) {
@@ -64,8 +73,8 @@ export function ApprovalPanel({
   if (r.status !== "pending") return null;
 
   if (!mine) {
-    const myStage = role === null || role === "any" ? -1 : role;
-    const text = myStage >= 0 && s < myStage ? `Hinihintay pa si ${STAGE_NAMES[s]} bago ito mapunta sa iyo.` : `Naipasa na sa susunod: ${STAGE_NAMES[s]} ang magpapasya.`;
+    const myIdx = steps.findIndex((st) => !isSuperAdmin && who.isAdmin && (st === "Sinumang Admin" || st === profile?.position));
+    const text = myIdx > s ? `Hinihintay pa si ${stepLabel(steps[s])} bago ito mapunta sa iyo.` : myIdx >= 0 && myIdx < s ? "Naipasa mo na ito sa susunod na approver." : `Si ${stepLabel(steps[s])} ang magpapasya rito.`;
     return (
       <div className="space-y-2">
         <p className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2 text-xs text-gray-600"><Lock className="h-3.5 w-3.5 shrink-0" aria-hidden /> {text}</p>
@@ -81,7 +90,7 @@ export function ApprovalPanel({
 
   return (
     <div className="space-y-2">
-      {isSuperAdmin && <p className="text-[0.7rem] font-bold text-purple-700">DEVELOPER OVERRIDE · ikaw ang kumikilos para kay {STAGE_NAMES[s]}</p>}
+      {isSuperAdmin && <p className="text-[0.7rem] font-bold text-purple-700">DEVELOPER OVERRIDE · ikaw ang kumikilos para kay {stepLabel(steps[s])}</p>}
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
@@ -93,13 +102,13 @@ export function ApprovalPanel({
       />
       {error && <p className="text-xs text-red-700">{error}</p>}
       <div className="grid grid-cols-2 gap-2">
-        {s === 2 ? (
+        {s >= last ? (
           <Button loading={busy} disabled={releaseDisabled} onClick={() => run(onRelease, false)}>I-release</Button>
         ) : (
-          <Button loading={busy} onClick={() => run(onAdvance, false)}>{s === 0 ? "I-endorso kay Admin" : "Sumang-ayon, ipasa kay Kapitan"}</Button>
+          <Button loading={busy} onClick={() => run(onAdvance, false)}>{s === 0 ? `I-endorso kay ${stepLabel(steps[s + 1])}` : `Sumang-ayon, ipasa kay ${stepLabel(steps[s + 1])}`}</Button>
         )}
         <Button variant="danger" loading={busy} onClick={() => run(onReject, true)}>Tanggihan</Button>
-        {s > 0 && <Button variant="outline" loading={busy} className={canFast ? "" : "col-span-2"} onClick={() => run(onReturn, true)}>Ibalik kay {STAGE_NAMES[s - 1]}</Button>}
+        {s > 0 && <Button variant="outline" loading={busy} className={canFast ? "" : "col-span-2"} onClick={() => run(onReturn, true)}>Ibalik kay {stepLabel(steps[s - 1])}</Button>}
         {canFast && <Button variant="danger" loading={busy} className={s > 0 ? "" : "col-span-2"} onClick={() => confirm("Agarang aprubahan ang request na ito nang hindi na dumadaan sa iba?") && run(onFast!, false)}>Agarang aprubahan</Button>}
       </div>
     </div>

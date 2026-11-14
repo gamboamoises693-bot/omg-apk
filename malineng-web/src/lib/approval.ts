@@ -1,17 +1,16 @@
 import { doc, updateDoc, serverTimestamp, type DocumentData } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { stepLabel } from "@/lib/approvalConfig";
 
 /**
- * Three-step approval used by Hiraman and Ambulansya (and later Ayuda / important decisions):
- *   stage 0  Secretary reviews  ->  stage 1  Admin agrees  ->  stage 2  Kapitan releases.
- * While a request is still `status: "pending"`, `stage` says whose turn it is. Documents made before
- * this existed have no `stage`, which counts as 0. `trail` is an append-only log that the resident can read.
- * The Developer (Super Admin) can act at any stage; Kapitan (or the Developer) can use the emergency "agaran" release.
+ * Approval by steps, as set by the Developer in Admin → Approval (see approvalConfig.ts).
+ * While a request is still `status: "pending"`, `stage` is the index of the step whose turn it is.
+ * Documents made before this existed have no `stage`, which counts as 0.
+ * `trail` is an append-only log that the resident can read.
+ * The Developer (Super Admin) can act at any stage and always has the emergency release.
  */
-export const STAGE_NAMES = ["Secretary", "Admin", "Kapitan"] as const;
-export type StageIndex = 0 | 1 | 2;
 
-export type TrailStep = "endorse" | "agree" | "release" | "reject" | "return" | "fast" | "override";
+export type TrailStep = "endorse" | "agree" | "release" | "reject" | "return" | "fast" | "override" | "handback" | "accept" | "resident";
 
 export interface TrailEntry {
   step: TrailStep;
@@ -39,25 +38,29 @@ export interface Actor {
   role: string;
 }
 
-export const stageOf = (r: Approvable): StageIndex => (Math.min(2, Math.max(0, r.stage ?? 0)) as StageIndex);
+/** The step the request is at, kept inside the configured list. */
+export const stageOf = (r: Approvable, steps: string[]): number => Math.min(Math.max(0, r.stage ?? 0), Math.max(0, steps.length - 1));
 
-/** Which stage this person decides at. The Developer can act at whatever stage the request is at. */
-export function roleStage(opts: { isSuperAdmin: boolean; isAdmin: boolean; position?: string }): StageIndex | "any" | null {
-  if (opts.isSuperAdmin) return "any";
-  if (!opts.isAdmin) return null;
-  if (opts.position === "Secretary") return 0;
-  if (opts.position === "Kapitan") return 2;
-  return 1;
+export interface Who {
+  isSuperAdmin: boolean;
+  isAdmin: boolean;
+  position?: string;
 }
 
-export function isMyTurn(r: Approvable, role: ReturnType<typeof roleStage>): boolean {
-  return r.status === "pending" && role !== null && (role === "any" || role === stageOf(r));
+/** Does this person decide at that step? The Developer always does. "Sinumang Admin" = any admin except BHW. */
+export function matchesStep(step: string, who: Who): boolean {
+  if (who.isSuperAdmin) return true;
+  return who.isAdmin && (step === "Sinumang Admin" || who.position === step);
 }
 
-/** "Hinihintay si Secretary" / "Hinihintay si Admin" / "Hinihintay si Kapitan" */
-export function waitingLabel(r: Approvable): string {
+export function isMyTurn(r: Approvable, steps: string[], who: Who): boolean {
+  return r.status === "pending" && matchesStep(steps[stageOf(r, steps)] ?? "", who);
+}
+
+/** "Hinihintay si Secretary" / "Hinihintay si Kapitan" */
+export function waitingLabel(r: Approvable, steps: string[]): string {
   if (r.status !== "pending") return "";
-  return `Hinihintay si ${STAGE_NAMES[stageOf(r)]}`;
+  return `Hinihintay si ${stepLabel(steps[stageOf(r, steps)] ?? "Kapitan")}`;
 }
 
 const STEP_TEXT: Record<TrailStep, string> = {
@@ -68,6 +71,9 @@ const STEP_TEXT: Record<TrailStep, string> = {
   return: "Ibinalik ni",
   fast: "AGARANG inaprubahan ni",
   override: "Override ni",
+  handback: "Ibinalik sa residente ni",
+  accept: "Tinanggap ni",
+  resident: "Ibinalik ng",
 };
 
 export function trailLine(t: TrailEntry): string {
@@ -79,20 +85,19 @@ export function newEntry(step: TrailStep, actor: Actor, note: string): TrailEntr
   return { step, by: actor.uid, name: actor.name, role: actor.role, at: new Date().toISOString(), note: note.trim().slice(0, 300) };
 }
 
-/** Appends to the trail (the rules require exactly one new entry per change). */
-export const withEntry = (r: Approvable, entry: TrailEntry): TrailEntry[] => [...(r.trail ?? []), entry];
+/** Appends to a trail (the rules require exactly one new entry per change). */
+export const withEntry = (trail: TrailEntry[] | undefined, entry: TrailEntry): TrailEntry[] => [...(trail ?? []), entry];
 
-/** Moves a pending request one step forward (Secretary -> Admin -> Kapitan). */
-export async function advanceRequest(collectionName: string, id: string, r: Approvable, actor: Actor, note: string, extra: DocumentData = {}): Promise<void> {
-  const s = stageOf(r);
-  if (s >= 2) throw new Error("Nasa Kapitan na ang request.");
-  const step: TrailStep = s === 0 ? "endorse" : "agree";
-  await updateDoc(doc(db, collectionName, id), { ...extra, stage: s + 1, trail: withEntry(r, newEntry(step, actor, note)), updatedAt: serverTimestamp() });
+/** Moves a pending request one step forward. */
+export async function advanceRequest(collectionName: string, id: string, r: Approvable, steps: string[], actor: Actor, note: string, extra: DocumentData = {}): Promise<void> {
+  const s = stageOf(r, steps);
+  if (s >= steps.length - 1) throw new Error("Nasa huling approver na ang request.");
+  await updateDoc(doc(db, collectionName, id), { ...extra, stage: s + 1, trail: withEntry(r.trail, newEntry(s === 0 ? "endorse" : "agree", actor, note)), updatedAt: serverTimestamp() });
 }
 
 /** Sends a pending request back one step, with the reason. */
-export async function returnRequest(collectionName: string, id: string, r: Approvable, actor: Actor, note: string): Promise<void> {
-  const s = stageOf(r);
+export async function returnRequest(collectionName: string, id: string, r: Approvable, steps: string[], actor: Actor, note: string): Promise<void> {
+  const s = stageOf(r, steps);
   if (s === 0) throw new Error("Nasa unang hakbang na ito.");
-  await updateDoc(doc(db, collectionName, id), { stage: s - 1, trail: withEntry(r, newEntry("return", actor, note)), updatedAt: serverTimestamp() });
+  await updateDoc(doc(db, collectionName, id), { stage: s - 1, trail: withEntry(r.trail, newEntry("return", actor, note)), updatedAt: serverTimestamp() });
 }

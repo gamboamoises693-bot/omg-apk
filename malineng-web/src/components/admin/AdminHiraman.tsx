@@ -12,6 +12,7 @@ import { compressToDataUrl } from "@/lib/upload";
 import { friendlyError, telHref, timeAgo, tsToMillis } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 import {
+  acceptReturn,
   approveRequest,
   availableQty,
   feeLabel,
@@ -20,12 +21,13 @@ import {
   isLate,
   linesText,
   markBorrowed,
-  markReturned,
   ms,
   rejectRequest,
   reportSummary,
+  sendReturnBack,
   setFeeStatus,
   settleDamaged,
+  startReturn,
   type BorrowBooking,
   type BorrowItem,
   type BorrowRequest,
@@ -35,7 +37,8 @@ import { Badge, Button, EmptyState, FilterTabs, Input, Modal, Spinner } from "@/
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { ApprovalPanel } from "@/components/ApprovalPanel";
 import { ApprovalTracker } from "@/components/ApprovalTracker";
-import { advanceRequest, returnRequest } from "@/lib/approval";
+import { advanceRequest, isMyTurn, returnRequest, stageOf, trailLine, type Actor } from "@/lib/approval";
+import { effectiveSteps, stepLabel, useApprovalConfig } from "@/lib/approvalConfig";
 import { useToast } from "@/components/Toast";
 
 type Tab = "request" | "hiram" | "naibalik" | "gamit";
@@ -112,13 +115,112 @@ function ReturnDialog({ r, onClose, onSave }: { r: BorrowRequest; onClose: () =>
   );
 }
 
+/* ---------------- Return approval ---------------- */
+
+/**
+ * The return of a hiram after the borrower handed the items back: the approvers set for "Hiraman: Pagbabalik"
+ * accept it in order. The first approver checks the condition; the last one accepts and closes the hiram.
+ */
+function ReturnApproval({ r, steps, actor, what }: { r: BorrowRequest; steps: string[]; actor: Actor | null; what: string }) {
+  const { isSuperAdmin, isAdmin, profile } = useAuth();
+  const toast = useToast();
+  const [checking, setChecking] = useState(false);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const rs = Math.max(0, r.returnStage ?? 0);
+  const synthetic = { status: "pending", stage: rs, trail: r.returnTrail };
+  const mine = isMyTurn(synthetic, steps, { isSuperAdmin, isAdmin, position: profile?.position });
+  const first = stageOf(synthetic, steps) === 0;
+  const last = stageOf(synthetic, steps) >= steps.length - 1;
+  const summary = reportSummary(r.returnReport);
+
+  const act = async (fn: () => Promise<void>, ok: string, log: string) => {
+    setBusy(true);
+    try {
+      await fn();
+      logActivity("Hiraman", log, r.id);
+      toast(ok);
+      setNote("");
+      setChecking(false);
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-xl bg-brand-light/60 p-2.5">
+      <p className="text-xs font-extrabold text-brand-deep">PAGBABALIK NG GAMIT · {stepLabel(steps[stageOf(synthetic, steps)])} ang tatanggap</p>
+      <ApprovalTracker r={synthetic} steps={steps} firstLabel="Ibinalik" trail={r.returnTrail} />
+      {!first && (
+        <p className="text-xs text-gray-700">
+          {summary ? <>Ulat: <b>{summary}</b>{(r.damageFee ?? 0) > 0 ? ` · singil ₱${r.damageFee}` : ""}.</> : <>Ulat: maayos ang lahat.</>}
+          {r.returnNote ? ` ${r.returnNote}` : ""}
+        </p>
+      )}
+      {mine && (
+        <div className="space-y-2">
+          {isSuperAdmin && <p className="text-[0.7rem] font-bold text-purple-700">DEVELOPER OVERRIDE · ikaw ang kumikilos para kay {stepLabel(steps[stageOf(synthetic, steps)])}</p>}
+          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={300} aria-label="Paalala" placeholder="Paalala (kailangan kung ibabalik)" className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm" />
+          <div className="grid grid-cols-2 gap-2">
+            {first ? (
+              <Button loading={busy} onClick={() => setChecking(true)}>Suriin ang gamit</Button>
+            ) : (
+              <Button loading={busy} onClick={() => actor && act(() => acceptReturn(r, steps, actor, note), last ? "Tinanggap at isinara ang hiram." : "Tinanggap. Naipasa sa susunod na approver.", `Tinanggap ang pagbabalik: ${what}`)}>
+                {last ? "Tanggapin at isara" : "Tanggapin, ipasa"}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              loading={busy}
+              onClick={() => (note.trim() ? actor && act(() => sendReturnBack(r, actor, note, true), "Naibalik sa residente.", `Ibinalik sa residente ang pagbabalik: ${what}`) : toast("Maglagay muna ng paalala.", "error"))}
+            >
+              Ibalik sa residente
+            </Button>
+            {!first && (
+              <Button
+                variant="outline"
+                className="col-span-2"
+                loading={busy}
+                onClick={() => (note.trim() ? actor && act(() => sendReturnBack(r, actor, note, false), "Naibalik sa naunang approver.", `Ibinalik ang pagbabalik: ${what}`) : toast("Maglagay muna ng paalala.", "error"))}
+              >
+                Ibalik kay {stepLabel(steps[stageOf(synthetic, steps) - 1])}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+      <Modal open={checking} onClose={() => setChecking(false)} title="Kondisyon ng gamit">
+        {checking && (
+          <ReturnDialog
+            r={r}
+            onClose={() => setChecking(false)}
+            onSave={async (report, rnote, fee) => {
+              if (!actor) return;
+              await acceptReturn(r, steps, actor, note, { report, note: rnote, fee });
+              const problem = reportSummary(report);
+              logActivity("Hiraman", `Sinuri ang pagbabalik: ${what}${problem ? `. ${problem}` : ""}${fee ? ` (singil ₱${fee})` : ""}`, r.id);
+              toast(last ? (problem ? "Naibalik na. Na-update ang bilang ng gamit." : "Naibalik na. Available ulit ang gamit.") : "Naipasa na sa susunod na approver.");
+              setChecking(false);
+              setNote("");
+            }}
+          />
+        )}
+      </Modal>
+    </div>
+  );
+}
+
 /* ---------------- Request card ---------------- */
 
 function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; items: BorrowItem[]; bookings: BorrowBooking[]; now: number; verified: boolean }) {
   const { user, profile, isSuperAdmin } = useAuth();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  const [returning, setReturning] = useState(false);
+  const approvals = useApprovalConfig();
+  const reqSteps = effectiveSteps(approvals.hiram);
+  const retSteps = effectiveSteps(approvals.balik);
   const actor = user && profile ? { uid: user.uid, name: profile.fullName, role: isSuperAdmin ? "Developer" : profile.position ?? "Admin" } : null;
   const late = isLate(r, now);
 
@@ -199,13 +301,14 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
 
       {shortages.length > 0 && <p className="rounded-lg bg-red-50 p-2 text-xs font-semibold text-red-700">{shortages.join(" · ")}</p>}
 
-      {(r.status === "pending" || r.status === "approved" || r.status === "rejected") && (r.status === "pending" || (r.trail?.length ?? 0) > 0) && <ApprovalTracker r={r} />}
+      {(r.status === "pending" || r.status === "approved" || r.status === "rejected") && (r.status === "pending" || (r.trail?.length ?? 0) > 0) && <ApprovalTracker r={r} steps={reqSteps} />}
       {r.status === "pending" && (
         <ApprovalPanel
           r={r}
+          steps={reqSteps}
           releaseDisabled={shortages.length > 0}
-          onAdvance={(a, n) => run(() => advanceRequest("borrowRequests", r.id, r, a, n), "Naipasa na sa susunod na opisyal.", `Naipasa ang hiram: ${what}`)}
-          onReturn={(a, n) => run(() => returnRequest("borrowRequests", r.id, r, a, n), "Naibalik sa naunang opisyal.", `Ibinalik ang hiram: ${what}`)}
+          onAdvance={(a, n) => run(() => advanceRequest("borrowRequests", r.id, r, reqSteps, a, n), "Naipasa na sa susunod na approver.", `Naipasa ang hiram: ${what}`)}
+          onReturn={(a, n) => run(() => returnRequest("borrowRequests", r.id, r, reqSteps, a, n), "Naibalik sa naunang approver.", `Ibinalik ang hiram: ${what}`)}
           onReject={(a, n) => run(() => rejectRequest(r, n, a), "Tinanggihan ang request.", `Tinanggihan ang hiram: ${what} (${n})`)}
           onRelease={(a, n) => run(() => approveRequest(r, a, n), "Nailabas. Naka-reserve na ang gamit.", `Inilabas ang hiram: ${what}`)}
         />
@@ -222,13 +325,22 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
           )}
           {r.status === "approved" ? (
             <Button loading={busy} onClick={() => run(() => markBorrowed(r), "Naitala: nakuha na ang gamit.", `Nakuha na ang hiram: ${what}`)}>Nakuha na</Button>
+          ) : (r.returnStage ?? -1) >= 0 ? (
+            <span />
           ) : (
-            <Button loading={busy} onClick={() => setReturning(true)}>
+            <Button
+              loading={busy}
+              onClick={() => actor && confirm(`Itala na naibalik na ni ${r.userName} ang gamit? Susunod ang pagtanggap ng mga approver.`) && run(() => startReturn(r, actor, true), "Naitala ang pagbabalik. Hinihintay ang pagtanggap.", `Naibalik na raw ang hiram: ${what}`)}
+            >
               <CheckCircle2 className="h-4 w-4" /> Naibalik na
             </Button>
           )}
         </div>
       )}
+      {r.status === "borrowed" && (r.returnStage ?? -1) === -1 && (r.returnTrail?.length ?? 0) > 0 && (
+        <p className="rounded-lg bg-yellow-50 p-2 text-xs text-yellow-900">{trailLine(r.returnTrail![r.returnTrail!.length - 1])}</p>
+      )}
+      {r.status === "borrowed" && (r.returnStage ?? -1) >= 0 && <ReturnApproval r={r} steps={retSteps} actor={actor} what={what} />}
       {r.status === "approved" && (
         <button
           onClick={() => confirm(`Kanselahin ang naaprubahang hiram ni ${r.userName}?`) && run(() => rejectRequest(r, "Kinansela ng Barangay", actor!), "Nakansela.", `Kinansela ang hiram: ${what}`)}
@@ -250,21 +362,6 @@ function RequestCard({ r, items, bookings, now, verified }: { r: BorrowRequest; 
           <Trash2 className="h-3.5 w-3.5" aria-hidden /> Burahin sa kasaysayan
         </button>
       )}
-      <Modal open={returning} onClose={() => setReturning(false)} title="Pagbabalik ng gamit">
-        {returning && (
-          <ReturnDialog
-            r={r}
-            onClose={() => setReturning(false)}
-            onSave={async (report, note, fee) => {
-              await markReturned(r, report, note, fee, actor!);
-              const problem = reportSummary(report);
-              logActivity("Hiraman", `Naibalik ang hiram: ${what}${problem ? `. ${problem}` : ""}${fee ? ` (singil ₱${fee})` : ""}`, r.id);
-              toast(problem ? "Naibalik na. Na-update ang bilang ng gamit." : "Naibalik na. Available ulit ang gamit.");
-              setReturning(false);
-            }}
-          />
-        )}
-      </Modal>
     </div>
   );
 }
@@ -509,7 +606,7 @@ export function AdminHiraman() {
         label="Hiraman"
         value={tab}
         onChange={setTab}
-        // Admins who only take part in the approval steps (not Kapitan/Secretary) see the request list only.
+        // Admins who only take part in the approval steps (not Kapitan/Secretary) see the requests and the borrowed items, to accept returns.
         options={
           canBorrowAdmin
             ? [
@@ -518,7 +615,10 @@ export function AdminHiraman() {
                 { value: "naibalik", label: "Kasaysayan", count: unpaidCount, tone: "alert" },
                 { value: "gamit", label: "Gamit" },
               ]
-            : [{ value: "request", label: "Request", count: pending.length }]
+            : [
+                { value: "request", label: "Request", count: pending.length },
+                { value: "hiram", label: "Hiram", count: lateCount || out.length, tone: lateCount ? "alert" : "neutral" },
+              ]
         }
       />
       {tab === "naibalik" && (

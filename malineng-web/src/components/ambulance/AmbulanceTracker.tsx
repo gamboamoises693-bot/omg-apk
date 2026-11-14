@@ -3,6 +3,7 @@ import { REQUEST_STATUS_LABEL, endTime, formatTime12, DEFAULT_DURATION } from "@
 import { formatDate } from "@/lib/format";
 import type { AmbulanceRequest } from "@/lib/types";
 import { waitingLabel } from "@/lib/approval";
+import { effectiveSteps, useApprovalConfig } from "@/lib/approvalConfig";
 import { ApprovalTracker } from "@/components/ApprovalTracker";
 
 const FLOW = ["pending", "approved", "enroute", "done"] as const;
@@ -24,6 +25,8 @@ export const STATUS_PILL: Record<AmbulanceRequest["status"], string> = {
 
 /** Status stepper + key details of one request (resident view). */
 export function AmbulanceTracker({ req }: { req: AmbulanceRequest }) {
+  const approvals = useApprovalConfig();
+  const steps = effectiveSteps(approvals[req.type === "emergency" ? "ambe" : "amb"]);
   const stopped = req.status === "rejected" || req.status === "cancelled";
   const current = FLOW.indexOf(req.status as (typeof FLOW)[number]);
   const hours = req.durationHours ?? DEFAULT_DURATION[req.type];
@@ -63,8 +66,8 @@ export function AmbulanceTracker({ req }: { req: AmbulanceRequest }) {
 
       {(req.status === "pending" || (stopped && (req.trail?.length ?? 0) > 0)) && (
         <div className="space-y-1.5 rounded-xl bg-surface p-3">
-          {req.status === "pending" && <p className="text-sm font-bold text-brand">{waitingLabel(req)} ang magpapasya</p>}
-          <ApprovalTracker r={req} />
+          {req.status === "pending" && <p className="text-sm font-bold text-brand">{waitingLabel(req, steps)} ang magpapasya</p>}
+          <ApprovalTracker r={req} steps={steps} />
         </div>
       )}
       {!stopped && req.driver && <p className="rounded-xl bg-brand-light p-3 text-brand"><b>Driver:</b> {req.driver}</p>}

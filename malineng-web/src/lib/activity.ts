@@ -49,6 +49,7 @@ export const ACTIVITY_TYPES = [
   "Web Access",
   "Videos",
   "Chat",
+  "Approval",
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 

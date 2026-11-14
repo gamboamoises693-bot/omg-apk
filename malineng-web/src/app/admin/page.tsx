@@ -68,6 +68,7 @@ import { AdminPresinto } from "@/components/admin/AdminPresinto";
 import { AdminWebAccess } from "@/components/admin/AdminWebAccess";
 import { AdminVideos } from "@/components/admin/AdminVideos";
 import { AdminChat } from "@/components/admin/AdminChat";
+import { AdminApprovals } from "@/components/admin/AdminApprovals";
 
 interface Section {
   key: string;
@@ -127,6 +128,7 @@ const GROUPS: Group[] = [
     superOnly: true,
     sections: [
       { key: "users", label: "Users at Roles", icon: Crown, Component: AdminUsers },
+      { key: "approvals", label: "Approval", icon: ClipboardCheck, Component: AdminApprovals },
       { key: "videos", label: "Videos", icon: Clapperboard, Component: AdminVideos },
       { key: "webaccess", label: "Web Access", icon: Globe, Component: AdminWebAccess },
       { key: "doble", label: "Posibleng Doble", icon: CopyCheck, Component: AdminDuplicates },

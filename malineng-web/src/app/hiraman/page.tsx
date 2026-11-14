@@ -9,7 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { logActivity } from "@/lib/activity";
 import { friendlyError, sortNewest } from "@/lib/format";
-import { waitingLabel } from "@/lib/approval";
+import { stageOf, waitingLabel } from "@/lib/approval";
+import { effectiveSteps, stepLabel, useApprovalConfig } from "@/lib/approvalConfig";
 import { ApprovalTracker } from "@/components/ApprovalTracker";
 import {
   BORROW_STATUS_LABEL,
@@ -20,6 +21,7 @@ import {
   linesText,
   nextReturn,
   reportSummary,
+  startReturn,
   upcomingReservations,
   type BorrowBooking,
   type BorrowItem,
@@ -44,8 +46,11 @@ function useNow(): number {
 
 /** The signed-in resident's active or recent requests. */
 function MyRequests() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const toast = useToast();
+  const approvals = useApprovalConfig();
+  const reqSteps = effectiveSteps(approvals.hiram);
+  const retSteps = effectiveSteps(approvals.balik);
   const now = useNow();
   const q = useMemo(() => (user ? query(collection(db, "borrowRequests"), where("userId", "==", user.uid)) : null), [user]);
   const { data } = useCollection<BorrowRequest>(q);
@@ -60,6 +65,19 @@ function MyRequests() {
   const past = sortNewest(data).filter((r) => ["returned", "rejected", "cancelled"].includes(r.status) && !active.includes(r));
   const [showPast, setShowPast] = useState(false);
   if (active.length === 0 && past.length === 0) return null;
+
+  /** The borrower hands the items back; the approvers set for "Pagbabalik" take over. */
+  const handBack = async (r: BorrowRequest) => {
+    if (!user || !profile) return;
+    if (!confirm("Ibinalik mo na ba ang gamit sa Barangay Hall? Susuriin ito ng mga opisyal.")) return;
+    try {
+      await startReturn(r, { uid: user.uid, name: profile.fullName, role: "Residente" }, false);
+      logActivity("Hiraman", `Ibinalik na ang hiram: ${linesText(r.items)}`, r.id);
+      toast("Naipadala. Hinihintay ang pagtanggap ng Barangay.");
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    }
+  };
 
   const cancel = async (r: BorrowRequest) => {
     if (!confirm("Kanselahin ang request na ito?")) return;
@@ -101,8 +119,23 @@ function MyRequests() {
             </p>
             {(r.status === "pending" || (r.status === "rejected" && (r.trail?.length ?? 0) > 0)) && (
               <div className="mt-3 space-y-1.5 border-t border-white/15 pt-3">
-                {r.status === "pending" && <p className="text-xs font-extrabold text-gold">{waitingLabel(r)} ang magpapasya</p>}
-                <ApprovalTracker r={r} dark />
+                {r.status === "pending" && <p className="text-xs font-extrabold text-gold">{waitingLabel(r, reqSteps)} ang magpapasya</p>}
+                <ApprovalTracker r={r} steps={reqSteps} dark />
+              </div>
+            )}
+            {r.status === "borrowed" && (r.returnStage ?? -1) >= 0 && (
+              <div className="mt-3 space-y-1.5 border-t border-white/15 pt-3">
+                <p className="text-xs font-extrabold text-gold">Pagbabalik: {stepLabel(retSteps[stageOf({ status: "pending", stage: r.returnStage }, retSteps)])} ang tatanggap</p>
+                <ApprovalTracker r={{ status: "pending", stage: r.returnStage }} steps={retSteps} firstLabel="Ibinalik" trail={r.returnTrail} dark />
+              </div>
+            )}
+            {r.status === "borrowed" && (r.returnStage ?? -1) === -1 && (
+              <div className="mt-3 space-y-1.5 border-t border-white/15 pt-3">
+                {(r.returnTrail?.length ?? 0) > 0 && <p className="text-xs text-red-200">Ibinalik ng Barangay ang pagbabalik mo. {r.returnTrail![r.returnTrail!.length - 1].note}</p>}
+                <button onClick={() => handBack(r)} className="w-full rounded-xl bg-gold py-2.5 text-sm font-extrabold text-brand-deep active:opacity-80">
+                  Ibinalik ko na ang gamit
+                </button>
+                <p className="text-[0.7rem] text-white/70">Dalhin muna sa Barangay Hall, tapos pindutin ito.</p>
               </div>
             )}
             {r.status === "pending" && (

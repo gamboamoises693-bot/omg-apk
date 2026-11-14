@@ -29,6 +29,7 @@ import { logActivity } from "@/lib/activity";
 import { ApprovalPanel } from "@/components/ApprovalPanel";
 import { ApprovalTracker } from "@/components/ApprovalTracker";
 import { advanceRequest, newEntry, returnRequest, withEntry, type Actor } from "@/lib/approval";
+import { effectiveSteps, useApprovalConfig } from "@/lib/approvalConfig";
 import { AlertsSettingsCard } from "./AlertsSettingsCard";
 
 const requestsCollection = collection(db, "ambulanceRequests");
@@ -69,6 +70,10 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
   const [note, setNote] = useState(req.adminNote ?? "");
   const [busy, setBusy] = useState(false);
   const conflicts = findConflicts(all, req, Number(hours));
+  // Who approves (set by the Developer): emergencies and scheduled trips can have different steps.
+  const approvals = useApprovalConfig();
+  const cfgKey = req.type === "emergency" ? "ambe" : "amb";
+  const steps = effectiveSteps(approvals[cfgKey]);
 
   /** Updates the request and keeps the public busy-window doc in sync. */
   const setStatus = async (status: AmbulanceRequestStatus) => {
@@ -107,7 +112,7 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
     batch.update(doc(db, "ambulanceRequests", req.id), {
       status: "approved",
       ...(fast ? { urgent: true } : {}),
-      trail: withEntry(req, newEntry(fast ? "fast" : "release", actor, noteText)),
+      trail: withEntry(req.trail, newEntry(fast ? "fast" : "release", actor, noteText)),
       driver: driver.trim(),
       durationHours,
       adminNote: note.trim().slice(0, 500),
@@ -194,14 +199,16 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
 
       {req.status === "pending" && (
         <div className="space-y-3">
-          <ApprovalTracker r={req} />
+          <ApprovalTracker r={req} steps={steps} />
           <ApprovalPanel
             r={req}
-            onAdvance={(a, n) => step(() => advanceRequest("ambulanceRequests", req.id, req, a, n), "Naipasa na sa susunod na opisyal.")}
-            onReturn={(a, n) => step(() => returnRequest("ambulanceRequests", req.id, req, a, n), "Naibalik sa naunang opisyal.")}
+            steps={steps}
+            fastBy={approvals[cfgKey].fast ? approvals[cfgKey].fastBy ?? "Kapitan" : undefined}
+            onAdvance={(a, n) => step(() => advanceRequest("ambulanceRequests", req.id, req, steps, a, n), "Naipasa na sa susunod na approver.")}
+            onReturn={(a, n) => step(() => returnRequest("ambulanceRequests", req.id, req, steps, a, n), "Naibalik sa naunang approver.")}
             onReject={(a, n) =>
               step(async () => {
-                await updateDoc(doc(db, "ambulanceRequests", req.id), { status: "rejected", trail: withEntry(req, newEntry("reject", a, n)), adminNote: n.slice(0, 500), updatedAt: serverTimestamp() });
+                await updateDoc(doc(db, "ambulanceRequests", req.id), { status: "rejected", trail: withEntry(req.trail, newEntry("reject", a, n)), adminNote: n.slice(0, 500), updatedAt: serverTimestamp() });
                 logActivity("Ambulansya", `Tinanggihan: ${req.patientName} (${n})`, req.id);
               }, "Tinanggihan ang request.")
             }
