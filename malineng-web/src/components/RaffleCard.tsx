@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { Gift, Trophy } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { countdown, formatWhen, phaseOf, prizeList, raffleReady, useMyEntry, useNow, useRaffle } from "@/lib/raffle";
+import { countdown, formatWhen, phaseOf, raffleReady, roundsOf, useMyEntry, useNow, useRaffle, type PublicRound } from "@/lib/raffle";
 import { RaffleSponsors } from "@/components/RaffleSponsors";
+import { WinnerQr } from "@/components/WinnerQr";
 
 function Countdown({ target }: { target: number }) {
   const now = useNow();
@@ -22,23 +23,51 @@ function Countdown({ target }: { target: number }) {
   );
 }
 
+function RoundResult({ r, myCode, claimed }: { r: PublicRound; myCode?: string; claimed: (round: number, code: string) => boolean }) {
+  const major = r.type === "maj";
+  return (
+    <div className={`rounded-3xl p-4 shadow-card ${major ? "bg-gradient-to-b from-gold-light to-[#EAD27A] text-[#3B2E05]" : "bg-white"}`}>
+      <p className="flex items-center gap-1.5 text-xs font-extrabold tracking-wider">
+        <Trophy className="h-4 w-4" aria-hidden /> {major ? "MAJOR PRIZE" : r.name.toUpperCase()}
+        <span className="ml-auto font-bold opacity-70">Round {r.round}</span>
+      </p>
+      <ol className="mt-2 space-y-2">
+        {r.winners.map((w, i) => {
+          const mine = !!myCode && w.code === myCode;
+          const got = claimed(r.round, w.code);
+          return (
+            <li key={i} className={`rounded-2xl px-3 py-2 text-center ${mine ? "ring-2 ring-brand" : ""} ${major ? "bg-white/60" : "bg-surface"}`}>
+              <p className={`${major ? "text-2xl" : "text-lg"} font-black`}>🎉 {w.label}{mine ? " (ikaw!)" : ""}</p>
+              <p className="text-sm">Entry {w.code} · {w.purok || "Malineng"}</p>
+              <p className="text-xs font-bold">Premyo: {w.prize}{got ? " · ✓ Nakuha na" : ""}</p>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-2 text-center text-xs opacity-80">{r.total} ang kasali sa round na ito · random na pinili ng app</p>
+    </div>
+  );
+}
+
 /**
- * The raffle for residents: shows the person's entry code while entries are open, the closed state after the cutoff,
- * and the winner after the draw. Verified residents get their entry automatically (once, before the cutoff).
+ * The raffle for residents: the entry code while entries are open, the countdown to the draw, the winners of each
+ * round as soon as it is drawn, and a QR for every prize the person won (an admin scans it to hand over the prize).
  */
 export function RaffleCard({ full = false }: { full?: boolean }) {
-  const { user, profile, isVerified, isStaff } = useAuth();
-  const { config, pub, loaded } = useRaffle();
+  const { user, isVerified, isStaff } = useAuth();
+  const { config, rounds, claims, loaded } = useRaffle();
   const now = useNow(1000);
   const entry = useMyEntry(user?.uid);
-  const phase = phaseOf(config, pub, now);
+  const phase = phaseOf(config, rounds.length, now);
+  const cfgRounds = roundsOf(config);
+  const claimed = (round: number, code: string) => !!claims[`${round}_${code}`];
 
   if (!loaded || phase === "off") {
     return full ? <p className="rounded-2xl bg-white p-4 text-center text-sm text-gray-600 shadow-card">Malapit na ang raffle ng Barangay. Abangan ang anunsyo.</p> : null;
   }
-  const prizes = prizeList(config);
-  const myWin = pub && entry ? pub.winners.find((w) => w.code === entry.code) : undefined;
-  const iWon = !!myWin;
+  const major = cfgRounds[cfgRounds.length - 1];
+  const myWins = entry ? rounds.flatMap((r) => r.winners.filter((w) => w.code === entry.code).map((w) => ({ r, w }))) : [];
+  const nextRound = cfgRounds[rounds.length];
 
   return (
     <div className="mt-3 space-y-3">
@@ -47,18 +76,18 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
           <p className="flex items-center gap-2 text-xs font-extrabold tracking-wider text-gold"><Gift className="h-4 w-4" aria-hidden /> RAFFLE NG BARANGAY</p>
           {phase === "open" && <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-[0.68rem] font-extrabold text-green-800">Bukas ang entries</span>}
           {phase === "closed" && <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[0.68rem] font-extrabold text-red-800">Sarado na</span>}
+          {phase === "live" && <span className="rounded-full bg-gold px-2.5 py-0.5 text-[0.68rem] font-extrabold text-brand-deep">Kasalukuyang bunutan</span>}
           {phase === "done" && <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[0.68rem] font-extrabold">Tapos na</span>}
         </div>
-        {prizes.length === 1 && <p className="text-sm text-white/90">Premyo: <b>{prizes[0]}</b></p>}
-        {prizes.length > 1 && (
-          <div className="text-sm text-white/90">
-            <p>{prizes.length} ang mananalo. Mga premyo:</p>
-            <ol className="mt-1 list-decimal space-y-0.5 pl-5">
-              {prizes.map((p, i) => (
-                <li key={i}><b>{p}</b></li>
-              ))}
-            </ol>
-          </div>
+
+        {cfgRounds.length === 1 ? (
+          <p className="text-sm text-white/90">
+            {cfgRounds[0].prizes.length === 1 ? "Premyo" : `${cfgRounds[0].prizes.length} ang mananalo. Mga premyo`}: <b>{cfgRounds[0].prizes.join(" · ")}</b>
+          </p>
+        ) : (
+          <p className="text-sm text-white/90">
+            <b>{cfgRounds.length} na round.</b> Major prize sa huli: <b className="text-gold">{major?.prizes.join(" · ")}</b>
+          </p>
         )}
 
         {phase === "soon" && (
@@ -109,26 +138,48 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
           </>
         )}
 
-        {phase === "done" && pub && (
-          <p className="text-sm text-white/85">{entry ? (iWon ? "" : "Salamat sa pagsali! Hindi napili ang entry mo ngayon.") : "Salamat sa pag-register."}</p>
+        {phase === "live" && (
+          <>
+            <p className="text-lg font-extrabold">Round {rounds.length} ng {cfgRounds.length} ang natapos</p>
+            <p className="text-sm text-white/85">{nextRound ? <>Susunod: <b>{nextRound.type === "maj" ? "MAJOR PRIZE" : nextRound.name}</b>. Abangan ang bunutan!</> : ""}{entry ? <> Ang entry code mo ay <b className="text-gold">{entry.code}</b>.</> : ""}</p>
+          </>
         )}
+
+        {phase === "done" && <p className="text-sm text-white/85">{entry ? (myWins.length ? "" : "Salamat sa pagsali! Hindi napili ang entry mo ngayon.") : "Salamat sa pag-register."}</p>}
       </div>
 
-      {phase === "done" && pub && (
-        <div className="rounded-3xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-5 text-[#3B2E05] shadow-card">
-          <p className="flex items-center justify-center gap-1.5 text-xs font-extrabold tracking-wider"><Trophy className="h-4 w-4" aria-hidden /> {pub.winners.length > 1 ? "MGA MAPALAD NA MANANALO" : "MAPALAD NA MANANALO"}</p>
-          {iWon && <p className="mt-2 rounded-xl bg-white/70 p-2 text-center text-sm font-bold">Panalo ka ng {myWin?.prize}! Makipag-ugnayan sa Barangay Hall para makuha ang premyo.</p>}
-          <ol className="mt-3 space-y-2">
-            {pub.winners.map((w, i) => (
-              <li key={i} className="rounded-2xl bg-white/60 px-3 py-2 text-center">
-                <p className="text-xl font-black">🎉 {w.label}</p>
-                <p className="text-sm">Entry {w.code} · {w.purok || "Malineng"}</p>
-                {w.prize && <p className="text-xs font-bold">Premyo: {w.prize}</p>}
+      {myWins.map(({ r, w }) => (
+        <div key={`${r.round}-${w.code}`} className="space-y-2 rounded-3xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-4 text-center text-[#3B2E05] shadow-card">
+          <p className="text-lg font-black">🎉 Panalo ka ng {w.prize}!</p>
+          <p className="text-xs font-bold">{r.type === "maj" ? "MAJOR PRIZE" : r.name} · Round {r.round}</p>
+          {claimed(r.round, w.code) ? (
+            <p className="rounded-xl bg-white/70 p-2.5 text-sm font-bold text-green-800">✓ Nakuha mo na ang premyo mo. Hindi na magagamit ang QR na ito.</p>
+          ) : (
+            <>
+              <div className="mx-auto w-fit rounded-2xl bg-white p-2"><WinnerQr round={r.round} code={w.code} /></div>
+              <p className="text-sm font-bold">Ipakita ito sa Barangay Hall kasama ang valid ID mo.</p>
+              <p className="text-xs">Ina-scan ito ng admin para patunayang ikaw ang nanalo. Huwag ibigay ang QR sa iba.</p>
+            </>
+          )}
+        </div>
+      ))}
+
+      {[...rounds].reverse().map((r) => (
+        <RoundResult key={r.id} r={r} myCode={entry?.code} claimed={claimed} />
+      ))}
+
+      {full && cfgRounds.length > 1 && (
+        <section className="rounded-2xl bg-white p-4 shadow-card">
+          <h2 className="font-extrabold">Mga round at premyo</h2>
+          <ol className="mt-2 space-y-1.5 text-sm">
+            {cfgRounds.map((r, i) => (
+              <li key={i} className={`flex items-start justify-between gap-2 rounded-xl px-3 py-2 ${r.type === "maj" ? "bg-gold-light font-bold" : "bg-surface"}`}>
+                <span>{i + 1}. {r.type === "maj" ? "MAJOR PRIZE" : r.name}</span>
+                <span className="text-right text-gray-700">{r.prizes.join(" · ")}{i < rounds.length ? " ✓" : ""}</span>
               </li>
             ))}
           </ol>
-          <p className="mt-3 text-center text-xs">{pub.total} na verified na account ang sumali. Random na pinili ng app.</p>
-        </div>
+        </section>
       )}
 
       <RaffleSponsors full={full} />
@@ -139,7 +190,8 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-gray-700">
             <li><b>Isang account, isang entry.</b> Kapag na-verify ang account mo, awtomatiko kang magkakaroon ng entry code.</li>
             <li><b>Hanggang cutoff lang.</b> Pagkatapos ng cutoff, walang entry na ibibigay sa mga magre-register.</li>
-            <li><b>Bunutan sa app.</b> Isang mapalad na mananalo ang pipiliin nang random ng app, at makikita ito ng lahat.</li>
+            <li><b>Bunutan sa app, round by round.</b> Makikita ng lahat ang nanalo sa bawat round pagkabunot. Ang <b>major prize</b> ang huli.</li>
+            <li><b>Pagkuha ng premyo:</b> ipakita ang QR ng panalo mo at ang valid ID sa Barangay Hall.</li>
             <li><b>Hindi kasali</b> ang mga admin at opisyal ng Barangay.</li>
           </ul>
         </section>

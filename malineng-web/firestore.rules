@@ -743,6 +743,18 @@ service cloud.firestore {
         && incoming().createdAt == request.time;
     }
 
+    // Old single-draw documents (kept readable for history; the Developer can clear them).
+    match /raffleResult/{id} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+      allow delete: if isSuperAdmin();
+    }
+
+    match /rafflePublic/{id} {
+      allow read: if true;
+      allow delete: if isSuperAdmin();
+    }
+
     match /raffleEntries/{uid} {
       allow get: if isSelf(uid) || isSuperAdmin();
       allow list: if isSuperAdmin();
@@ -753,49 +765,73 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/settings/raffle)
           && raffleCfg().get('enabled', false) == true
           && request.time >= raffleCfg().startAt && request.time < raffleCfg().cutoffAt
-          && !exists(/databases/$(database)/documents/rafflePublic/current)
+          && !exists(/databases/$(database)/documents/rafflePublicRounds/1)
           && raffleEntryShape(uid)
           && incoming().name == me().fullName
           && incoming().purok == me().get('purok', ''))
         // The Developer adds verified people who never opened the app, before the draw.
-        || (isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublic/current) && raffleEntryShape(uid));
+        || (isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublicRounds/1) && raffleEntryShape(uid));
       allow update: if false;
-      allow delete: if isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublic/current);
+      allow delete: if isSuperAdmin();
     }
 
-    // The draw: one prize per winner (settings/raffle.prizes) plus up to 5 reserves. Full result is private.
-    match /raffleResult/{id} {
-      allow read: if isSuperAdmin();
-      // Once, after the cutoff and the draw time.
-      allow create: if isSuperAdmin() && id == 'current'
+    // The draw, round by round (settings/raffle.rounds): round 1 first, the major prize is the last round.
+    // Each round has one winner per prize plus reserves. Admins read the private round (to verify a QR); residents only the public copy.
+    function raffleRound(n) {
+      return raffleCfg().rounds[n - 1];
+    }
+
+    match /raffleRounds/{roundId} {
+      allow read: if isAdmin();
+      allow create: if isSuperAdmin()
+        && roundId.matches('^[0-9]{1,2}$')
+        && int(roundId) >= 1 && int(roundId) <= raffleCfg().rounds.size()
+        && (int(roundId) == 1 || exists(/databases/$(database)/documents/raffleRounds/$(string(int(roundId) - 1))))
         && request.time >= raffleCfg().cutoffAt && request.time >= raffleCfg().drawAt
-        && incoming().keys().hasOnly(['winners', 'reserves', 'total', 'drawnAt', 'drawnBy', 'cursor', 'log'])
-        && incoming().winners is list && incoming().winners.size() >= 1 && incoming().winners.size() <= 20
+        && incoming().keys().hasOnly(['round', 'winners', 'winnerCodes', 'reserves', 'total', 'drawnAt', 'drawnBy', 'cursor', 'log'])
+        && incoming().round == int(roundId)
+        && incoming().winners is list && incoming().winners.size() == raffleRound(int(roundId)).prizes.size()
+        && incoming().winnerCodes is list && incoming().winnerCodes.size() == incoming().winners.size()
         && incoming().reserves is list && incoming().reserves.size() <= 5
-        && incoming().total is int && incoming().total >= incoming().winners.size() + incoming().reserves.size()
+        && incoming().total is int && incoming().total >= incoming().winners.size()
         && incoming().cursor == 0
         && incoming().drawnAt == request.time && incoming().drawnBy == request.auth.uid;
-      // A reserve takes over a winner who does not claim the prize (one reserve at a time, with a reason in the log).
+      // A reserve takes over a winner who does not claim the prize (one at a time, with a reason in the log).
       allow update: if isSuperAdmin()
-        && incoming().diff(existing()).affectedKeys().hasOnly(['winners', 'cursor', 'log'])
+        && incoming().diff(existing()).affectedKeys().hasOnly(['winners', 'winnerCodes', 'cursor', 'log'])
         && incoming().winners.size() == existing().winners.size()
+        && incoming().winnerCodes.size() == existing().winnerCodes.size()
         && incoming().cursor == existing().cursor + 1
         && incoming().cursor <= existing().reserves.size();
-      allow delete: if false;
+      allow delete: if isSuperAdmin();
     }
 
-    match /rafflePublic/{id} {
+    match /rafflePublicRounds/{roundId} {
       allow read: if true;
-      allow create: if isSuperAdmin() && id == 'current'
-        && !exists(/databases/$(database)/documents/rafflePublic/current)
-        && existsAfter(/databases/$(database)/documents/raffleResult/current)
-        && incoming().keys().hasOnly(['winners', 'total', 'reservesLeft', 'drawnAt'])
+      allow create: if isSuperAdmin()
+        && existsAfter(/databases/$(database)/documents/raffleRounds/$(roundId))
+        && incoming().keys().hasOnly(['round', 'name', 'type', 'winners', 'total', 'reservesLeft', 'drawnAt'])
         && incoming().winners is list && incoming().winners.size() >= 1 && incoming().winners.size() <= 20
+        && incoming().type in ['min', 'maj']
         && incoming().drawnAt == request.time;
       allow update: if isSuperAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['winners', 'reservesLeft'])
         && incoming().winners.size() == existing().winners.size()
         && incoming().reservesLeft == existing().reservesLeft - 1;
-      allow delete: if false;
+      allow delete: if isSuperAdmin();
+    }
+
+    // A prize handed over: one record per round and winner code, made by an admin after checking the QR and ID.
+    match /raffleClaims/{claimId} {
+      allow read: if signedIn();
+      allow create: if isAdmin()
+        && incoming().keys().hasOnly(['round', 'code', 'claimedBy', 'claimedByName', 'claimedAt'])
+        && incoming().round is int && claimId == string(incoming().round) + '_' + incoming().code
+        && incoming().code in get(/databases/$(database)/documents/raffleRounds/$(string(incoming().round))).data.winnerCodes
+        && incoming().claimedBy == request.auth.uid
+        && incoming().claimedByName is string && incoming().claimedByName.size() <= 120
+        && incoming().claimedAt == request.time;
+      allow update: if false;
+      allow delete: if isSuperAdmin();
     }
 
     // ---------- Raffle donations and sponsors (amounts are public for transparency) ----------

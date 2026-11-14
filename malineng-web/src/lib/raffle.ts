@@ -1,24 +1,38 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { doc, onSnapshot, serverTimestamp, setDoc, type Timestamp } from "firebase/firestore";
+import { collection, doc, onSnapshot, serverTimestamp, setDoc, type Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 /**
  * The barangay raffle. One entry per verified resident, up to the cutoff; the Developer draws in the app.
  * - settings/raffle         : the Developer's setup (dates and prize)
  * - raffleEntries/{uid}     : one entry per person (private: owner and Developer)
- * - raffleResult/current    : the full draw with the reserves (Developer only)
- * - rafflePublic/current    : what everyone sees (first name and initial, purok, entry code, no phone)
+ * - raffleRounds/{n}        : the full draw of round n with its reserves (admins only)
+ * - rafflePublicRounds/{n}  : what everyone sees of round n (first name and initial, purok, entry code, no phone)
+ * - raffleClaims/{n_code}   : a prize handed over (made by an admin after checking the QR and the ID)
  */
+export interface RaffleRoundCfg {
+  name: string;
+  /** "maj" is the last round (the major prize); the others are minor prizes. */
+  type: "min" | "maj";
+  /** One prize per winner. The number of prizes is the number of winners of this round. */
+  prizes: string[];
+}
+
 export interface RaffleConfig {
   enabled: boolean;
   startAt?: Timestamp;
   cutoffAt?: Timestamp;
   drawAt?: Timestamp;
-  /** One prize per winner, in order (1st prize first). The number of prizes is the number of winners. */
+  /** The rounds, drawn in order. The last one is the major prize. */
+  rounds?: RaffleRoundCfg[];
+  /** A person can win only once (default true). */
+  onePerPerson?: boolean;
+  /** Reserves drawn with each round (0 to 5, default 2). */
+  reservesPerRound?: number;
+  /** Older single-draw fields; used only when `rounds` is missing. */
   prizes?: string[];
-  /** Older single-prize field; used when `prizes` is missing. */
   prize?: string;
 }
 
@@ -30,21 +44,32 @@ export interface PublicWinner {
   prize: string;
 }
 
-export interface RafflePublic {
+/** What everyone sees of a drawn round (rafflePublicRounds/{n}). */
+export interface PublicRound {
+  id: string;
+  round: number;
+  name: string;
+  type: "min" | "maj";
   winners: PublicWinner[];
   total: number;
-  /** Reserves not used yet. */
   reservesLeft: number;
   drawnAt?: Timestamp;
 }
 
-/** The prizes to draw for (at least one entry only if something was set). */
-export function prizeList(c: RaffleConfig | null): string[] {
+/** The rounds to draw (older raffles with a plain prize list count as one major round). */
+export function roundsOf(c: RaffleConfig | null): RaffleRoundCfg[] {
   if (!c) return [];
-  const list = (c.prizes ?? []).map((p) => p.trim()).filter(Boolean);
-  if (list.length) return list;
-  return c.prize?.trim() ? [c.prize.trim()] : [];
+  const list = (c.rounds ?? [])
+    .map((r) => ({ name: r.name?.trim() || "Raffle", type: r.type === "maj" ? ("maj" as const) : ("min" as const), prizes: (r.prizes ?? []).map((p) => p.trim()).filter(Boolean) }))
+    .filter((r) => r.prizes.length > 0);
+  if (list.length) return list.map((r, i) => ({ ...r, type: i === list.length - 1 ? "maj" : "min" }));
+  const legacy = (c.prizes ?? []).map((p) => p.trim()).filter(Boolean);
+  const prizes = legacy.length ? legacy : c.prize?.trim() ? [c.prize.trim()] : [];
+  return prizes.length ? [{ name: "MAJOR PRIZE", type: "maj", prizes }] : [];
 }
+
+export const DEFAULT_RESERVES = 2;
+export const MAX_ROUNDS = 20;
 
 export interface RaffleEntry {
   uid: string;
@@ -60,27 +85,38 @@ export const MAX_WINNERS = 20;
 /** The raffle starts here unless the Developer sets another date. */
 export const DEFAULT_START_ISO = "2026-12-28T00:00:00+08:00";
 
-export type RafflePhase = "off" | "soon" | "open" | "closed" | "done";
+export type RafflePhase = "off" | "soon" | "open" | "closed" | "live" | "done";
 
 export function raffleReady(c: RaffleConfig | null): c is RaffleConfig & { startAt: Timestamp; cutoffAt: Timestamp; drawAt: Timestamp } {
   return !!c && c.enabled && !!c.startAt && !!c.cutoffAt && !!c.drawAt;
 }
 
-export function phaseOf(c: RaffleConfig | null, pub: RafflePublic | null, now: number): RafflePhase {
-  if (pub) return "done";
+/** `drawn` = how many rounds have been drawn so far. */
+export function phaseOf(c: RaffleConfig | null, drawn: number, now: number): RafflePhase {
   if (!raffleReady(c)) return "off";
+  const total = roundsOf(c).length;
+  if (total > 0 && drawn >= total) return "done";
+  if (drawn > 0) return "live";
   if (now < c.startAt.toMillis()) return "soon";
   if (now < c.cutoffAt.toMillis()) return "open";
   return "closed";
 }
 
-/* ---- one shared listener for the setup and the public result ---- */
+/* ---- one shared listener for the setup, the drawn rounds and the claimed prizes ---- */
+export interface Claim {
+  round: number;
+  code: string;
+  claimedByName: string;
+  claimedAt?: Timestamp;
+}
+
 interface Snapshot {
   config: RaffleConfig | null;
-  pub: RafflePublic | null;
+  rounds: PublicRound[];
+  claims: Record<string, Claim>;
   loaded: boolean;
 }
-let current: Snapshot = { config: null, pub: null, loaded: false };
+let current: Snapshot = { config: null, rounds: [], claims: {}, loaded: false };
 const subscribers = new Set<() => void>();
 let started = false;
 
@@ -98,9 +134,14 @@ function start(): void {
     () => emit({ loaded: true }),
   );
   onSnapshot(
-    doc(db, "rafflePublic", "current"),
-    (s) => emit({ pub: s.exists() ? (s.data() as RafflePublic) : null }),
+    collection(db, "rafflePublicRounds"),
+    (snap) => emit({ rounds: snap.docs.map((d) => ({ id: d.id, ...d.data() }) as PublicRound).sort((a, b) => a.round - b.round) }),
     () => {},
+  );
+  onSnapshot(
+    collection(db, "raffleClaims"),
+    (snap) => emit({ claims: Object.fromEntries(snap.docs.map((d) => [d.id, d.data() as Claim])) }),
+    () => {}, // guests cannot read claims: nothing to show
   );
 }
 
@@ -112,11 +153,14 @@ function subscribe(cb: () => void): () => void {
   };
 }
 
-const EMPTY: Snapshot = { config: null, pub: null, loaded: false };
+const EMPTY: Snapshot = { config: null, rounds: [], claims: {}, loaded: false };
 
 export function useRaffle(): Snapshot {
   return useSyncExternalStore(subscribe, () => current, () => EMPTY);
 }
+
+/** The URL in a winner's QR (an admin scans it with the phone camera). */
+export const verifyUrl = (round: number, code: string): string => `${typeof window !== "undefined" ? window.location.origin : ""}/raffle/verify/?r=${round}&c=${code}`;
 
 /** The signed-in person's own entry (undefined while loading, null if none). */
 export function useMyEntry(uid?: string): RaffleEntry | null | undefined {

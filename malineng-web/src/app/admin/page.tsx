@@ -26,6 +26,7 @@ import {
   Gavel,
   Gift,
   HandCoins,
+  ScanLine,
   HardHat,
   ScrollText,
   Settings as SettingsIcon,
@@ -73,6 +74,7 @@ import { AdminChat } from "@/components/admin/AdminChat";
 import { AdminApprovals } from "@/components/admin/AdminApprovals";
 import { AdminRaffle } from "@/components/admin/AdminRaffle";
 import { AdminRaffleDonations } from "@/components/admin/AdminRaffleDonations";
+import { AdminRaffleVerify } from "@/components/admin/AdminRaffleVerify";
 import { AdminDecisions } from "@/components/admin/AdminDecisions";
 import { AdminAyudaBatches } from "@/components/admin/AdminAyudaBatches";
 
@@ -104,6 +106,7 @@ const GROUPS: Group[] = [
       { key: "appointments", label: "Appointments", icon: CalendarCheck, Component: AdminAppointments },
       { key: "hiraman", label: "Hiraman", icon: Package, Component: AdminHiraman, borrowOnly: true, approver: true },
       { key: "ayudabatch", label: "Ayuda: Batch", icon: HandCoins, Component: AdminAyudaBatches, borrowOnly: true, approver: true },
+      { key: "raffleverify", label: "Raffle: I-verify ang nanalo", icon: ScanLine, Component: AdminRaffleVerify, borrowOnly: true, approver: true },
       { key: "rafflepledge", label: "Raffle: Donasyon", icon: Gift, Component: AdminRaffleDonations, borrowOnly: true, approver: true },
       { key: "desisyon", label: "Mahalagang desisyon", icon: Gavel, Component: AdminDecisions, borrowOnly: true, approver: true },
       { key: "blotter", label: "Blotter / Reklamo", icon: FileWarning, Component: AdminBlotter, borrowOnly: true },
