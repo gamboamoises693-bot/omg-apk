@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Gift, Trophy } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { claimEntry, countdown, formatWhen, phaseOf, raffleReady, useMyEntry, useNow, useRaffle } from "@/lib/raffle";
-import { friendlyError } from "@/lib/format";
+import { countdown, formatWhen, phaseOf, raffleReady, useMyEntry, useNow, useRaffle } from "@/lib/raffle";
 
 function Countdown({ target }: { target: number }) {
   const now = useNow();
@@ -33,15 +31,6 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
   const now = useNow(1000);
   const entry = useMyEntry(user?.uid);
   const phase = phaseOf(config, pub, now);
-  const [error, setError] = useState("");
-  const tried = useRef(false);
-
-  // Automatic entry: verified resident, entries open, no entry yet.
-  useEffect(() => {
-    if (tried.current || !user || !profile || !isVerified || isStaff || phase !== "open" || entry !== null) return;
-    tried.current = true;
-    claimEntry(user.uid, profile.fullName, profile.purok ?? "").catch((e) => setError(friendlyError(e)));
-  }, [user, profile, isVerified, isStaff, phase, entry]);
 
   if (!loaded || phase === "off") {
     return full ? <p className="rounded-2xl bg-white p-4 text-center text-sm text-gray-600 shadow-card">Malapit na ang raffle ng Barangay. Abangan ang anunsyo.</p> : null;
@@ -111,7 +100,6 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
         {phase === "done" && pub && (
           <p className="text-sm text-white/85">{entry ? (iWon ? "" : "Salamat sa pagsali! Hindi napili ang entry mo ngayon.") : "Salamat sa pag-register."}</p>
         )}
-        {error && <p className="rounded-lg bg-red-100 p-2 text-xs text-red-800">{error}</p>}
       </div>
 
       {phase === "done" && pub && (
