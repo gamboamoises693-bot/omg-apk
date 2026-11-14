@@ -62,7 +62,7 @@ export function AdminApprovals() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pb-20">
       <p className="rounded-2xl bg-brand-deep p-3 text-sm text-white">
         <b className="text-gold">Developer lang</b> ang makakapagbago nito. Piliin ang aksyon, kung kailangan ng approval, at kung sino ang magpapasya sa bawat hakbang. Ang <b>Developer</b> ay laging may override.
       </p>

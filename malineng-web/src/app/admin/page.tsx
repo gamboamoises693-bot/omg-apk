@@ -23,6 +23,7 @@ import {
   ClipboardList,
   Crown,
   FileBarChart,
+  Gavel,
   HandCoins,
   HardHat,
   ScrollText,
@@ -69,6 +70,8 @@ import { AdminWebAccess } from "@/components/admin/AdminWebAccess";
 import { AdminVideos } from "@/components/admin/AdminVideos";
 import { AdminChat } from "@/components/admin/AdminChat";
 import { AdminApprovals } from "@/components/admin/AdminApprovals";
+import { AdminDecisions } from "@/components/admin/AdminDecisions";
+import { AdminAyudaBatches } from "@/components/admin/AdminAyudaBatches";
 
 interface Section {
   key: string;
@@ -97,6 +100,8 @@ const GROUPS: Group[] = [
       { key: "ambulansya", label: "Ambulansya", icon: Ambulance, Component: AdminAmbulance },
       { key: "appointments", label: "Appointments", icon: CalendarCheck, Component: AdminAppointments },
       { key: "hiraman", label: "Hiraman", icon: Package, Component: AdminHiraman, borrowOnly: true, approver: true },
+      { key: "ayudabatch", label: "Ayuda: Batch", icon: HandCoins, Component: AdminAyudaBatches, borrowOnly: true, approver: true },
+      { key: "desisyon", label: "Mahalagang desisyon", icon: Gavel, Component: AdminDecisions, borrowOnly: true, approver: true },
       { key: "blotter", label: "Blotter / Reklamo", icon: FileWarning, Component: AdminBlotter, borrowOnly: true },
     ],
   },

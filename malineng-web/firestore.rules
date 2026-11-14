@@ -660,6 +660,55 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ---------- ayudaBatches: a release of ayuda, approved by the steps the Developer set ('ayuda') ----------
+    match /ayudaBatches/{batchId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && incoming().keys().hasOnly(['title', 'program', 'controlNumbers', 'families', 'perFamily', 'date', 'status', 'authorId', 'authorName', 'createdAt'])
+        && incoming().authorId == request.auth.uid
+        && incoming().authorName == me().fullName
+        && incoming().status == 'pending'
+        && isNonEmptyString(incoming().title, 120)
+        && isNonEmptyString(incoming().program, 80)
+        && incoming().controlNumbers is list && incoming().controlNumbers.size() > 0 && incoming().controlNumbers.size() <= 400
+        && incoming().families == incoming().controlNumbers.size()
+        && incoming().perFamily is int && incoming().perFamily >= 0 && incoming().perFamily <= 10000000
+        && isNonEmptyString(incoming().date, 40)
+        && incoming().createdAt == request.time;
+      allow update: if approvalMove('ayuda') || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ---------- decisions (private, with the amount) and decisionsPublic (what residents see, no amount) ----------
+    match /decisions/{decisionId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && incoming().keys().hasOnly(['title', 'kind', 'amount', 'detail', 'status', 'authorId', 'authorName', 'createdAt'])
+        && incoming().authorId == request.auth.uid
+        && incoming().authorName == me().fullName
+        && incoming().status == 'pending'
+        && isNonEmptyString(incoming().title, 120)
+        && incoming().kind in ['Gastusin', 'Proyekto', 'Patakaran', 'Iba pa']
+        && incoming().amount is number && incoming().amount >= 0 && incoming().amount <= 1000000000
+        && isNonEmptyString(incoming().detail, 1000)
+        && incoming().createdAt == request.time;
+      allow update: if approvalMove('des') || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    match /decisionsPublic/{decisionId} {
+      allow read: if true;
+      // Published only together with the approval of the same decision, with the same words and no amount.
+      allow create: if isAdmin()
+        && incoming().keys().hasOnly(['title', 'kind', 'detail', 'decidedAt'])
+        && getAfter(/databases/$(database)/documents/decisions/$(decisionId)).data.status == 'approved'
+        && getAfter(/databases/$(database)/documents/decisions/$(decisionId)).data.title == incoming().title
+        && getAfter(/databases/$(database)/documents/decisions/$(decisionId)).data.kind == incoming().kind
+        && getAfter(/databases/$(database)/documents/decisions/$(decisionId)).data.detail == incoming().detail
+        && incoming().decidedAt == request.time;
+      allow update, delete: if isSuperAdmin();
+    }
+
     // ---------- appointments ----------
     match /appointments/{apptId} {
       allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
