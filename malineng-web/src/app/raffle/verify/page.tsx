@@ -10,6 +10,8 @@ import { useAuth } from "@/context/AuthContext";
 import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
 import { maskName } from "@/lib/raffle";
+import { roleLabel } from "@/lib/activity";
+import { BarangayIdCard, barangayIdNo } from "@/components/BarangayIdCard";
 import { LoginGate } from "@/components/LoginGate";
 import { Button, Input, PageHeader, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
@@ -30,6 +32,17 @@ interface ClaimDoc {
   claimedAt?: { toDate: () => Date };
 }
 
+/** What the system knows about the winner, for the Barangay ID card. */
+interface IdInfo {
+  name: string;
+  purok: string;
+  birthday: string;
+  selfie: string;
+  verified: boolean;
+  idNo: string;
+  roleText?: string;
+}
+
 type Result =
   | { kind: "none" }
   | { kind: "invalid" }
@@ -44,12 +57,14 @@ function Verify() {
   const round = Number(params.get("r") ?? "0");
   const code = (params.get("c") ?? "").toUpperCase();
   const [result, setResult] = useState<Result>({ kind: "none" });
+  const [idInfo, setIdInfo] = useState<IdInfo | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [manualRound, setManualRound] = useState("");
   const [manualCode, setManualCode] = useState("");
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState("");
+  const [scanNote, setScanNote] = useState("");
   const video = useRef<HTMLVideoElement>(null);
 
   // Look the code up in the private round (admins only).
@@ -82,46 +97,108 @@ function Verify() {
     };
   }, [isAdmin, round, code]);
 
-  const go = useCallback((r: string | number, c: string) => router.push(`/raffle/verify/?r=${encodeURIComponent(String(r))}&c=${encodeURIComponent(c.toUpperCase())}`), [router]);
-
-  // Camera scanner (Chrome on Android supports BarcodeDetector; otherwise use the phone's own camera app).
+  // The winner's Barangay ID from the system (photo, name, purok), so the admin can compare the face without asking for a paper ID.
+  const winnerUid = result.kind === "ok" ? result.winner.uid : "";
   useEffect(() => {
-    if (!scanning) return;
-    const Detector = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> } }).BarcodeDetector;
-    if (!Detector) {
-      setScanError("Hindi sinusuportahan ng browser na ito ang scanner. Gamitin ang camera ng phone, o i-type ang code sa ibaba.");
-      setScanning(false);
+    if (!winnerUid) {
+      setIdInfo(undefined);
       return;
     }
+    let live = true;
+    setIdInfo(undefined);
+    Promise.all([getDoc(doc(db, "users", winnerUid)), getDoc(doc(db, "verifications", winnerUid)), getDoc(doc(db, "verifiedUsers", winnerUid))])
+      .then(([u, v, f]) => {
+        if (!live) return;
+        const ud = u.data();
+        if (!ud) return setIdInfo(null);
+        const year = ud.createdAt?.toDate ? ud.createdAt.toDate().getFullYear() : new Date().getFullYear();
+        setIdInfo({
+          name: String(ud.fullName ?? ""),
+          purok: String(ud.purok ?? ""),
+          birthday: String(ud.birthday ?? ""),
+          selfie: String(v.data()?.selfie ?? ""),
+          verified: f.exists(),
+          idNo: barangayIdNo(winnerUid, year),
+          roleText: ud.role && ud.role !== "resident" ? roleLabel(ud.role, ud.position).toUpperCase() : undefined,
+        });
+      })
+      .catch(() => live && setIdInfo(null));
+    return () => {
+      live = false;
+    };
+  }, [winnerUid]);
+
+  const go = useCallback((r: string | number, c: string) => router.push(`/raffle/verify/?r=${encodeURIComponent(String(r))}&c=${encodeURIComponent(c.toUpperCase())}`), [router]);
+
+  // Camera scanner. It reads frames with a built-in QR decoder (works on every phone) and also uses the
+  // browser's own detector when it has one. A QR that is not a raffle QR says so instead of being ignored.
+  useEffect(() => {
+    if (!scanning) return;
     let stop = false;
     let stream: MediaStream | null = null;
-    const detector = new Detector({ formats: ["qr_code"] });
+    let timer: number | undefined;
+    const Detector = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> } }).BarcodeDetector;
+    const detector = Detector ? new Detector({ formats: ["qr_code"] }) : null;
+    const canvas = document.createElement("canvas");
+
+    /** Opens the winner page if the text is a raffle QR; otherwise tells the admin what was read. */
+    const accept = (raw: string): boolean => {
+      try {
+        const u = new URL(raw);
+        const r = u.searchParams.get("r");
+        const c = u.searchParams.get("c");
+        if (r && c && u.pathname.includes("/raffle/verify")) {
+          setScanning(false);
+          go(r, c);
+          return true;
+        }
+      } catch {
+        /* not a web address */
+      }
+      setScanNote("Nabasa ang QR, pero hindi ito QR ng raffle. Subukan ang QR ng nanalo.");
+      return false;
+    };
+
     (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        if (video.current) {
-          video.current.srcObject = stream;
-          await video.current.play();
+        const jsQR = (await import("jsqr")).default;
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+        // Keep the picture sharp on phones that support continuous focus.
+        const track = stream.getVideoTracks()[0];
+        try {
+          await track.applyConstraints({ advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet] });
+        } catch {
+          /* not supported: the phone focuses on its own */
         }
+        const v = video.current;
+        if (!v) return;
+        v.srcObject = stream;
+        await v.play();
         const tick = async () => {
           if (stop || !video.current) return;
-          try {
-            const found = await detector.detect(video.current);
-            const raw = found[0]?.rawValue;
-            if (raw) {
-              const u = new URL(raw);
-              const r = u.searchParams.get("r");
-              const c = u.searchParams.get("c");
-              if (r && c) {
-                setScanning(false);
-                go(r, c);
-                return;
+          const vid = video.current;
+          if (vid.readyState >= 2 && vid.videoWidth > 0) {
+            try {
+              let raw = "";
+              if (detector) raw = (await detector.detect(vid))[0]?.rawValue ?? "";
+              if (!raw) {
+                const w = Math.min(720, vid.videoWidth);
+                const h = Math.round((vid.videoHeight / vid.videoWidth) * w);
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext("2d", { willReadFrequently: true });
+                if (ctx) {
+                  ctx.drawImage(vid, 0, 0, w, h);
+                  const img = ctx.getImageData(0, 0, w, h);
+                  raw = jsQR(img.data, w, h, { inversionAttempts: "attemptBoth" })?.data ?? "";
+                }
               }
+              if (raw && accept(raw)) return;
+            } catch {
+              /* keep scanning */
             }
-          } catch {
-            /* keep scanning */
           }
-          setTimeout(tick, 300);
+          timer = window.setTimeout(tick, 200);
         };
         tick();
       } catch {
@@ -131,6 +208,7 @@ function Verify() {
     })();
     return () => {
       stop = true;
+      window.clearTimeout(timer);
       stream?.getTracks().forEach((t) => t.stop());
     };
   }, [scanning, go]);
@@ -188,7 +266,17 @@ function Verify() {
               <div className="rounded-xl bg-white p-2"><b className="block">{result.roundName}</b><span className="text-xs text-gray-500">Round {result.round}</span></div>
               <div className="rounded-xl bg-white p-2"><b className="block">{result.winner.prize}</b><span className="text-xs text-gray-500">Premyo</span></div>
             </div>
-            <p className="text-sm">Hingin ang valid ID at ihambing ang pangalan at mukha.</p>
+            <p className="text-sm">Ihambing ang mukha sa Barangay ID sa ibaba. Hingin ang valid ID kung may duda.</p>
+            {idInfo === undefined && <p className="text-xs text-gray-600">Kinukuha ang Barangay ID mula sa system…</p>}
+            {idInfo && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold uppercase tracking-wide text-green-900">Barangay ID ng nanalo (mula sa system)</p>
+                <BarangayIdCard idNo={idInfo.idNo} name={idInfo.name} purok={idInfo.purok} birthday={idInfo.birthday} selfie={idInfo.selfie} verified={idInfo.verified} roleText={idInfo.roleText} />
+                {!idInfo.verified && <p className="rounded-lg bg-yellow-50 p-2 text-xs font-semibold text-yellow-900">Hindi na verified ang account na ito ngayon. Mag-ingat at hingin ang valid ID.</p>}
+                {!idInfo.selfie && <p className="rounded-lg bg-yellow-50 p-2 text-xs font-semibold text-yellow-900">Walang litrato sa system. Hingin ang valid ID para makumpirma.</p>}
+              </div>
+            )}
+            {idInfo === null && <p className="rounded-lg bg-yellow-50 p-2 text-xs font-semibold text-yellow-900">Hindi makuha ang Barangay ID sa system. Hingin ang valid ID.</p>}
             <Button full loading={busy} onClick={give}>Ibigay na ang premyo</Button>
           </div>
         )
@@ -203,10 +291,12 @@ function Verify() {
       {scanning ? (
         <div className="space-y-2">
           <video ref={video} className="w-full rounded-2xl bg-black" playsInline muted />
+          <p className="text-center text-xs text-gray-600">Itutok ang camera sa QR ng nanalo. Ilapit hanggang malinaw, at iwasan ang liwanag na tumatama sa screen.</p>
+          {scanNote && <p className="rounded-xl bg-yellow-50 p-2.5 text-sm font-semibold text-yellow-900">{scanNote}</p>}
           <Button variant="outline" full onClick={() => setScanning(false)}>Itigil ang scanner</Button>
         </div>
       ) : (
-        <Button full onClick={() => { setScanError(""); setScanning(true); }}>
+        <Button full onClick={() => { setScanError(""); setScanNote(""); setScanning(true); }}>
           <Camera className="h-5 w-5" aria-hidden /> I-scan ang QR
         </Button>
       )}
