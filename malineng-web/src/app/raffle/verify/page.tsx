@@ -10,6 +10,8 @@ import { useAuth } from "@/context/AuthContext";
 import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
 import { maskName } from "@/lib/raffle";
+import { roleLabel } from "@/lib/activity";
+import { BarangayIdCard, barangayIdNo } from "@/components/BarangayIdCard";
 import { LoginGate } from "@/components/LoginGate";
 import { Button, Input, PageHeader, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
@@ -30,6 +32,17 @@ interface ClaimDoc {
   claimedAt?: { toDate: () => Date };
 }
 
+/** What the system knows about the winner, for the Barangay ID card. */
+interface IdInfo {
+  name: string;
+  purok: string;
+  birthday: string;
+  selfie: string;
+  verified: boolean;
+  idNo: string;
+  roleText?: string;
+}
+
 type Result =
   | { kind: "none" }
   | { kind: "invalid" }
@@ -44,6 +57,7 @@ function Verify() {
   const round = Number(params.get("r") ?? "0");
   const code = (params.get("c") ?? "").toUpperCase();
   const [result, setResult] = useState<Result>({ kind: "none" });
+  const [idInfo, setIdInfo] = useState<IdInfo | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [manualRound, setManualRound] = useState("");
@@ -82,6 +96,37 @@ function Verify() {
       live = false;
     };
   }, [isAdmin, round, code]);
+
+  // The winner's Barangay ID from the system (photo, name, purok), so the admin can compare the face without asking for a paper ID.
+  const winnerUid = result.kind === "ok" ? result.winner.uid : "";
+  useEffect(() => {
+    if (!winnerUid) {
+      setIdInfo(undefined);
+      return;
+    }
+    let live = true;
+    setIdInfo(undefined);
+    Promise.all([getDoc(doc(db, "users", winnerUid)), getDoc(doc(db, "verifications", winnerUid)), getDoc(doc(db, "verifiedUsers", winnerUid))])
+      .then(([u, v, f]) => {
+        if (!live) return;
+        const ud = u.data();
+        if (!ud) return setIdInfo(null);
+        const year = ud.createdAt?.toDate ? ud.createdAt.toDate().getFullYear() : new Date().getFullYear();
+        setIdInfo({
+          name: String(ud.fullName ?? ""),
+          purok: String(ud.purok ?? ""),
+          birthday: String(ud.birthday ?? ""),
+          selfie: String(v.data()?.selfie ?? ""),
+          verified: f.exists(),
+          idNo: barangayIdNo(winnerUid, year),
+          roleText: ud.role && ud.role !== "resident" ? roleLabel(ud.role, ud.position).toUpperCase() : undefined,
+        });
+      })
+      .catch(() => live && setIdInfo(null));
+    return () => {
+      live = false;
+    };
+  }, [winnerUid]);
 
   const go = useCallback((r: string | number, c: string) => router.push(`/raffle/verify/?r=${encodeURIComponent(String(r))}&c=${encodeURIComponent(c.toUpperCase())}`), [router]);
 
@@ -221,7 +266,17 @@ function Verify() {
               <div className="rounded-xl bg-white p-2"><b className="block">{result.roundName}</b><span className="text-xs text-gray-500">Round {result.round}</span></div>
               <div className="rounded-xl bg-white p-2"><b className="block">{result.winner.prize}</b><span className="text-xs text-gray-500">Premyo</span></div>
             </div>
-            <p className="text-sm">Hingin ang valid ID at ihambing ang pangalan at mukha.</p>
+            <p className="text-sm">Ihambing ang mukha sa Barangay ID sa ibaba. Hingin ang valid ID kung may duda.</p>
+            {idInfo === undefined && <p className="text-xs text-gray-600">Kinukuha ang Barangay ID mula sa system…</p>}
+            {idInfo && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold uppercase tracking-wide text-green-900">Barangay ID ng nanalo (mula sa system)</p>
+                <BarangayIdCard idNo={idInfo.idNo} name={idInfo.name} purok={idInfo.purok} birthday={idInfo.birthday} selfie={idInfo.selfie} verified={idInfo.verified} roleText={idInfo.roleText} />
+                {!idInfo.verified && <p className="rounded-lg bg-yellow-50 p-2 text-xs font-semibold text-yellow-900">Hindi na verified ang account na ito ngayon. Mag-ingat at hingin ang valid ID.</p>}
+                {!idInfo.selfie && <p className="rounded-lg bg-yellow-50 p-2 text-xs font-semibold text-yellow-900">Walang litrato sa system. Hingin ang valid ID para makumpirma.</p>}
+              </div>
+            )}
+            {idInfo === null && <p className="rounded-lg bg-yellow-50 p-2 text-xs font-semibold text-yellow-900">Hindi makuha ang Barangay ID sa system. Hingin ang valid ID.</p>}
             <Button full loading={busy} onClick={give}>Ibigay na ang premyo</Button>
           </div>
         )

@@ -659,6 +659,12 @@ export const EN: Record<string, string> = {
   "Tingnan ang resibo": "View the receipt",
   "Salamat sa pangako mo (": "Thank you for your pledge (",
   "). Hindi ito natanggap ngayon. Makipag-ugnayan sa Barangay Hall kung may tanong ka.": "). It was not accepted this time. Contact the Barangay Hall if you have questions.",
+  "Ihambing ang mukha sa Barangay ID sa ibaba. Hingin ang valid ID kung may duda.": "Compare the face with the Barangay ID below. Ask for the valid ID if in doubt.",
+  "Kinukuha ang Barangay ID mula sa system…": "Getting the Barangay ID from the system…",
+  "Barangay ID ng nanalo (mula sa system)": "Winner's Barangay ID (from the system)",
+  "Hindi na verified ang account na ito ngayon. Mag-ingat at hingin ang valid ID.": "This account is no longer verified. Be careful and ask for the valid ID.",
+  "Walang litrato sa system. Hingin ang valid ID para makumpirma.": "No photo in the system. Ask for the valid ID to confirm.",
+  "Hindi makuha ang Barangay ID sa system. Hingin ang valid ID.": "Could not get the Barangay ID from the system. Ask for the valid ID.",
 };
 
 /** For texts that include a number or a name. $1, $2... are the captured parts. */
