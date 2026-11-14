@@ -72,26 +72,28 @@ service cloud.firestore {
       return isSuperAdmin() || (isAdmin() && me().get('position', '') == 'Kapitan');
     }
 
-    // ---- Three-step approval (Hiraman, Ambulansya): Secretary reviews -> Admin agrees -> Kapitan releases ----
-    // While status is 'pending', `stage` (missing = 0) says whose turn it is. The Developer can act at any stage.
-    function isSecretaryOnly() {
-      return isAdmin() && me().get('position', '') == 'Secretary';
+    // ---- Configurable approval (Hiraman, Hiraman return, Ambulansya) ----
+    // The Developer sets, per action, which positions approve in order (settings/approvals).
+    // Default: Secretary -> Kapitan. While a request is 'pending', `stage` (missing = 0) says whose turn it is.
+    // The Developer can always act at any stage. BHW is never an approver.
+    function approvalCfg(key) {
+      return exists(/databases/$(database)/documents/settings/approvals)
+          && get(/databases/$(database)/documents/settings/approvals).data.get('actions', {}).get(key, null) != null
+        ? get(/databases/$(database)/documents/settings/approvals).data.actions[key]
+        : {'on': true, 'steps': ['Secretary', 'Kapitan'], 'fast': key == 'ambe', 'fastBy': 'Kapitan'};
     }
 
-    function isKapitanOnly() {
-      return isAdmin() && me().get('position', '') == 'Kapitan';
+    // With approval switched off a single decider (the first step) is enough.
+    function stepsOf(key) {
+      return approvalCfg(key).get('on', true) == true ? approvalCfg(key).steps : approvalCfg(key).steps[0:1];
     }
 
-    // Any other admin (Treasurer, Kagawad, SK Chairman...); BHW is not an admin.
-    function isAgreeAdmin() {
-      return isAdmin() && !(me().get('position', '') in ['Secretary', 'Kapitan']);
+    function stepMatches(step) {
+      return isSuperAdmin() || (isAdmin() && (step == 'Sinumang Admin' || me().get('position', '') == step));
     }
 
-    function mayActAtStage(stage) {
-      return isSuperAdmin()
-        || (stage == 0 && isSecretaryOnly())
-        || (stage == 1 && isAgreeAdmin())
-        || (stage == 2 && isKapitanOnly());
+    function mayActAt(key, stage) {
+      return stage >= 0 && stage < stepsOf(key).size() && stepMatches(stepsOf(key)[stage]);
     }
 
     // Exactly one new log entry per change, so nobody can erase the trail.
@@ -102,7 +104,7 @@ service cloud.firestore {
 
     // After release nobody except the Developer may touch the approval log.
     function trailUntouched() {
-      return !incoming().diff(existing()).affectedKeys().hasAny(['trail', 'stage', 'urgent']);
+      return !incoming().diff(existing()).affectedKeys().hasAny(['trail', 'stage', 'urgent', 'returnStage', 'returnTrail']);
     }
 
     function approvalFieldsOnly() {
@@ -110,21 +112,66 @@ service cloud.firestore {
         ['status', 'stage', 'trail', 'urgent', 'rejectReason', 'decidedBy', 'decidedByName', 'decidedAt', 'updatedAt', 'driver', 'durationHours', 'adminNote']);
     }
 
-    function approvalMove() {
+    // The emergency "agaran" release: only if the Developer allowed it for this action, by the chosen position.
+    function mayFast(key) {
+      return isSuperAdmin()
+        || (approvalCfg(key).get('fast', false) == true && isAdmin()
+          && (approvalCfg(key).get('fastBy', 'Kapitan') == 'Kapitan' ? me().get('position', '') == 'Kapitan'
+            : approvalCfg(key).get('fastBy', 'Kapitan') == 'Secretary' ? me().get('position', '') == 'Secretary'
+            : me().get('position', '') in ['Kapitan', 'Secretary']));
+    }
+
+    function approvalMove(key) {
       return existing().status == 'pending' && trailGrewByOne() && approvalFieldsOnly()
         && (
-          // forward: Secretary -> Admin, Admin -> Kapitan
-          (incoming().status == 'pending' && existing().get('stage', 0) < 2
-            && incoming().stage == existing().get('stage', 0) + 1 && mayActAtStage(existing().get('stage', 0)))
+          // forward to the next approver
+          (incoming().status == 'pending' && existing().get('stage', 0) < stepsOf(key).size() - 1
+            && incoming().stage == existing().get('stage', 0) + 1 && mayActAt(key, existing().get('stage', 0)))
           // back one step, with a reason in the trail
           || (incoming().status == 'pending' && existing().get('stage', 0) > 0
-            && incoming().stage == existing().get('stage', 0) - 1 && mayActAtStage(existing().get('stage', 0)))
-          // Kapitan releases only after the Admin agreed
-          || (incoming().status == 'approved' && existing().get('stage', 0) == 2 && mayActAtStage(2))
-          // the person whose turn it is may reject
-          || (incoming().status == 'rejected' && mayActAtStage(existing().get('stage', 0)))
-          // emergency "agaran": Kapitan (or Developer) approves at once
-          || (incoming().status == 'approved' && incoming().get('urgent', false) == true && (isKapitanOnly() || isSuperAdmin()))
+            && incoming().stage == existing().get('stage', 0) - 1 && mayActAt(key, existing().get('stage', 0)))
+          // the last approver releases
+          || (incoming().status == 'approved' && existing().get('stage', 0) >= stepsOf(key).size() - 1
+            && mayActAt(key, stepsOf(key).size() - 1))
+          // the approver whose turn it is may reject
+          || (incoming().status == 'rejected'
+            && mayActAt(key, existing().get('stage', 0) < stepsOf(key).size() ? existing().get('stage', 0) : stepsOf(key).size() - 1))
+          // emergency release
+          || (incoming().status == 'approved' && incoming().get('urgent', false) == true && mayFast(key))
+        );
+    }
+
+    // ---- Hiraman return: the borrower (or staff for them) hands back; the approvers of 'balik' accept in order ----
+    function returnStageNow() {
+      return existing().get('returnStage', -1);
+    }
+
+    function returnTrailGrew() {
+      return incoming().returnTrail is list
+        && incoming().returnTrail.size() == existing().get('returnTrail', []).size() + 1;
+    }
+
+    function returnStart() {
+      return existing().status == 'borrowed' && returnStageNow() == -1
+        && returnTrailGrew() && incoming().status == 'borrowed' && incoming().returnStage == 0
+        && incoming().diff(existing()).affectedKeys().hasOnly(['returnStage', 'returnTrail', 'updatedAt'])
+        && ((signedIn() && existing().userId == request.auth.uid) || isBorrowAdmin());
+    }
+
+    function returnMove() {
+      return existing().status == 'borrowed' && returnStageNow() >= 0 && returnTrailGrew()
+        && incoming().diff(existing()).affectedKeys().hasOnly(
+          ['returnStage', 'returnTrail', 'returnReport', 'returnNote', 'damageFee', 'feeStatus', 'status', 'returnedAt', 'returnedToName', 'updatedAt'])
+        && (
+          (incoming().status == 'borrowed' && returnStageNow() < stepsOf('balik').size() - 1
+            && incoming().returnStage == returnStageNow() + 1 && mayActAt('balik', returnStageNow()))
+          || (incoming().status == 'borrowed' && returnStageNow() > 0
+            && incoming().returnStage == returnStageNow() - 1 && mayActAt('balik', returnStageNow()))
+          // sent back to the borrower (not complete)
+          || (incoming().status == 'borrowed' && incoming().returnStage == -1 && mayActAt('balik', returnStageNow()))
+          // the last approver accepts and closes
+          || (incoming().status == 'returned' && returnStageNow() >= stepsOf('balik').size() - 1
+            && mayActAt('balik', stepsOf('balik').size() - 1))
         );
     }
 
@@ -301,6 +348,11 @@ service cloud.firestore {
         // Units that came back broken: out of use, but still part of the total.
         && incoming().get('damaged', 0) is int && incoming().get('damaged', 0) >= 0 && incoming().get('damaged', 0) <= incoming().total
         && incoming().photo is string && incoming().photo.size() < 150000;
+      // The approver who accepts a return may mark units damaged or lost (and nothing else on the item).
+      allow update: if isAdmin()
+        && incoming().diff(existing()).affectedKeys().hasOnly(['total', 'damaged'])
+        && incoming().total is int && incoming().total >= 0
+        && incoming().get('damaged', 0) is int && incoming().get('damaged', 0) >= 0 && incoming().get('damaged', 0) <= incoming().total;
       allow delete: if isBorrowAdmin();
     }
 
@@ -327,8 +379,11 @@ service cloud.firestore {
           && incoming().status == 'cancelled'
           && changedOnly(['status']))
         // Once released, Kapitan / Secretary handle pick-up and return. Before that, only the approval steps apply.
-        || (existing().status != 'pending' && isBorrowAdmin() && trailUntouched())
-        || approvalMove()
+        || (existing().status != 'pending' && isBorrowAdmin() && trailUntouched()
+            && !(existing().status == 'borrowed' && incoming().status == 'returned'))
+        || approvalMove('hiram')
+        || returnStart()
+        || returnMove()
         || isSuperAdmin();
       allow delete: if isSuperAdmin();
     }
@@ -336,7 +391,8 @@ service cloud.firestore {
     // Public reservations (no names/contacts) so anyone can see what is available on a date.
     match /borrowBookings/{id} {
       allow read: if true;
-      allow write: if isBorrowAdmin();
+      // Public reservation (no personal info). Any approver releases or closes a request.
+      allow write: if isAdmin();
     }
 
     // ---------- verifications (selfie; private to owner + admins) ----------
@@ -644,7 +700,7 @@ service cloud.firestore {
         && incoming().time is string && incoming().time.matches('^[0-9]{2}:[0-9]{2}$');
       // Secretary -> Admin -> Kapitan decide (approvalMove); a resident may only cancel their own pending request.
       allow update: if (existing().status != 'pending' && isKapitan() && trailUntouched())
-        || approvalMove()
+        || approvalMove(existing().type == 'emergency' ? 'ambe' : 'amb')
         || isSuperAdmin()
         || (signedIn()
           && existing().userId == request.auth.uid
@@ -657,7 +713,8 @@ service cloud.firestore {
     // ---------- ambulanceSchedule (public busy windows, no patient data) ----------
     match /ambulanceSchedule/{slotId} {
       allow read: if true;
-      allow write: if isKapitan();
+      // Public busy window. Whoever releases a request (as set by the Developer) writes it.
+      allow write: if isAdmin();
     }
 
     // ---------- polls (Botohan) ----------
@@ -916,7 +973,7 @@ service cloud.firestore {
     // ---------- settings (settings/main; settings/webAccess is Super Admin only) ----------
     match /settings/{docId} {
       allow read: if true;
-      allow write: if docId in ['webAccess', 'chat'] ? isSuperAdmin() : isAdmin();
+      allow write: if docId in ['webAccess', 'chat', 'approvals'] ? isSuperAdmin() : isAdmin();
     }
 
     // ---------- Chat ng Barangay (verified residents) ----------

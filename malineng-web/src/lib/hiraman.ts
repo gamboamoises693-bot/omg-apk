@@ -1,4 +1,4 @@
-import { Timestamp, doc, increment, serverTimestamp, writeBatch } from "firebase/firestore";
+import { Timestamp, doc, increment, serverTimestamp, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 import { newEntry, withEntry, type Actor as ApprovalActor, type TrailEntry } from "./approval";
 
@@ -58,6 +58,9 @@ export interface BorrowRequest {
   stage?: number;
   trail?: TrailEntry[];
   urgent?: boolean;
+  /** Return steps: missing or -1 = not handed back yet (or sent back to the borrower); 0.. = the approver whose turn it is. */
+  returnStage?: number;
+  returnTrail?: TrailEntry[];
   returnNote?: string;
   /** Set when the items were returned: how many came back fine, damaged or lost. */
   returnReport?: ReturnLine[];
@@ -200,7 +203,7 @@ export async function approveRequest(r: BorrowRequest, actor: ApprovalActor, not
     decidedBy: actor.uid,
     decidedByName: actor.name,
     decidedAt: serverTimestamp(),
-    trail: withEntry(r, newEntry("release", actor, note)),
+    trail: withEntry(r.trail, newEntry("release", actor, note)),
   });
   batch.set(doc(db, "borrowBookings", r.id), {
     items: r.items.map((i) => ({ itemId: i.itemId, qty: i.qty })),
@@ -220,10 +223,11 @@ export async function markBorrowed(r: BorrowRequest): Promise<void> {
 }
 
 /**
- * Return a request with what really came back. Damaged units stay in the item's stock but are marked out of use
+ * Closes a return with what really came back. Damaged units stay in the item's stock but are marked out of use
  * (`damaged`), lost units leave the stock, and a charge can be recorded for the borrower.
+ * Called by the LAST approver of the "balik" action, who accepts the return.
  */
-export async function markReturned(r: BorrowRequest, report: ReturnLine[], returnNote: string, damageFee: number, actor: Actor): Promise<void> {
+export async function markReturned(r: BorrowRequest, report: ReturnLine[], returnNote: string, damageFee: number, actor: Actor, trail?: TrailEntry[]): Promise<void> {
   const batch = writeBatch(db);
   const fee = Math.max(0, Math.round(damageFee));
   batch.update(doc(db, "borrowRequests", r.id), {
@@ -234,6 +238,7 @@ export async function markReturned(r: BorrowRequest, report: ReturnLine[], retur
     returnReport: report,
     damageFee: fee,
     feeStatus: fee > 0 ? "unpaid" : "waived",
+    ...(trail ? { returnTrail: trail } : {}),
   });
   batch.delete(doc(db, "borrowBookings", r.id));
   for (const l of report) {
@@ -242,6 +247,40 @@ export async function markReturned(r: BorrowRequest, report: ReturnLine[], retur
     }
   }
   await batch.commit();
+}
+
+/** The borrower hands the items back (or staff records it for them). The approvers of "balik" then take over. */
+export async function startReturn(r: BorrowRequest, actor: ApprovalActor, byStaff: boolean): Promise<void> {
+  const entry = newEntry("resident", byStaff ? actor : { ...actor, role: "Residente" }, byStaff ? "Inilagay ng staff" : "");
+  await updateDoc(doc(db, "borrowRequests", r.id), { returnStage: 0, returnTrail: withEntry(r.returnTrail, entry), updatedAt: serverTimestamp() });
+}
+
+/**
+ * An approver accepts the return. The first approver also records the condition (`review`).
+ * If more approvers follow, it moves on; the last approver closes the hiram.
+ */
+export async function acceptReturn(r: BorrowRequest, steps: string[], actor: ApprovalActor, note: string, review?: { report: ReturnLine[]; note: string; fee: number }): Promise<void> {
+  const rs = Math.max(0, r.returnStage ?? 0);
+  const trail = withEntry(r.returnTrail, newEntry("accept", actor, note));
+  const report = review?.report ?? r.returnReport ?? [];
+  const retNote = review?.note ?? r.returnNote ?? "";
+  const fee = Math.max(0, Math.round(review?.fee ?? r.damageFee ?? 0));
+  if (rs < steps.length - 1) {
+    await updateDoc(doc(db, "borrowRequests", r.id), { returnStage: rs + 1, returnTrail: trail, returnReport: report, returnNote: retNote.slice(0, 300), damageFee: fee, updatedAt: serverTimestamp() });
+    return;
+  }
+  await markReturned(r, report, retNote, fee, actor, trail);
+}
+
+/** Sends the return back one approver, or back to the borrower (not complete), with the reason. */
+export async function sendReturnBack(r: BorrowRequest, actor: ApprovalActor, note: string, toResident: boolean): Promise<void> {
+  const rs = Math.max(0, r.returnStage ?? 0);
+  const entry = newEntry(toResident || rs === 0 ? "handback" : "return", actor, note);
+  await updateDoc(doc(db, "borrowRequests", r.id), {
+    returnStage: toResident || rs === 0 ? -1 : rs - 1,
+    returnTrail: withEntry(r.returnTrail, entry),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 /** A damaged unit was repaired (back in use) or discarded (leaves the stock). */
@@ -265,7 +304,7 @@ export async function setFeeStatus(r: BorrowRequest, status: FeeStatus): Promise
 export async function rejectRequest(r: BorrowRequest, reason: string, actor: ApprovalActor): Promise<void> {
   const batch = writeBatch(db);
   const update: Record<string, unknown> = { status: "rejected", rejectReason: reason, decidedBy: actor.uid, decidedByName: actor.name, decidedAt: serverTimestamp() };
-  if (r.status === "pending") update.trail = withEntry(r, newEntry("reject", actor, reason));
+  if (r.status === "pending") update.trail = withEntry(r.trail, newEntry("reject", actor, reason));
   batch.update(doc(db, "borrowRequests", r.id), update);
   // A pending request has no booking yet; only approved ones hold dates.
   if (r.status !== "pending") batch.delete(doc(db, "borrowBookings", r.id));
