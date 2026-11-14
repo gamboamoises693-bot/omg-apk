@@ -37,6 +37,7 @@ export const WEB_FEATURES: WebFeature[] = [
   { key: "skills", label: "Skills" },
   { key: "proyekto", label: "Proyekto" },
   { key: "desisyon", label: "Mga Desisyon" },
+  { key: "raffle", label: "Raffle" },
   { key: "board", label: "Board" },
   { key: "register-event", label: "Magpa-rehistro" },
   { key: "events", label: "Events" },

@@ -727,6 +727,73 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
 
+    // ---------- Raffle ----------
+    // One entry per verified resident up to the cutoff (settings/raffle, set by the Developer). The Developer draws
+    // after the cutoff and the draw time; the full result is private, rafflePublic has no phone numbers.
+    function raffleCfg() {
+      return get(/databases/$(database)/documents/settings/raffle).data;
+    }
+
+    function raffleEntryShape(uid) {
+      return incoming().keys().hasOnly(['uid', 'code', 'name', 'purok', 'createdAt'])
+        && incoming().uid == uid
+        && incoming().code is string && incoming().code.matches('^[A-Z0-9]{8}$')
+        && incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 120
+        && incoming().purok is string && incoming().purok.size() <= 40
+        && incoming().createdAt == request.time;
+    }
+
+    match /raffleEntries/{uid} {
+      allow get: if isSelf(uid) || isSuperAdmin();
+      allow list: if isSuperAdmin();
+      // The person claims their own entry: verified, not staff, entries open (start <= now < cutoff), and no draw yet.
+      allow create: if (isSelf(uid)
+          && exists(/databases/$(database)/documents/verifiedUsers/$(uid))
+          && !isStaff() && notSuspended()
+          && exists(/databases/$(database)/documents/settings/raffle)
+          && raffleCfg().get('enabled', false) == true
+          && request.time >= raffleCfg().startAt && request.time < raffleCfg().cutoffAt
+          && !exists(/databases/$(database)/documents/rafflePublic/current)
+          && raffleEntryShape(uid)
+          && incoming().name == me().fullName
+          && incoming().purok == me().get('purok', ''))
+        // The Developer adds verified people who never opened the app, before the draw.
+        || (isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublic/current) && raffleEntryShape(uid));
+      allow update: if false;
+      allow delete: if isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublic/current);
+    }
+
+    match /raffleResult/{id} {
+      allow read: if isSuperAdmin();
+      // Once, after the cutoff and the draw time.
+      allow create: if isSuperAdmin() && id == 'current'
+        && request.time >= raffleCfg().cutoffAt && request.time >= raffleCfg().drawAt
+        && incoming().keys().hasOnly(['winners', 'total', 'drawnAt', 'drawnBy', 'active', 'log'])
+        && incoming().winners is list && incoming().winners.size() >= 1 && incoming().winners.size() <= 6
+        && incoming().total is int && incoming().total >= incoming().winners.size()
+        && incoming().active == 0
+        && incoming().drawnAt == request.time && incoming().drawnBy == request.auth.uid;
+      // A reserve takes over when the winner does not claim the prize.
+      allow update: if isSuperAdmin()
+        && incoming().diff(existing()).affectedKeys().hasOnly(['active', 'log'])
+        && incoming().active is int && incoming().active == existing().active + 1
+        && incoming().active < existing().winners.size();
+      allow delete: if false;
+    }
+
+    match /rafflePublic/{id} {
+      allow read: if true;
+      allow create: if isSuperAdmin() && id == 'current'
+        && !exists(/databases/$(database)/documents/rafflePublic/current)
+        && existsAfter(/databases/$(database)/documents/raffleResult/current)
+        && incoming().keys().hasOnly(['label', 'purok', 'code', 'total', 'active', 'reserves', 'prize', 'drawnAt'])
+        && incoming().active == 0
+        && incoming().drawnAt == request.time;
+      allow update: if isSuperAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['label', 'purok', 'code', 'active'])
+        && incoming().active == existing().active + 1;
+      allow delete: if false;
+    }
+
     // ---------- appointments ----------
     match /appointments/{apptId} {
       allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
@@ -1043,7 +1110,7 @@ service cloud.firestore {
     // ---------- settings (settings/main; settings/webAccess is Super Admin only) ----------
     match /settings/{docId} {
       allow read: if true;
-      allow write: if docId in ['webAccess', 'chat', 'approvals'] ? isSuperAdmin() : isAdmin();
+      allow write: if docId in ['webAccess', 'chat', 'approvals', 'raffle'] ? isSuperAdmin() : isAdmin();
     }
 
     // ---------- Chat ng Barangay (verified residents) ----------
