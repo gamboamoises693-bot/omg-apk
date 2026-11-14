@@ -763,21 +763,24 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublic/current);
     }
 
+    // The draw: one prize per winner (settings/raffle.prizes) plus up to 5 reserves. Full result is private.
     match /raffleResult/{id} {
       allow read: if isSuperAdmin();
       // Once, after the cutoff and the draw time.
       allow create: if isSuperAdmin() && id == 'current'
         && request.time >= raffleCfg().cutoffAt && request.time >= raffleCfg().drawAt
-        && incoming().keys().hasOnly(['winners', 'total', 'drawnAt', 'drawnBy', 'active', 'log'])
-        && incoming().winners is list && incoming().winners.size() >= 1 && incoming().winners.size() <= 6
-        && incoming().total is int && incoming().total >= incoming().winners.size()
-        && incoming().active == 0
+        && incoming().keys().hasOnly(['winners', 'reserves', 'total', 'drawnAt', 'drawnBy', 'cursor', 'log'])
+        && incoming().winners is list && incoming().winners.size() >= 1 && incoming().winners.size() <= 20
+        && incoming().reserves is list && incoming().reserves.size() <= 5
+        && incoming().total is int && incoming().total >= incoming().winners.size() + incoming().reserves.size()
+        && incoming().cursor == 0
         && incoming().drawnAt == request.time && incoming().drawnBy == request.auth.uid;
-      // A reserve takes over when the winner does not claim the prize.
+      // A reserve takes over a winner who does not claim the prize (one reserve at a time, with a reason in the log).
       allow update: if isSuperAdmin()
-        && incoming().diff(existing()).affectedKeys().hasOnly(['active', 'log'])
-        && incoming().active is int && incoming().active == existing().active + 1
-        && incoming().active < existing().winners.size();
+        && incoming().diff(existing()).affectedKeys().hasOnly(['winners', 'cursor', 'log'])
+        && incoming().winners.size() == existing().winners.size()
+        && incoming().cursor == existing().cursor + 1
+        && incoming().cursor <= existing().reserves.size();
       allow delete: if false;
     }
 
@@ -786,12 +789,52 @@ service cloud.firestore {
       allow create: if isSuperAdmin() && id == 'current'
         && !exists(/databases/$(database)/documents/rafflePublic/current)
         && existsAfter(/databases/$(database)/documents/raffleResult/current)
-        && incoming().keys().hasOnly(['label', 'purok', 'code', 'total', 'active', 'reserves', 'prize', 'drawnAt'])
-        && incoming().active == 0
+        && incoming().keys().hasOnly(['winners', 'total', 'reservesLeft', 'drawnAt'])
+        && incoming().winners is list && incoming().winners.size() >= 1 && incoming().winners.size() <= 20
         && incoming().drawnAt == request.time;
-      allow update: if isSuperAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['label', 'purok', 'code', 'active'])
-        && incoming().active == existing().active + 1;
+      allow update: if isSuperAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['winners', 'reservesLeft'])
+        && incoming().winners.size() == existing().winners.size()
+        && incoming().reservesLeft == existing().reservesLeft - 1;
       allow delete: if false;
+    }
+
+    // ---------- Raffle donations and sponsors (amounts are public for transparency) ----------
+    // A logged-in person pledges; an admin accepts and marks it received (a receipt number is made for the donor).
+    match /raffleDonations/{id} {
+      allow read: if (signedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if signedIn() && notSuspended()
+        && incoming().keys().hasOnly(['userId', 'name', 'anon', 'kind', 'what', 'amount', 'contact', 'message', 'status', 'createdAt'])
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'new'
+        && isNonEmptyString(incoming().name, 120)
+        && incoming().anon is bool
+        && incoming().kind in ['Pera', 'Gamit / premyo']
+        && isNonEmptyString(incoming().what, 120)
+        && incoming().amount is number && incoming().amount >= 0 && incoming().amount <= 100000000
+        && incoming().contact is string && incoming().contact.size() <= 30
+        && incoming().message is string && incoming().message.size() <= 300
+        && incoming().createdAt == request.time;
+      allow update: if isAdmin()
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'receiptNo', 'receivedBy', 'receivedByName', 'receivedAt', 'what', 'amount', 'note'])
+        && incoming().status in ['new', 'accepted', 'received', 'declined']
+        && (incoming().status != 'received' || (incoming().receiptNo is string && incoming().receiptNo.matches('^RAF-[0-9]{8}-[A-Z0-9]{4}$')
+            && incoming().receivedBy == request.auth.uid && incoming().receivedAt == request.time))
+        // A received donation is final.
+        && existing().status != 'received';
+      allow delete: if isSuperAdmin();
+    }
+
+    match /raffleSponsors/{id} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && incoming().keys().hasOnly(['name', 'what', 'amount', 'tier', 'show', 'donationId', 'createdAt'])
+        && isNonEmptyString(incoming().name, 120)
+        && isNonEmptyString(incoming().what, 120)
+        && incoming().amount is number && incoming().amount >= 0 && incoming().amount <= 100000000
+        && incoming().tier in ['main', 'reg']
+        && incoming().show is bool
+        && incoming().get('donationId', '') is string;
+      allow delete: if isAdmin();
     }
 
     // ---------- appointments ----------

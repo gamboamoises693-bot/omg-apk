@@ -16,20 +16,34 @@ export interface RaffleConfig {
   startAt?: Timestamp;
   cutoffAt?: Timestamp;
   drawAt?: Timestamp;
-  prize: string;
+  /** One prize per winner, in order (1st prize first). The number of prizes is the number of winners. */
+  prizes?: string[];
+  /** Older single-prize field; used when `prizes` is missing. */
+  prize?: string;
 }
 
-export interface RafflePublic {
+export interface PublicWinner {
   /** "Rosa M." */
   label: string;
   purok: string;
   code: string;
-  total: number;
-  /** Which of the winner / reserves is the current winner (0 = first). */
-  active: number;
-  reserves: number;
   prize: string;
+}
+
+export interface RafflePublic {
+  winners: PublicWinner[];
+  total: number;
+  /** Reserves not used yet. */
+  reservesLeft: number;
   drawnAt?: Timestamp;
+}
+
+/** The prizes to draw for (at least one entry only if something was set). */
+export function prizeList(c: RaffleConfig | null): string[] {
+  if (!c) return [];
+  const list = (c.prizes ?? []).map((p) => p.trim()).filter(Boolean);
+  if (list.length) return list;
+  return c.prize?.trim() ? [c.prize.trim()] : [];
 }
 
 export interface RaffleEntry {
@@ -41,6 +55,7 @@ export interface RaffleEntry {
 }
 
 export const MAX_RESERVES = 5;
+export const MAX_WINNERS = 20;
 
 /** The raffle starts here unless the Developer sets another date. */
 export const DEFAULT_START_ISO = "2026-12-28T00:00:00+08:00";
@@ -79,7 +94,7 @@ function start(): void {
   started = true;
   onSnapshot(
     doc(db, "settings", "raffle"),
-    (s) => emit({ config: s.exists() ? ({ prize: "", enabled: false, ...s.data() } as RaffleConfig) : null, loaded: true }),
+    (s) => emit({ config: s.exists() ? ({ enabled: false, ...s.data() } as RaffleConfig) : null, loaded: true }),
     () => emit({ loaded: true }),
   );
   onSnapshot(

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Gift } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { claimEntry, formatWhen, phaseOf, useMyEntry, useNow, useRaffle } from "@/lib/raffle";
+import { claimEntry, formatWhen, phaseOf, prizeList, useMyEntry, useNow, useRaffle } from "@/lib/raffle";
 import { Modal } from "@/components/ui";
 
 const seenKey = (code: string) => `malineng-raffle-seen-${code}`;
@@ -64,7 +64,7 @@ export function RaffleEntryManager() {
         <Gift className="mx-auto h-10 w-10 text-gold-dark" aria-hidden />
         <p className="text-sm text-gray-700">Salamat sa pagiging verified na taga-Malineng. Ito ang entry number mo sa raffle ng Barangay:</p>
         <p className="mx-auto inline-block rounded-2xl border-2 border-dashed border-gold bg-gold-light px-5 py-3 text-3xl font-black tracking-widest text-brand-deep">{entry.code}</p>
-        {config?.prize && <p className="text-sm">Premyo: <b>{config.prize}</b></p>}
+        {prizeList(config).length > 0 && <p className="text-sm">{prizeList(config).length > 1 ? `${prizeList(config).length} ang mananalo. Unang premyo` : "Premyo"}: <b>{prizeList(config)[0]}</b></p>}
         <p className="text-xs text-gray-500">
           {phase === "open" ? `Cutoff ng entries: ${formatWhen(config?.cutoffAt)}.` : `Sarado na ang entries. Bunutan: ${formatWhen(config?.drawAt)}.`} Makikita mo ulit ang number sa Home at sa pahinang Raffle.
         </p>

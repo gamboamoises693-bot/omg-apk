@@ -1,28 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Timestamp, collection, doc, getCountFromServer, getDoc, getDocs, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
-import { Dices } from "lucide-react";
+import { Timestamp, collection, doc, getCountFromServer, getDoc, getDocs, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
+import { Dices, Plus, X } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
 import { verifiedSetRef } from "@/lib/verified";
-import { DEFAULT_START_ISO, MAX_RESERVES, formatWhen, maskName, newCode, useNow, useRaffle, type RaffleEntry } from "@/lib/raffle";
+import { DEFAULT_START_ISO, MAX_RESERVES, MAX_WINNERS, formatWhen, maskName, newCode, prizeList, useNow, useRaffle, type RaffleEntry } from "@/lib/raffle";
 import { Button, Card, Input, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
-interface Winner {
+interface Person {
   uid: string;
   code: string;
   name: string;
   purok: string;
 }
-
+interface Winner extends Person {
+  prize: string;
+}
 interface ResultDoc {
   winners: Winner[];
+  reserves: Person[];
   total: number;
-  active: number;
+  cursor: number;
   log?: { at: string; by: string; note: string }[];
 }
 
@@ -34,12 +37,11 @@ function toInput(ts?: Timestamp, fallbackIso?: string): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-/** Fair shuffle with crypto randomness (Fisher-Yates). */
+/** Fair shuffle with crypto randomness (Fisher-Yates, no modulo bias). */
 function shuffle<T>(list: T[]): T[] {
   const a = [...list];
   const buf = new Uint32Array(1);
   for (let i = a.length - 1; i > 0; i--) {
-    // Rejection sampling avoids modulo bias.
     const limit = Math.floor(0x100000000 / (i + 1)) * (i + 1);
     let r: number;
     do {
@@ -52,7 +54,7 @@ function shuffle<T>(list: T[]): T[] {
   return a;
 }
 
-/** Developer: set up the raffle, add missing verified people, draw the winner and the reserves. */
+/** Developer: set up the raffle (dates, prizes = winners), add missing verified people, draw, and replace a winner who does not claim. */
 export function AdminRaffle() {
   const { user } = useAuth();
   const toast = useToast();
@@ -62,13 +64,14 @@ export function AdminRaffle() {
   const [startAt, setStartAt] = useState(toInput(undefined, DEFAULT_START_ISO));
   const [cutoffAt, setCutoffAt] = useState("");
   const [drawAt, setDrawAt] = useState("");
-  const [prize, setPrize] = useState("");
+  const [prizes, setPrizes] = useState<string[]>([""]);
   const [loadedForm, setLoadedForm] = useState(false);
   const [count, setCount] = useState<number | null>(null);
   const [busy, setBusy] = useState("");
   const [result, setResult] = useState<ResultDoc | null>(null);
   const [reel, setReel] = useState("");
   const [note, setNote] = useState("");
+  const [slot, setSlot] = useState<number | null>(null);
 
   // Fill the form once from what is saved.
   useEffect(() => {
@@ -77,7 +80,8 @@ export function AdminRaffle() {
     setStartAt(toInput(config?.startAt, DEFAULT_START_ISO));
     setCutoffAt(toInput(config?.cutoffAt));
     setDrawAt(toInput(config?.drawAt));
-    setPrize(config?.prize ?? "");
+    const list = prizeList(config);
+    setPrizes(list.length ? list : [""]);
     setLoadedForm(true);
   }, [loaded, loadedForm, config]);
 
@@ -93,16 +97,19 @@ export function AdminRaffle() {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pub?.active, pub?.code]);
+  }, [pub?.reservesLeft, pub?.total]);
 
   if (!loaded) return <Spinner />;
 
   const cutoffMs = config?.cutoffAt?.toMillis() ?? Infinity;
   const drawMs = config?.drawAt?.toMillis() ?? Infinity;
-  const canDraw = !!config?.enabled && now >= cutoffMs && now >= drawMs && !pub;
+  const savedPrizes = prizeList(config);
+  const canDraw = !!config?.enabled && savedPrizes.length > 0 && now >= cutoffMs && now >= drawMs && !pub;
+  const cleanPrizes = prizes.map((p) => p.trim()).filter(Boolean);
 
   const save = async () => {
     if (!startAt || !cutoffAt || !drawAt) return toast("Ilagay ang simula, cutoff at oras ng bunutan.", "error");
+    if (cleanPrizes.length === 0) return toast("Maglagay ng kahit isang premyo.", "error");
     const s = new Date(startAt).getTime();
     const c = new Date(cutoffAt).getTime();
     const d = new Date(drawAt).getTime();
@@ -116,10 +123,10 @@ export function AdminRaffle() {
         startAt: Timestamp.fromMillis(s),
         cutoffAt: Timestamp.fromMillis(c),
         drawAt: Timestamp.fromMillis(d),
-        prize: prize.trim().slice(0, 120),
+        prizes: cleanPrizes.slice(0, MAX_WINNERS).map((p) => p.slice(0, 120)),
         updatedAt: serverTimestamp(),
       });
-      logActivity("Raffle", `Na-save ang setup ng raffle (${enabled ? "bukas" : "sarado"})`);
+      logActivity("Raffle", `Na-save ang setup ng raffle (${enabled ? "bukas" : "sarado"}, ${cleanPrizes.length} mananalo)`);
       toast("Na-save ang setup ng raffle.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -165,34 +172,33 @@ export function AdminRaffle() {
 
   const draw = async () => {
     if (!user) return;
-    if (!confirm("Simulan ang bunutan? Isang beses lang ito at hindi na mababago ang resulta.")) return;
+    const n = savedPrizes.length;
+    if (!confirm(`Simulan ang bunutan para sa ${n} mananalo? Isang beses lang ito at hindi na mababago ang resulta.`)) return;
     setBusy("draw");
     try {
       const snap = await getDocs(collection(db, "raffleEntries"));
       const entries = snap.docs.map((d) => d.data() as RaffleEntry);
-      if (entries.length === 0) throw new Error("Walang entry sa raffle.");
+      if (entries.length < n) throw new Error(`Kulang ang entries (${entries.length}) para sa ${n} mananalo.`);
       // A short roll of names for the show; the result comes from the fair shuffle below.
       const names = entries.map((e) => maskName(e.name));
       const roll = setInterval(() => setReel(names[Math.floor(Math.random() * names.length)]), 70);
       await new Promise((r) => setTimeout(r, 2200));
       clearInterval(roll);
-      const picked = shuffle(entries).slice(0, 1 + MAX_RESERVES);
-      const winners: Winner[] = picked.map((e) => ({ uid: e.uid, code: e.code, name: e.name, purok: e.purok }));
+      const picked = shuffle(entries);
+      const person = (e: RaffleEntry): Person => ({ uid: e.uid, code: e.code, name: e.name, purok: e.purok });
+      const winners: Winner[] = picked.slice(0, n).map((e, i) => ({ ...person(e), prize: savedPrizes[i] }));
+      const reserves: Person[] = picked.slice(n, n + MAX_RESERVES).map(person);
       const batch = writeBatch(db);
-      batch.set(doc(db, "raffleResult", "current"), { winners, total: entries.length, drawnAt: serverTimestamp(), drawnBy: user.uid, active: 0, log: [] });
+      batch.set(doc(db, "raffleResult", "current"), { winners, reserves, total: entries.length, drawnAt: serverTimestamp(), drawnBy: user.uid, cursor: 0, log: [] });
       batch.set(doc(db, "rafflePublic", "current"), {
-        label: maskName(winners[0].name),
-        purok: winners[0].purok,
-        code: winners[0].code,
+        winners: winners.map((w) => ({ label: maskName(w.name), purok: w.purok, code: w.code, prize: w.prize })),
         total: entries.length,
-        active: 0,
-        reserves: winners.length - 1,
-        prize: config?.prize ?? "",
+        reservesLeft: reserves.length,
         drawnAt: serverTimestamp(),
       });
       await batch.commit();
       setReel(maskName(winners[0].name));
-      logActivity("Raffle", `Natapos ang bunutan: ${entries.length} entries, mananalo: ${maskName(winners[0].name)} (${winners[0].code})`);
+      logActivity("Raffle", `Natapos ang bunutan: ${entries.length} entries, ${winners.length} mananalo, ${reserves.length} reserba`);
       toast("May mapalad na mananalo na! Naitala na ang resulta.");
       refresh();
     } catch (err) {
@@ -202,23 +208,32 @@ export function AdminRaffle() {
     }
   };
 
-  /** The winner did not claim the prize: the next reserve takes over (with the reason in the log). */
-  const nextReserve = async () => {
-    if (!result || !user) return;
+  /** A winner did not claim the prize: the next reserve takes that prize (with the reason in the log). */
+  const replace = async () => {
+    if (!result || !user || slot === null) return;
     if (!note.trim()) return toast("Isulat muna ang dahilan.", "error");
-    const next = result.active + 1;
-    const w = result.winners[next];
-    if (!w) return toast("Wala nang reserba.", "error");
-    if (!confirm(`Hindi nakuha ng kasalukuyang nanalo ang premyo? Ang susunod ay si ${maskName(w.name)}.`)) return;
+    const next = result.reserves[result.cursor];
+    if (!next) return toast("Wala nang reserba.", "error");
+    const old = result.winners[slot];
+    if (!confirm(`Hindi nakuha ni ${maskName(old.name)} ang premyo? Papalitan siya ni ${maskName(next.name)}.`)) return;
     setBusy("next");
     try {
+      const winners = result.winners.map((w, i) => (i === slot ? { ...next, prize: w.prize } : w));
       const batch = writeBatch(db);
-      batch.update(doc(db, "raffleResult", "current"), { active: next, log: [...(result.log ?? []), { at: new Date().toISOString(), by: user.uid, note: note.trim().slice(0, 200) }] });
-      batch.update(doc(db, "rafflePublic", "current"), { active: next, label: maskName(w.name), purok: w.purok, code: w.code });
+      batch.update(doc(db, "raffleResult", "current"), {
+        winners,
+        cursor: result.cursor + 1,
+        log: [...(result.log ?? []), { at: new Date().toISOString(), by: user.uid, note: `${maskName(old.name)} → ${maskName(next.name)}: ${note.trim().slice(0, 160)}` }],
+      });
+      batch.update(doc(db, "rafflePublic", "current"), {
+        winners: winners.map((w) => ({ label: maskName(w.name), purok: w.purok, code: w.code, prize: w.prize })),
+        reservesLeft: (pub?.reservesLeft ?? 1) - 1,
+      });
       await batch.commit();
-      logActivity("Raffle", `Lumipat sa reserba #${next}: ${maskName(w.name)} (${note.trim()})`);
+      logActivity("Raffle", `Napalitan ang mananalo: ${maskName(old.name)} → ${maskName(next.name)} (${note.trim()})`);
       setNote("");
-      toast("Lumipat na sa susunod na reserba.");
+      setSlot(null);
+      toast("Napalitan na ng reserba.");
       refresh();
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -232,7 +247,7 @@ export function AdminRaffle() {
   return (
     <div className="space-y-3">
       <p className="rounded-2xl bg-brand-deep p-3 text-sm text-white">
-        <b className="text-gold">Developer lang.</b> Ang mga <b>verified na resident</b> ay kusang magkakaroon ng isang entry hanggang sa cutoff. Hindi kasali ang admin at opisyal. Ang bunutan ay gagawin dito, sa araw ng raffle.
+        <b className="text-gold">Developer lang.</b> Ang mga <b>verified na resident</b> ay kusang magkakaroon ng isang entry hanggang sa cutoff. Hindi kasali ang admin at opisyal. Ang <b>bilang ng mga premyo ang bilang ng mananalo</b>. Ang bunutan ay gagawin dito, sa araw ng raffle.
       </p>
 
       <Card className="space-y-3">
@@ -246,7 +261,35 @@ export function AdminRaffle() {
         <Input label="Simula (default Dec 28, 2026)" type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} disabled={!!pub} />
         <Input label="Cutoff ng entries" type="datetime-local" value={cutoffAt} onChange={(e) => setCutoffAt(e.target.value)} disabled={!!pub} />
         <Input label="Oras ng bunutan (araw ng cutoff)" type="datetime-local" value={drawAt} onChange={(e) => setDrawAt(e.target.value)} disabled={!!pub} />
-        <Input label="Premyo" value={prize} onChange={(e) => setPrize(e.target.value)} maxLength={120} placeholder="hal. ₱10,000 + grocery pack" disabled={!!pub} />
+
+        <div className="space-y-2">
+          <p className="text-[0.8rem] font-bold text-brand-dark">Mga premyo ({cleanPrizes.length} ang mananalo)</p>
+          {prizes.map((p, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold text-sm font-extrabold text-brand-deep">{i + 1}</span>
+              <input
+                value={p}
+                onChange={(e) => setPrizes((list) => list.map((x, k) => (k === i ? e.target.value : x)))}
+                maxLength={120}
+                disabled={!!pub}
+                aria-label={`Premyo ${i + 1}`}
+                placeholder={i === 0 ? "hal. ₱10,000" : "hal. Grocery package with rice"}
+                className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5"
+              />
+              {prizes.length > 1 && !pub && (
+                <button type="button" aria-label="Alisin ang premyo" onClick={() => setPrizes((list) => list.filter((_, k) => k !== i))} className="rounded-xl border border-gray-200 p-2.5 text-red-700">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          ))}
+          {prizes.length < MAX_WINNERS && !pub && (
+            <Button variant="outline" full onClick={() => setPrizes((list) => [...list, ""])}>
+              <Plus className="h-4 w-4" aria-hidden /> Dagdagan ng premyo (hanggang {MAX_WINNERS})
+            </Button>
+          )}
+          <p className="text-xs text-gray-500">Ang 1st na premyo ay sa unang mananalo, at iba pa. Dagdagan ito habang dumarami ang donasyon.</p>
+        </div>
         <Button full loading={busy === "save"} disabled={!!pub} onClick={save}>I-save ang setup</Button>
       </Card>
 
@@ -269,41 +312,55 @@ export function AdminRaffle() {
         <h2 className="font-extrabold">Bunutan</h2>
         {!pub && !canDraw && (
           <p className="rounded-xl bg-yellow-50 p-2.5 text-sm text-yellow-900">
-            Hindi pa pwedeng bumunot. {config?.cutoffAt ? `Hintayin ang cutoff (${formatWhen(config.cutoffAt)}) at ang oras ng bunutan (${formatWhen(config.drawAt)}).` : "I-save muna ang setup."}
+            Hindi pa pwedeng bumunot. {config?.cutoffAt ? `Hintayin ang cutoff (${formatWhen(config.cutoffAt)}) at ang oras ng bunutan (${formatWhen(config.drawAt)}), at i-save ang mga premyo.` : "I-save muna ang setup."}
           </p>
         )}
         <div className="flex min-h-[5rem] flex-col items-center justify-center rounded-2xl bg-brand-deep px-3 py-5 text-center text-3xl font-black text-gold">
-          {reel || (pub ? `🎉 ${pub.label}` : "— — —")}
-          <span className="mt-1 text-xs font-semibold text-white/75">{pub ? `Entry ${pub.code} · ${pub.total} ang kasali` : `${count ?? 0} entries ang kasali`}</span>
+          {reel || (pub ? `🎉 ${pub.winners.length} ang mananalo` : "— — —")}
+          <span className="mt-1 text-xs font-semibold text-white/75">{pub ? `${pub.total} ang kasali` : `${count ?? 0} entries · ${savedPrizes.length} ang mananalo`}</span>
         </div>
         {!pub && (
           <Button variant="primary" full loading={busy === "draw"} disabled={!canDraw} onClick={draw}>
             <Dices className="h-5 w-5" aria-hidden /> Simulan ang bunutan
           </Button>
         )}
-        <p className="text-xs text-gray-500">Isang beses lang ito. Random ang pagpili at kasama ang {MAX_RESERVES} reserba. Naitala ang oras at resulta at hindi na mababago.</p>
+        <p className="text-xs text-gray-500">Isang beses lang ito. Random ang pagpili at kasama ang hanggang {MAX_RESERVES} reserba. Naitala ang oras at resulta at hindi na mababago.</p>
       </Card>
 
       {result && (
         <Card className="space-y-2">
-          <h2 className="font-extrabold">Mananalo at mga reserba</h2>
+          <h2 className="font-extrabold">Mga mananalo</h2>
           <ol className="space-y-1.5 text-sm">
             {result.winners.map((w, i) => (
-              <li key={w.uid} className={`rounded-xl px-3 py-2 ${i === result.active ? "bg-gold-light font-bold" : i < result.active ? "bg-gray-100 text-gray-500 line-through" : "bg-surface"}`}>
-                {i === 0 ? "Mananalo" : `Reserba ${i}`}: {w.name} · {w.purok || "—"} · {w.code}
-                {i === result.active && <span className="ml-1 text-xs">(ngayon)</span>}
+              <li key={`${w.uid}-${i}`} className="rounded-xl bg-gold-light px-3 py-2">
+                <b>{i + 1}. {w.prize}</b>
+                <span className="block">{w.name} · {w.purok || "—"} · {w.code}</span>
+                {result.cursor < result.reserves.length && (
+                  <button type="button" onClick={() => setSlot(slot === i ? null : i)} className="mt-1 text-xs font-bold text-red-700 underline">
+                    {slot === i ? "Huwag nang palitan" : "Hindi nakuha ang premyo"}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ol>
+          {slot !== null && (
+            <div className="space-y-2 rounded-xl bg-red-50 p-3">
+              <p className="text-sm">Papalitan ng susunod na reserba: <b>{result.reserves[result.cursor] ? maskName(result.reserves[result.cursor].name) : "—"}</b></p>
+              <Input label="Dahilan (hal. hindi nakuha ang premyo)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={160} />
+              <Button variant="danger" full loading={busy === "next"} onClick={replace}>Palitan ng reserba</Button>
+            </div>
+          )}
+          <h3 className="pt-1 text-sm font-extrabold">Mga reserba ({result.reserves.length - result.cursor} natitira)</h3>
+          <ol className="space-y-1 text-sm">
+            {result.reserves.map((r, i) => (
+              <li key={`${r.uid}-${i}`} className={`rounded-xl px-3 py-1.5 ${i < result.cursor ? "bg-gray-100 text-gray-500 line-through" : "bg-surface"}`}>
+                Reserba {i + 1}: {r.name} · {r.purok || "—"} · {r.code}
               </li>
             ))}
           </ol>
           {(result.log ?? []).map((l, i) => (
-            <p key={i} className="text-xs text-gray-600">{new Date(l.at).toLocaleString("fil-PH")} · Lumipat sa susunod na reserba: {l.note}</p>
+            <p key={i} className="text-xs text-gray-600">{new Date(l.at).toLocaleString("fil-PH")} · {l.note}</p>
           ))}
-          {result.active < result.winners.length - 1 && (
-            <>
-              <Input label="Dahilan (hal. hindi nakuha ang premyo)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
-              <Button variant="danger" full loading={busy === "next"} onClick={nextReserve}>Hindi nakuha → susunod na reserba</Button>
-            </>
-          )}
           <p className="text-xs text-gray-500">Ang buong pangalan ay nakikita mo lang dito. Sa publiko, ang unang pangalan at inisyal lang.</p>
         </Card>
       )}

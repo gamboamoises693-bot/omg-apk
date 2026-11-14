@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { Gift, Trophy } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { countdown, formatWhen, phaseOf, raffleReady, useMyEntry, useNow, useRaffle } from "@/lib/raffle";
+import { countdown, formatWhen, phaseOf, prizeList, raffleReady, useMyEntry, useNow, useRaffle } from "@/lib/raffle";
+import { RaffleSponsors } from "@/components/RaffleSponsors";
 
 function Countdown({ target }: { target: number }) {
   const now = useNow();
@@ -35,8 +36,9 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
   if (!loaded || phase === "off") {
     return full ? <p className="rounded-2xl bg-white p-4 text-center text-sm text-gray-600 shadow-card">Malapit na ang raffle ng Barangay. Abangan ang anunsyo.</p> : null;
   }
-  const prize = pub?.prize || config?.prize || "";
-  const iWon = !!pub && !!entry && entry.code === pub.code;
+  const prizes = prizeList(config);
+  const myWin = pub && entry ? pub.winners.find((w) => w.code === entry.code) : undefined;
+  const iWon = !!myWin;
 
   return (
     <div className="mt-3 space-y-3">
@@ -47,7 +49,17 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
           {phase === "closed" && <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[0.68rem] font-extrabold text-red-800">Sarado na</span>}
           {phase === "done" && <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[0.68rem] font-extrabold">Tapos na</span>}
         </div>
-        {prize && <p className="text-sm text-white/90">Premyo: <b>{prize}</b></p>}
+        {prizes.length === 1 && <p className="text-sm text-white/90">Premyo: <b>{prizes[0]}</b></p>}
+        {prizes.length > 1 && (
+          <div className="text-sm text-white/90">
+            <p>{prizes.length} ang mananalo. Mga premyo:</p>
+            <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+              {prizes.map((p, i) => (
+                <li key={i}><b>{p}</b></li>
+              ))}
+            </ol>
+          </div>
+        )}
 
         {phase === "soon" && (
           <>
@@ -103,14 +115,23 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
       </div>
 
       {phase === "done" && pub && (
-        <div className="rounded-3xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-5 text-center text-[#3B2E05] shadow-card">
-          <p className="flex items-center justify-center gap-1.5 text-xs font-extrabold tracking-wider"><Trophy className="h-4 w-4" aria-hidden /> MAPALAD NA MANANALO</p>
-          <p className="mt-1 text-2xl font-black">🎉 {pub.label}</p>
-          <p className="text-sm">Entry {pub.code} · {pub.purok || "Malineng"}</p>
-          {iWon && <p className="mt-2 rounded-xl bg-white/70 p-2 text-sm font-bold">Panalo ka! Makipag-ugnayan sa Barangay Hall para makuha ang premyo.</p>}
-          <p className="mt-2 text-xs">{pub.total} na verified na account ang sumali. Random na pinili ng app.</p>
+        <div className="rounded-3xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-5 text-[#3B2E05] shadow-card">
+          <p className="flex items-center justify-center gap-1.5 text-xs font-extrabold tracking-wider"><Trophy className="h-4 w-4" aria-hidden /> {pub.winners.length > 1 ? "MGA MAPALAD NA MANANALO" : "MAPALAD NA MANANALO"}</p>
+          {iWon && <p className="mt-2 rounded-xl bg-white/70 p-2 text-center text-sm font-bold">Panalo ka ng {myWin?.prize}! Makipag-ugnayan sa Barangay Hall para makuha ang premyo.</p>}
+          <ol className="mt-3 space-y-2">
+            {pub.winners.map((w, i) => (
+              <li key={i} className="rounded-2xl bg-white/60 px-3 py-2 text-center">
+                <p className="text-xl font-black">🎉 {w.label}</p>
+                <p className="text-sm">Entry {w.code} · {w.purok || "Malineng"}</p>
+                {w.prize && <p className="text-xs font-bold">Premyo: {w.prize}</p>}
+              </li>
+            ))}
+          </ol>
+          <p className="mt-3 text-center text-xs">{pub.total} na verified na account ang sumali. Random na pinili ng app.</p>
         </div>
       )}
+
+      <RaffleSponsors full={full} />
 
       {full && (
         <section className="rounded-2xl bg-white p-4 shadow-card">
