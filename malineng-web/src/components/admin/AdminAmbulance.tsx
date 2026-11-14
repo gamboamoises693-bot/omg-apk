@@ -19,7 +19,7 @@ import {
   sortRequests,
 } from "@/lib/ambulance";
 import { formatDate, friendlyError, telHref, timeAgo } from "@/lib/format";
-import type { AmbulanceAvailability, AmbulanceRequest, AmbulanceRequestStatus } from "@/lib/types";
+import type { AmbulanceAvailability, AmbulanceRequest, AmbulanceRequestStatus, AmbulanceSettings } from "@/lib/types";
 import { Button, Card, EmptyState, Modal, SectionTitle, Select, Spinner, Textarea } from "@/components/ui";
 import { AmbulanceForm } from "@/components/ambulance/AmbulanceForm";
 import { STATUS_PILL } from "@/components/ambulance/AmbulanceTracker";
@@ -62,10 +62,11 @@ function RequestRow({ r, onOpen }: { r: AmbulanceRequest; onOpen: () => void }) 
   );
 }
 
-function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; all: AmbulanceRequest[]; drivers: string[]; onClose: () => void }) {
-  const { isKapitan } = useAuth();
+function RequestDetail({ req, all, drivers, ambulance, onClose }: { req: AmbulanceRequest; all: AmbulanceRequest[]; drivers: string[]; ambulance: AmbulanceSettings; onClose: () => void }) {
+  const { isKapitan, isAdmin } = useAuth();
   const toast = useToast();
-  const [driver, setDriver] = useState(req.driver ?? drivers[0] ?? "");
+  // No driver is pre-selected: it must be chosen on purpose before the request is endorsed.
+  const [driver, setDriver] = useState(req.driver ?? "");
   const [hours, setHours] = useState(String(req.durationHours ?? DEFAULT_DURATION[req.type]));
   const [note, setNote] = useState(req.adminNote ?? "");
   const [busy, setBusy] = useState(false);
@@ -146,7 +147,8 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
     }
   };
 
-  const editable = isKapitan && (req.status === "pending" || req.status === "approved");
+  // The driver and the hours are set while the request is still waiting (before the first approver endorses it); Kapitan can still change them after release.
+  const editable = (isAdmin && req.status === "pending") || (isKapitan && req.status === "approved");
 
   return (
     <div className="space-y-4">
@@ -168,6 +170,13 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
 
       {editable && (
         <>
+          <div className="rounded-xl bg-surface p-3 text-sm">
+            <p className="font-bold">🚑 Ambulansya ng Barangay</p>
+            <p className="text-gray-700">
+              {ambulance.phone ? <a href={telHref(ambulance.phone)} className="font-semibold text-brand underline">{ambulance.phone}</a> : "Walang numero sa Settings"} · {ambulance.fee || "Libre"} · {AVAILABILITY_LABEL[ambulance.status]}
+            </p>
+            {req.status === "pending" && <p className="mt-1 text-xs text-gray-600">Piliin ang <b>Driver</b> (mula sa listahan sa Settings ng Ambulansya) at ang tagal bago mag-endorso. Nakikita ito ng mga susunod na approver at ng residente.</p>}
+          </div>
           {conflicts.length > 0 ? (
             <div className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-800">
               <p className="flex items-center gap-1"><AlertTriangle className="h-4 w-4" /> May tatamaang biyahe:</p>
@@ -184,7 +193,7 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
           )}
           <div className="grid grid-cols-2 gap-3">
             {drivers.length > 0 ? (
-              <Select label="Driver" options={drivers} value={driver} onChange={(e) => setDriver(e.target.value)} />
+              <Select label="Driver" options={drivers} placeholder="-- Pumili ng driver --" value={driver} onChange={(e) => setDriver(e.target.value)} />
             ) : (
               <label className="block">
                 <span className="mb-1 block font-semibold text-gray-800">Driver</span>
@@ -204,7 +213,17 @@ function RequestDetail({ req, all, drivers, onClose }: { req: AmbulanceRequest; 
             r={req}
             steps={steps}
             fastBy={approvals[cfgKey].fast ? approvals[cfgKey].fastBy ?? "Kapitan" : undefined}
-            onAdvance={(a, n) => step(() => advanceRequest("ambulanceRequests", req.id, req, steps, a, n), "Naipasa na sa susunod na approver.")}
+            onAdvance={async (a, n) => {
+              // The driver must be chosen before the request moves on.
+              if (!driver.trim()) {
+                toast("Piliin muna ang Driver bago i-endorso.", "error");
+                return;
+              }
+              await step(
+                () => advanceRequest("ambulanceRequests", req.id, req, steps, a, n, { driver: driver.trim(), durationHours: Number(hours), adminNote: note.trim().slice(0, 500) }),
+                "Naipasa na sa susunod na approver, kasama ang driver.",
+              );
+            }}
             onReturn={(a, n) => step(() => returnRequest("ambulanceRequests", req.id, req, steps, a, n), "Naibalik sa naunang approver.")}
             onReject={(a, n) =>
               step(async () => {
@@ -348,7 +367,7 @@ export function AdminAmbulance() {
       </Button>
 
       <Modal open={!!open} onClose={() => setOpenId(null)} title="Request ng Ambulansya">
-        {open && <RequestDetail key={open.id} req={open} all={data} drivers={settings.ambulance.drivers} onClose={() => setOpenId(null)} />}
+        {open && <RequestDetail key={open.id} req={open} all={data} drivers={settings.ambulance.drivers} ambulance={settings.ambulance} onClose={() => setOpenId(null)} />}
       </Modal>
 
       <Modal open={manual} onClose={() => setManual(false)} title="Manual na booking">
