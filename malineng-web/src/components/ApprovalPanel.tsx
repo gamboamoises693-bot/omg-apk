@@ -23,6 +23,8 @@ export function ApprovalPanel({
   onFast,
   releaseDisabled,
   releaseNote,
+  releaseLabel = "I-release",
+  canReject = true,
 }: {
   r: Approvable;
   /** The approvers the Developer set for this action, in order. */
@@ -39,6 +41,10 @@ export function ApprovalPanel({
   onFast?: (actor: Actor, note: string) => Promise<void>;
   releaseDisabled?: boolean;
   releaseNote?: string;
+  /** Text of the last approver's button (e.g. "Approve", "Ready na"). */
+  releaseLabel?: string;
+  /** Hide "Tanggihan" where rejecting makes no sense (documents). */
+  canReject?: boolean;
 }) {
   const { user, profile, isSuperAdmin, isAdmin } = useAuth();
   const [note, setNote] = useState("");
@@ -103,11 +109,11 @@ export function ApprovalPanel({
       {error && <p className="text-xs text-red-700">{error}</p>}
       <div className="grid grid-cols-2 gap-2">
         {s >= last ? (
-          <Button loading={busy} disabled={releaseDisabled} onClick={() => run(onRelease, false)}>I-release</Button>
+          <Button loading={busy} disabled={releaseDisabled} onClick={() => run(onRelease, false)}>{releaseLabel}</Button>
         ) : (
           <Button loading={busy} onClick={() => run(onAdvance, false)}>{s === 0 ? `I-endorso kay ${stepLabel(steps[s + 1])}` : `Sumang-ayon, ipasa kay ${stepLabel(steps[s + 1])}`}</Button>
         )}
-        <Button variant="danger" loading={busy} onClick={() => run(onReject, true)}>Tanggihan</Button>
+        {canReject ? <Button variant="danger" loading={busy} onClick={() => run(onReject, true)}>Tanggihan</Button> : <span />}
         {s > 0 && <Button variant="outline" loading={busy} className={canFast ? "" : "col-span-2"} onClick={() => run(onReturn, true)}>Ibalik kay {stepLabel(steps[s - 1])}</Button>}
         {canFast && <Button variant="danger" loading={busy} className={s > 0 ? "" : "col-span-2"} onClick={() => confirm("Agarang aprubahan ang request na ito nang hindi na dumadaan sa iba?") && run(onFast!, false)}>Agarang aprubahan</Button>}
       </div>

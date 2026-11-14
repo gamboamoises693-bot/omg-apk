@@ -14,6 +14,7 @@ import { formatDate, friendlyError, telHref } from "@/lib/format";
 import type { Appointment } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, FilterTabs, Input, Modal, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { ModerationApproval } from "@/components/ModerationApproval";
 
 const appointmentsCollection = collection(db, "appointments");
 const PRINTABLE = ["Barangay Clearance", "Indigency"] as const;
@@ -130,16 +131,25 @@ export function AdminAppointments() {
                   <button onClick={() => remove(a.id)} className="rounded-full p-2 text-gray-400" aria-label="Burahin"><Trash2 className="h-5 w-5" /></button>
                 </div>
               </div>
-              <select
-                value={a.status}
-                onChange={(e) => setStatus(a.id, e.target.value as AppointmentStatus)}
-                className="mt-3 w-full rounded-xl border-2 border-gray-200 px-4 py-3 font-semibold"
-                aria-label="Status"
-              >
-                {APPOINTMENT_STATUSES.map((s) => (
-                  <option key={s} value={s}>{APPOINTMENT_STATUS_LABEL[s]}</option>
-                ))}
-              </select>
+              {a.status === "ready" ? (
+                <p className="mt-3 rounded-xl bg-green-50 px-4 py-3 font-semibold text-green-800">{APPOINTMENT_STATUS_LABEL.ready}</p>
+              ) : (
+                <>
+                  <select
+                    value={a.status}
+                    onChange={(e) => setStatus(a.id, e.target.value as AppointmentStatus)}
+                    className="mt-3 w-full rounded-xl border-2 border-gray-200 px-4 py-3 font-semibold"
+                    aria-label="Status"
+                  >
+                    {APPOINTMENT_STATUSES.filter((s) => s !== "ready").map((s) => (
+                      <option key={s} value={s}>{APPOINTMENT_STATUS_LABEL[s]}</option>
+                    ))}
+                  </select>
+                  <div className="mt-3">
+                    <ModerationApproval collectionName="appointments" item={a} actionKey="dok" releasedStatus="ready" rejectable={false} tab="Appointments" what={`${a.service} ni ${a.fullName}`} releaseLabel="Ready na (pwede nang kunin)" />
+                  </div>
+                </>
+              )}
               {a.status === "ready" && (PRINTABLE as readonly string[]).includes(a.service) && (
                 a.documentId ? (
                   <Link href={`/dokumento/?id=${a.documentId}`} target="_blank" className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-brand-light py-2.5 text-sm font-bold text-brand">

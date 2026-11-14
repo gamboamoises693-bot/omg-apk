@@ -82,6 +82,9 @@ export interface Household {
 }
 
 export interface Post {
+  /** Approval steps (see lib/approval.ts). Missing `stage` = waiting for the first approver. */
+  stage?: number;
+  trail?: import("./approval").TrailEntry[];
   id: string;
   authorId: string;
   authorName: string;
@@ -106,6 +109,9 @@ export interface Comment {
 }
 
 export interface Listing {
+  /** Approval steps (see lib/approval.ts). Missing `stage` = waiting for the first approver. */
+  stage?: number;
+  trail?: import("./approval").TrailEntry[];
   id: string;
   sellerId: string;
   sellerName: string;
@@ -124,6 +130,9 @@ export interface Listing {
 }
 
 export interface Job {
+  /** Approval steps (see lib/approval.ts). Missing `stage` = waiting for the first approver. */
+  stage?: number;
+  trail?: import("./approval").TrailEntry[];
   id: string;
   posterId: string;
   posterName: string;
@@ -172,6 +181,9 @@ export interface Ayuda {
 }
 
 export interface Appointment {
+  /** Approval steps (see lib/approval.ts). Missing `stage` = waiting for the first approver. */
+  stage?: number;
+  trail?: import("./approval").TrailEntry[];
   id: string;
   userId: string;
   fullName: string;

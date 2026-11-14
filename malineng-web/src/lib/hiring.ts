@@ -4,6 +4,9 @@ export type OpeningState = "open" | "full" | "closed";
 export type ApplicationStatus = "new" | "interview" | "hired" | "rejected";
 
 export interface Opening {
+  /** Approval steps (see lib/approval.ts). Missing `stage` = waiting for the first approver. */
+  stage?: number;
+  trail?: import("./approval").TrailEntry[];
   id: string;
   posterId: string;
   posterName: string;
