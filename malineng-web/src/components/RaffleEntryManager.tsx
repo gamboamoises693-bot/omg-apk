@@ -60,7 +60,7 @@ export function RaffleEntryManager() {
 
   // A winner popup (with the QR) the first time a new win is seen on this phone.
   const wins = entry ? rounds.flatMap((r) => r.winners.filter((w) => w.code === entry.code).map((w) => ({ r, w }))) : [];
-  const unseenWin = wins.find(({ r, w }) => !wasSeen(`win-${r.round}-${w.code}`) && !claims[`${r.round}_${w.code}`]);
+  const unseenWin = phase === "off" ? undefined : wins.find(({ r, w }) => !wasSeen(`win-${r.round}-${w.code}`) && !claims[`${r.round}_${w.code}`]);
   const closeWin = () => {
     if (!unseenWin) return;
     try {
