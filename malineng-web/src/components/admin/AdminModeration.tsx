@@ -13,35 +13,8 @@ import { PostCard } from "@/components/PostCard";
 import { SellerInfo } from "./SellerInfo";
 import { deleteListing, isExpired, newExpiry } from "@/lib/listings";
 import { useToast } from "@/components/Toast";
+import { ModerationApproval } from "@/components/ModerationApproval";
 import { logActivity } from "@/lib/activity";
-
-function useModerate(collectionName: "listings" | "jobs") {
-  const toast = useToast();
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const setStatus = async (id: string, status: "approved" | "rejected", label = "") => {
-    setBusyId(id);
-    try {
-      // The 24-hour clock of a listing starts when it is approved.
-      await updateDoc(doc(db, collectionName, id), collectionName === "listings" && status === "approved" ? { status, expiresAt: newExpiry() } : { status });
-      logActivity(collectionName === "listings" ? "Tindahan" : "Trabaho", `${status === "approved" ? "Nag-approve" : "Nag-reject"} ng ${collectionName === "listings" ? "paninda" : "trabaho"}${label ? `: “${label}”` : ""}`, id);
-      toast(status === "approved" ? "Na-approve!" : "Na-reject.");
-    } catch (err) {
-      toast(friendlyError(err), "error");
-    } finally {
-      setBusyId(null);
-    }
-  };
-  return { busyId, setStatus };
-}
-
-function ApproveButtons({ busy, onApprove, onReject }: { busy: boolean; onApprove: () => void; onReject: () => void }) {
-  return (
-    <div className="mt-3 grid grid-cols-2 gap-2">
-      <Button onClick={onApprove} loading={busy}><Check className="h-5 w-5" /> Approve</Button>
-      <Button variant="danger" onClick={onReject} loading={busy}><X className="h-5 w-5" /> Reject</Button>
-    </div>
-  );
-}
 
 export function AdminModeration() {
   const toast = useToast();
@@ -55,22 +28,7 @@ export function AdminModeration() {
   const listings = useCollection<Listing>(listingsQ);
   const jobs = useCollection<Job>(jobsQ);
   const openings = useCollection<Opening>(openingsQ);
-  const [openingBusy, setOpeningBusy] = useState<string | null>(null);
-  const decideOpening = async (o: Opening, status: "approved" | "rejected") => {
-    setOpeningBusy(o.id);
-    try {
-      await updateDoc(doc(db, "openings", o.id), { status });
-      logActivity("Hiring", `${status === "approved" ? "Nag-approve" : "Nag-reject"} ng bakante: “${o.title}”`, o.id);
-      toast(status === "approved" ? "Na-approve!" : "Na-reject.");
-    } catch (err) {
-      toast(friendlyError(err), "error");
-    } finally {
-      setOpeningBusy(null);
-    }
-  };
   const approvedListings = useCollection<Listing>(approvedListingsQ);
-  const listingMod = useModerate("listings");
-  const jobMod = useModerate("jobs");
 
   const expired = useMemo(() => approvedListings.data.filter((l) => isExpired(l)), [approvedListings.data]);
 
@@ -109,7 +67,7 @@ export function AdminModeration() {
               </div>
               {l.description && <p className="mt-2 whitespace-pre-line text-gray-700">{l.description}</p>}
               <SellerInfo uid={l.sellerId} contact={l.contact} messengerLink={l.messengerLink} kind="listings" />
-              <ApproveButtons busy={listingMod.busyId === l.id} onApprove={() => listingMod.setStatus(l.id, "approved", l.title)} onReject={() => listingMod.setStatus(l.id, "rejected", l.title)} />
+              <ModerationApproval collectionName="listings" item={l} tab="Tindahan" what={`paninda: ${l.title}`} releaseExtra={() => ({ expiresAt: newExpiry() })} />
             </Card>
           ))}
         </div>
@@ -144,7 +102,7 @@ export function AdminModeration() {
               )}
               {o.requirements.length > 0 && <p className="mt-1 text-sm text-gray-600">Kailangan: {o.requirements.join("; ")}</p>}
               <SellerInfo uid={o.posterId} contact={o.contact} kind="jobs" />
-              <ApproveButtons busy={openingBusy === o.id} onApprove={() => decideOpening(o, "approved")} onReject={() => decideOpening(o, "rejected")} />
+              <ModerationApproval collectionName="openings" item={o} tab="Hiring" what={`bakante: “${o.title}”`} />
             </Card>
           ))}
         </div>
@@ -161,7 +119,7 @@ export function AdminModeration() {
               <p className="text-gray-600">{j.category} · {j.purok} · {j.salary}</p>
               <p className="text-sm text-gray-500">{timeAgo(j.createdAt)}</p>
               <SellerInfo uid={j.posterId} contact={j.contact} kind="jobs" />
-              <ApproveButtons busy={jobMod.busyId === j.id} onApprove={() => jobMod.setStatus(j.id, "approved", j.title)} onReject={() => jobMod.setStatus(j.id, "rejected", j.title)} />
+              <ModerationApproval collectionName="jobs" item={j} tab="Trabaho" what={`trabaho: ${j.title}`} />
             </Card>
           ))}
         </div>

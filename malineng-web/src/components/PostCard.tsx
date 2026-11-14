@@ -14,6 +14,7 @@ import type { Comment, Post } from "@/lib/types";
 import { Avatar } from "./Avatar";
 import { Badge, Button } from "./ui";
 import { useToast } from "./Toast";
+import { ModerationApproval } from "./ModerationApproval";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { useVerifiedSet } from "@/lib/useVerifiedSet";
 import { logActivity } from "@/lib/activity";
@@ -200,19 +201,6 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
     }
   };
 
-  const setStatus = async (status: "approved" | "rejected") => {
-    setBusy(true);
-    try {
-      await updateDoc(doc(db, "posts", post.id), { status });
-      logActivity("Board", `${status === "approved" ? "Nag-approve" : "Nag-reject"} ng post ni ${post.authorName}`, post.id);
-      toast(status === "approved" ? "Na-approve ang post." : "Na-reject ang post.");
-    } catch (err) {
-      toast(friendlyError(err), "error");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const remove = async () => {
     setMenu(false);
     if (!confirm("Sigurado ka bang buburahin ang post na ito?")) return;
@@ -288,9 +276,8 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
       )}
 
       {adminMode ? (
-        <div className="grid grid-cols-2 gap-2 p-4">
-          <Button onClick={() => setStatus("approved")} loading={busy}><Check className="h-5 w-5" /> Approve</Button>
-          <Button variant="danger" onClick={() => setStatus("rejected")} loading={busy}><X className="h-5 w-5" /> Reject</Button>
+        <div className="p-4">
+          <ModerationApproval collectionName="posts" item={post} tab="Board" what={`post ni ${post.authorName}`} />
         </div>
       ) : post.status === "approved" ? (
         <>

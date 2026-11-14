@@ -41,8 +41,8 @@ export const ACTION_DEFS: ActionDef[] = [
   { key: "ambe", name: "Ambulansya: Emergency", ui: "Ambulansya", wired: true, hasFast: true },
   { key: "ayuda", name: "Ayuda: Paglabas ng ayuda", ui: "Ayuda", wired: true },
   { key: "des", name: "Mahalagang desisyon", ui: "Desisyon", wired: true },
-  { key: "dok", name: "Clearance at dokumento", ui: "Dokumento", wired: false },
-  { key: "post", name: "Bagong post, paninda, trabaho", ui: "I-approve", wired: false },
+  { key: "dok", name: "Clearance at dokumento", ui: "Dokumento → \"Ready na\"", wired: true },
+  { key: "post", name: "Bagong post, paninda, trabaho", ui: "Board, Tindahan, Trabaho, Hiring", wired: true },
 ];
 
 export const DEFAULT_CONFIG: ApprovalConfig = {
@@ -52,14 +52,17 @@ export const DEFAULT_CONFIG: ApprovalConfig = {
   ambe: { on: true, steps: ["Secretary", "Kapitan"], fast: true, fastBy: "Kapitan" },
   ayuda: { on: true, steps: ["Secretary", "Kapitan"] },
   des: { on: true, steps: ["Secretary", "Kapitan"] },
-  dok: { on: false, steps: ["Secretary"] },
+  dok: { on: false, steps: ["Sinumang Admin"] },
   post: { on: false, steps: ["Sinumang Admin"] },
 };
 
-/** The steps that really apply: with approval switched off only the first approver decides. */
-export function effectiveSteps(c: ActionCfg): string[] {
+/** The steps that really apply: with approval switched off only the first approver decides (for documents and posts: any admin). */
+export function effectiveSteps(c: ActionCfg, key?: ActionKey): string[] {
   const steps = c.steps.length ? c.steps : ["Kapitan"];
-  return c.on ? steps : steps.slice(0, 1);
+  if (c.on) return steps;
+  // Documents and posts: "off" keeps the old way, any admin decides.
+  if (key === "dok" || key === "post") return ["Sinumang Admin"];
+  return steps.slice(0, 1);
 }
 
 /** "Sinumang Admin" reads as "Admin" in the trackers. */

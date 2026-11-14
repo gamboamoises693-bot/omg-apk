@@ -24,6 +24,7 @@ import {
   Crown,
   FileBarChart,
   Gavel,
+  Gift,
   HandCoins,
   HardHat,
   ScrollText,
@@ -70,6 +71,7 @@ import { AdminWebAccess } from "@/components/admin/AdminWebAccess";
 import { AdminVideos } from "@/components/admin/AdminVideos";
 import { AdminChat } from "@/components/admin/AdminChat";
 import { AdminApprovals } from "@/components/admin/AdminApprovals";
+import { AdminRaffle } from "@/components/admin/AdminRaffle";
 import { AdminDecisions } from "@/components/admin/AdminDecisions";
 import { AdminAyudaBatches } from "@/components/admin/AdminAyudaBatches";
 
@@ -134,6 +136,7 @@ const GROUPS: Group[] = [
     sections: [
       { key: "users", label: "Users at Roles", icon: Crown, Component: AdminUsers },
       { key: "approvals", label: "Approval", icon: ClipboardCheck, Component: AdminApprovals },
+      { key: "raffle", label: "Raffle", icon: Gift, Component: AdminRaffle },
       { key: "videos", label: "Videos", icon: Clapperboard, Component: AdminVideos },
       { key: "webaccess", label: "Web Access", icon: Globe, Component: AdminWebAccess },
       { key: "doble", label: "Posibleng Doble", icon: CopyCheck, Component: AdminDuplicates },

@@ -40,6 +40,7 @@ import { ServicesMenu } from "@/components/ServicesMenu";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MgMark } from "@/components/MgMark";
 import { WatchVideos } from "@/components/WatchVideos";
+import { RaffleCard } from "@/components/RaffleCard";
 import { useWebAccess } from "@/lib/webAccess";
 import type { PrecinctMeta } from "@/lib/presinto";
 
@@ -311,6 +312,9 @@ export default function HomePage() {
           <ChevronRight className="ml-auto h-5 w-5 shrink-0" aria-hidden />
         </Link>
       )}
+
+      {/* Raffle (only while the Developer has it on) */}
+      <RaffleCard />
 
       {/* Every video of the barangay */}
       <WatchVideos />

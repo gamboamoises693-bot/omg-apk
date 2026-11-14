@@ -80,12 +80,15 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/settings/approvals)
           && get(/databases/$(database)/documents/settings/approvals).data.get('actions', {}).get(key, null) != null
         ? get(/databases/$(database)/documents/settings/approvals).data.actions[key]
-        : {'on': true, 'steps': ['Secretary', 'Kapitan'], 'fast': key == 'ambe', 'fastBy': 'Kapitan'};
+        : {'on': !(key in ['dok', 'post']), 'steps': key in ['dok', 'post'] ? ['Sinumang Admin'] : ['Secretary', 'Kapitan'], 'fast': key == 'ambe', 'fastBy': 'Kapitan'};
     }
 
     // With approval switched off a single decider (the first step) is enough.
+    // For documents and posts, "off" keeps the old way: any admin decides.
     function stepsOf(key) {
-      return approvalCfg(key).get('on', true) == true ? approvalCfg(key).steps : approvalCfg(key).steps[0:1];
+      return approvalCfg(key).get('on', true) == true ? approvalCfg(key).steps
+        : key in ['dok', 'post'] ? ['Sinumang Admin']
+        : approvalCfg(key).steps[0:1];
     }
 
     function stepMatches(step) {
@@ -109,7 +112,7 @@ service cloud.firestore {
 
     function approvalFieldsOnly() {
       return incoming().diff(existing()).affectedKeys().hasOnly(
-        ['status', 'stage', 'trail', 'urgent', 'rejectReason', 'decidedBy', 'decidedByName', 'decidedAt', 'updatedAt', 'driver', 'durationHours', 'adminNote']);
+        ['status', 'stage', 'trail', 'urgent', 'rejectReason', 'decidedBy', 'decidedByName', 'decidedAt', 'updatedAt', 'driver', 'durationHours', 'adminNote', 'expiresAt']);
     }
 
     // The emergency "agaran" release: only if the Developer allowed it for this action, by the chosen position.
@@ -138,6 +141,19 @@ service cloud.firestore {
             && mayActAt(key, existing().get('stage', 0) < stepsOf(key).size() ? existing().get('stage', 0) : stepsOf(key).size() - 1))
           // emergency release
           || (incoming().status == 'approved' && incoming().get('urgent', false) == true && mayFast(key))
+        );
+    }
+
+    // ---- Documents (appointments): "ready" is the release; natanggap / nasa_kagawad are the waiting statuses ----
+    function apptMove() {
+      return existing().status in ['natanggap', 'nasa_kagawad'] && trailGrewByOne() && approvalFieldsOnly()
+        && (
+          (incoming().status in ['natanggap', 'nasa_kagawad'] && existing().get('stage', 0) < stepsOf('dok').size() - 1
+            && incoming().stage == existing().get('stage', 0) + 1 && mayActAt('dok', existing().get('stage', 0)))
+          || (incoming().status in ['natanggap', 'nasa_kagawad'] && existing().get('stage', 0) > 0
+            && incoming().stage == existing().get('stage', 0) - 1 && mayActAt('dok', existing().get('stage', 0)))
+          || (incoming().status == 'ready' && existing().get('stage', 0) >= stepsOf('dok').size() - 1
+            && mayActAt('dok', stepsOf('dok').size() - 1))
         );
     }
 
@@ -476,7 +492,9 @@ service cloud.firestore {
 
       // Reactions: a resident may only add/remove/change THEIR OWN uid in "likes" (everyone who reacted)
       // and in "reactions" (uid -> 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'pray').
-      allow update: if isAdmin()
+      allow update: if (isAdmin() && existing().status != 'pending')
+        || approvalMove('post')
+        || isSuperAdmin()
         || (signedIn()
           && existing().status == 'approved'
           && changedOnly(['likes', 'reactions'])
@@ -518,7 +536,7 @@ service cloud.firestore {
         && incoming().expiresAt is timestamp
         && optionalPhoto();
 
-      allow update: if isAdmin();
+      allow update: if (isAdmin() && existing().status != 'pending') || approvalMove('post') || isSuperAdmin();
       allow delete: if isAdmin() || (signedIn() && existing().sellerId == request.auth.uid);
     }
 
@@ -541,7 +559,7 @@ service cloud.firestore {
         && incoming().posterId == request.auth.uid
         && incoming().status == 'pending'
         && isNonEmptyString(incoming().title, 120);
-      allow update: if isAdmin();
+      allow update: if (isAdmin() && existing().status != 'pending') || approvalMove('post') || isSuperAdmin();
       allow delete: if isAdmin() || (signedIn() && existing().posterId == request.auth.uid);
     }
 
@@ -577,7 +595,7 @@ service cloud.firestore {
         (verifiedPoster() && incoming().status == 'pending' && incoming().official == false)
         || (isOfficer() && incoming().status == 'approved' && incoming().official == true));
       // The poster can only close / reopen and update how many were hired; admins can change anything.
-      allow update: if isAdmin()
+      allow update: if (isAdmin() && existing().status != 'pending') || approvalMove('post') || isSuperAdmin()
         || (signedIn() && existing().posterId == request.auth.uid && existing().status == 'approved'
           && changedOnly(['state', 'filled'])
           && incoming().state in ['open', 'full', 'closed']
@@ -709,6 +727,73 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
 
+    // ---------- Raffle ----------
+    // One entry per verified resident up to the cutoff (settings/raffle, set by the Developer). The Developer draws
+    // after the cutoff and the draw time; the full result is private, rafflePublic has no phone numbers.
+    function raffleCfg() {
+      return get(/databases/$(database)/documents/settings/raffle).data;
+    }
+
+    function raffleEntryShape(uid) {
+      return incoming().keys().hasOnly(['uid', 'code', 'name', 'purok', 'createdAt'])
+        && incoming().uid == uid
+        && incoming().code is string && incoming().code.matches('^[A-Z0-9]{8}$')
+        && incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 120
+        && incoming().purok is string && incoming().purok.size() <= 40
+        && incoming().createdAt == request.time;
+    }
+
+    match /raffleEntries/{uid} {
+      allow get: if isSelf(uid) || isSuperAdmin();
+      allow list: if isSuperAdmin();
+      // The person claims their own entry: verified, not staff, entries open (start <= now < cutoff), and no draw yet.
+      allow create: if (isSelf(uid)
+          && exists(/databases/$(database)/documents/verifiedUsers/$(uid))
+          && !isStaff() && notSuspended()
+          && exists(/databases/$(database)/documents/settings/raffle)
+          && raffleCfg().get('enabled', false) == true
+          && request.time >= raffleCfg().startAt && request.time < raffleCfg().cutoffAt
+          && !exists(/databases/$(database)/documents/rafflePublic/current)
+          && raffleEntryShape(uid)
+          && incoming().name == me().fullName
+          && incoming().purok == me().get('purok', ''))
+        // The Developer adds verified people who never opened the app, before the draw.
+        || (isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublic/current) && raffleEntryShape(uid));
+      allow update: if false;
+      allow delete: if isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublic/current);
+    }
+
+    match /raffleResult/{id} {
+      allow read: if isSuperAdmin();
+      // Once, after the cutoff and the draw time.
+      allow create: if isSuperAdmin() && id == 'current'
+        && request.time >= raffleCfg().cutoffAt && request.time >= raffleCfg().drawAt
+        && incoming().keys().hasOnly(['winners', 'total', 'drawnAt', 'drawnBy', 'active', 'log'])
+        && incoming().winners is list && incoming().winners.size() >= 1 && incoming().winners.size() <= 6
+        && incoming().total is int && incoming().total >= incoming().winners.size()
+        && incoming().active == 0
+        && incoming().drawnAt == request.time && incoming().drawnBy == request.auth.uid;
+      // A reserve takes over when the winner does not claim the prize.
+      allow update: if isSuperAdmin()
+        && incoming().diff(existing()).affectedKeys().hasOnly(['active', 'log'])
+        && incoming().active is int && incoming().active == existing().active + 1
+        && incoming().active < existing().winners.size();
+      allow delete: if false;
+    }
+
+    match /rafflePublic/{id} {
+      allow read: if true;
+      allow create: if isSuperAdmin() && id == 'current'
+        && !exists(/databases/$(database)/documents/rafflePublic/current)
+        && existsAfter(/databases/$(database)/documents/raffleResult/current)
+        && incoming().keys().hasOnly(['label', 'purok', 'code', 'total', 'active', 'reserves', 'prize', 'drawnAt'])
+        && incoming().active == 0
+        && incoming().drawnAt == request.time;
+      allow update: if isSuperAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['label', 'purok', 'code', 'active'])
+        && incoming().active == existing().active + 1;
+      allow delete: if false;
+    }
+
     // ---------- appointments ----------
     match /appointments/{apptId} {
       allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
@@ -718,7 +803,10 @@ service cloud.firestore {
         // A listed service, or the one the resident wrote when choosing "Iba pa".
         && isNonEmptyString(incoming()['service'], 60)
         && isNonEmptyString(incoming().fullName, 120);
-      allow update: if isAdmin();
+      // Moving to "ready" needs the approvers set for documents; other changes stay with any admin.
+      allow update: if (isAdmin() && trailUntouched() && !(incoming().status == 'ready' && existing().status != 'ready'))
+        || apptMove()
+        || isSuperAdmin();
       allow delete: if isAdmin()
         || (signedIn() && existing().userId == request.auth.uid && existing().status == 'natanggap');
     }
@@ -1022,7 +1110,7 @@ service cloud.firestore {
     // ---------- settings (settings/main; settings/webAccess is Super Admin only) ----------
     match /settings/{docId} {
       allow read: if true;
-      allow write: if docId in ['webAccess', 'chat', 'approvals'] ? isSuperAdmin() : isAdmin();
+      allow write: if docId in ['webAccess', 'chat', 'approvals', 'raffle'] ? isSuperAdmin() : isAdmin();
     }
 
     // ---------- Chat ng Barangay (verified residents) ----------

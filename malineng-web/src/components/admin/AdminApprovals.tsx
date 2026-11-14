@@ -44,7 +44,7 @@ export function AdminApprovals() {
   const duplicate = cfg.on && new Set(cfg.steps).size !== cfg.steps.length;
   const anyDuplicate = (Object.values(draft) as ActionCfg[]).some((c) => c.on && new Set(c.steps).size !== c.steps.length);
 
-  const flow = (c: ActionCfg) => (c.on ? effectiveSteps(c).map((s, i) => `${i + 1}. ${stepLabel(s)}`).join(" → ") : `Walang approval · ${stepLabel(c.steps[0])} ang nagpapasya`);
+  const flow = (c: ActionCfg, key: ActionKey) => (c.on ? effectiveSteps(c, key).map((s, i) => `${i + 1}. ${stepLabel(s)}`).join(" → ") : key === "dok" || key === "post" ? "Walang approval · sinumang admin ang nagpapasya" : `Walang approval · ${stepLabel(c.steps[0])} ang nagpapasya`);
 
   const save = async () => {
     if (anyDuplicate) return toast("Ayusin muna: may parehong approver sa dalawang hakbang.", "error");
@@ -81,7 +81,7 @@ export function AdminApprovals() {
               {!d.wired && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[0.65rem] font-bold text-gray-500">Susunod na bersyon</span>}
             </span>
             <span className="block text-xs text-gray-500">{d.ui}</span>
-            <span className="mt-1 block text-xs font-semibold text-brand">{flow(draft[d.key])}{d.hasFast && draft[d.key].fast ? ` · Agaran: ${draft[d.key].fastBy ?? "Kapitan"}` : ""}</span>
+            <span className="mt-1 block text-xs font-semibold text-brand">{flow(draft[d.key], d.key)}{d.hasFast && draft[d.key].fast ? ` · Agaran: ${draft[d.key].fastBy ?? "Kapitan"}` : ""}</span>
           </button>
         ))}
       </div>
@@ -107,7 +107,8 @@ export function AdminApprovals() {
         </label>
 
         <p className="text-xs font-bold tracking-wide text-gray-500">{cfg.on ? "MGA HAKBANG (AYON SA PAGKAKASUNOD)" : "SINO ANG MAGPAPASYA"}</p>
-        {(cfg.on ? cfg.steps : cfg.steps.slice(0, 1)).map((step, i) => (
+        {!cfg.on && (sel === "dok" || sel === "post") && <p className="rounded-xl bg-gray-50 p-2.5 text-sm text-gray-700">Sinumang admin (hindi BHW) ang magpapasya, tulad ng dati.</p>}
+        {(cfg.on ? cfg.steps : sel === "dok" || sel === "post" ? [] : cfg.steps.slice(0, 1)).map((step, i) => (
           <div key={i} className="flex items-center gap-2">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold text-sm font-extrabold text-brand-deep">{i + 1}</span>
             <select
@@ -159,7 +160,7 @@ export function AdminApprovals() {
         )}
 
         <p className="rounded-xl bg-brand-deep p-3 text-xs text-white">
-          <b className="text-gold">Daloy:</b> Residente → {effectiveSteps(cfg).map(stepLabel).join(" → ")} → <b className="text-gold">{sel === "balik" ? "Isinara" : "Nailabas"}</b>
+          <b className="text-gold">Daloy:</b> Residente → {effectiveSteps(cfg, sel).map(stepLabel).join(" → ")} → <b className="text-gold">{sel === "balik" ? "Isinara" : "Nailabas"}</b>
           {def.hasFast && cfg.on && cfg.fast ? ` · Agaran: ${cfg.fastBy ?? "Kapitan"}` : ""}
         </p>
         <p className="text-xs text-gray-500">Kung walang may hawak ng posisyon, ang Developer ang magpapasya.</p>

@@ -13,6 +13,7 @@ import {
   FileWarning,
   HandCoins,
   Gavel,
+  Gift,
   HardHat,
   HeartPulse,
   IdCard,
@@ -75,6 +76,7 @@ const BY_HREF: Record<string, Service> = Object.fromEntries(
       { href: "/skills", label: "Skills", icon: Wrench },
       { href: "/proyekto", label: "Proyekto", icon: HardHat },
       { href: "/desisyon", label: "Mga Desisyon", icon: Gavel },
+      { href: "/raffle", label: "Raffle", icon: Gift },
       { href: "/board", label: "Board", icon: MessagesSquare },
       { href: "/register-event", label: "Magpa-rehistro", icon: ClipboardList },
       { href: "/events", label: "Events", icon: CalendarDays },
@@ -91,7 +93,7 @@ const GROUPS: { title: string; hrefs: string[] }[] = [
   { title: "Dokumento at tulong", hrefs: ["/appointment", "/barangay-id", "/ayuda", "/reklamo", "/hiraman"] },
   { title: "Eleksyon at boto", hrefs: ["/presinto", "/botohan", "/survey"] },
   { title: "Negosyo at trabaho", hrefs: ["/tindahan", "/hiring", "/skills"] },
-  { title: "Komunidad", hrefs: ["/chat", "/pabatid", "/board", "/events", "/register-event", "/liga", "/purok", "/lost-found"] },
+  { title: "Komunidad", hrefs: ["/chat", "/pabatid", "/board", "/events", "/raffle", "/register-event", "/liga", "/purok", "/lost-found"] },
   { title: "Barangay", hrefs: ["/pondo", "/proyekto", "/desisyon", "/mapa"] },
 ];
 
