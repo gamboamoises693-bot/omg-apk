@@ -24,6 +24,7 @@ import {
   type RaffleRoundCfg,
 } from "@/lib/raffle";
 import { Button, Card, Input, Spinner } from "@/components/ui";
+import { AdminRaffleReset } from "@/components/admin/AdminRaffleReset";
 import { useToast } from "@/components/Toast";
 
 interface Person {
@@ -78,7 +79,6 @@ export function AdminRaffle() {
   const toast = useToast();
   const { config, rounds: publicRounds, claims, loaded } = useRaffle();
   const now = useNow(1000);
-  const [enabled, setEnabled] = useState(false);
   const [startAt, setStartAt] = useState(toInput(undefined, DEFAULT_START_ISO));
   const [cutoffAt, setCutoffAt] = useState("");
   const [drawAt, setDrawAt] = useState("");
@@ -96,7 +96,6 @@ export function AdminRaffle() {
   // Fill the form once from what is saved.
   useEffect(() => {
     if (!loaded || loadedForm) return;
-    setEnabled(config?.enabled ?? false);
     setStartAt(toInput(config?.startAt, DEFAULT_START_ISO));
     setCutoffAt(toInput(config?.cutoffAt));
     setDrawAt(toInput(config?.drawAt));
@@ -146,8 +145,8 @@ export function AdminRaffle() {
     if (locked) return toast("Nasimulan na ang bunutan. Hindi na mababago ang setup.", "error");
     setBusy("save");
     try {
+      // merge: the on/off switch above is saved on its own and must not be overwritten here.
       await setDoc(doc(db, "settings", "raffle"), {
-        enabled,
         startAt: Timestamp.fromMillis(s),
         cutoffAt: Timestamp.fromMillis(c),
         drawAt: Timestamp.fromMillis(d),
@@ -159,9 +158,23 @@ export function AdminRaffle() {
         onePerPerson: onePer,
         reservesPerRound: reserves,
         updatedAt: serverTimestamp(),
-      });
-      logActivity("Raffle", `Na-save ang setup ng raffle (${enabled ? "bukas" : "sarado"}, ${cleaned.length} round)`);
+      }, { merge: true });
+      logActivity("Raffle", `Na-save ang setup ng raffle (${cleaned.length} round)`);
       toast("Na-save ang setup ng raffle.");
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  /** Shows or hides the raffle for everyone. Works at any time, also after the draw; nothing is deleted. */
+  const setVisible = async (next: boolean) => {
+    setBusy("visible");
+    try {
+      await setDoc(doc(db, "settings", "raffle"), { enabled: next, updatedAt: serverTimestamp() }, { merge: true });
+      logActivity("Raffle", next ? "Ipinakita ang raffle sa lahat" : "Itinago ang raffle");
+      toast(next ? "Nakikita na ng lahat ang raffle." : "Nakatago na ang raffle.");
     } catch (err) {
       toast(friendlyError(err), "error");
     } finally {
@@ -299,33 +312,6 @@ export function AdminRaffle() {
     }
   };
 
-  /** For tests only: clears the entries, all rounds, claims and the old single-draw documents. */
-  const reset = async () => {
-    const typed = prompt('PANGTEST LANG. Buburahin ang LAHAT ng entries, resulta at claims ng raffle. I-type ang RESET para ituloy.');
-    if (typed?.trim().toUpperCase() !== "RESET") return;
-    setBusy("reset");
-    try {
-      let total = 0;
-      for (const name of ["raffleEntries", "raffleRounds", "rafflePublicRounds", "raffleClaims", "rafflePublic", "raffleResult"]) {
-        const snap = await getDocs(collection(db, name));
-        for (let i = 0; i < snap.docs.length; i += 400) {
-          const batch = writeBatch(db);
-          snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
-          await batch.commit();
-          total += Math.min(400, snap.docs.length - i);
-        }
-      }
-      logActivity("Raffle", `Na-reset ang raffle (${total} dokumento ang binura)`);
-      toast("Na-reset na ang raffle.");
-      setReel("");
-      refresh();
-    } catch (err) {
-      toast(friendlyError(err), "error");
-    } finally {
-      setBusy("");
-    }
-  };
-
   const phaseText = done ? "Tapos na" : drawn > 0 ? `Round ${drawn} ng ${savedRounds.length}` : !config?.enabled ? "Sarado (naka-off)" : now < (config.startAt?.toMillis() ?? 0) ? "Hindi pa nagsisimula" : now < cutoffMs ? "Bukas ang entries" : "Sarado na ang entries";
 
   return (
@@ -334,14 +320,20 @@ export function AdminRaffle() {
         <b className="text-gold">Developer lang.</b> Ang mga <b>verified na resident</b> ay kusang magkakaroon ng isang entry hanggang sa cutoff. Hindi kasali ang admin at opisyal. Hatiin ang raffle sa mga <b>round</b>: minor muna, at ang <b>major prize</b> ang huli. Ang bilang ng premyo sa round ang bilang ng mananalo.
       </p>
 
-      <Card className="space-y-3">
-        <h2 className="font-extrabold">Setup ng raffle</h2>
-        <label className="flex items-center justify-between gap-3 text-sm font-semibold">
-          Bukas ang raffle (nakikita ng lahat)
-          <button type="button" role="switch" aria-checked={enabled} onClick={() => setEnabled(!enabled)} disabled={locked} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${enabled ? "bg-brand" : "bg-gray-300"}`}>
-            <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${enabled ? "left-[1.4rem]" : "left-0.5"}`} />
+      <Card className="space-y-2">
+        <label className="flex items-center justify-between gap-3 font-bold">
+          Ipakita ang raffle sa lahat
+          <button type="button" role="switch" aria-checked={!!config?.enabled} aria-label="Ipakita ang raffle sa lahat" disabled={busy === "visible"} onClick={() => setVisible(!config?.enabled)} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${config?.enabled ? "bg-brand" : "bg-gray-300"}`}>
+            <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${config?.enabled ? "left-[1.4rem]" : "left-0.5"}`} />
           </button>
         </label>
+        <p className="text-xs text-gray-600">
+          Para sa espesyal na event lang. <b>I-off</b> para itago ang raffle sa Home at sa pahinang Raffle (walang entry na ibibigay, at hindi mabubunot). Hindi nabubura ang mga entry at resulta, at pwede itong gamitin <b>kahit pagkatapos ng bunutan</b>. <b>I-on</b> para ipakita ulit. Ang raffle ay lalabas lang kapag naka-on at kumpleto ang petsa at mga premyo.
+        </p>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="font-extrabold">Setup ng raffle</h2>
         <Input label="Simula (default Dec 28, 2026)" type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} disabled={locked} />
         <Input label="Cutoff ng entries" type="datetime-local" value={cutoffAt} onChange={(e) => setCutoffAt(e.target.value)} disabled={locked} />
         <Input label="Oras ng bunutan (araw ng cutoff)" type="datetime-local" value={drawAt} onChange={(e) => setDrawAt(e.target.value)} disabled={locked} />
@@ -492,7 +484,7 @@ export function AdminRaffle() {
         );
       })}
 
-      <Button variant="outline" full className="!text-red-700" loading={busy === "reset"} onClick={reset}>I-reset ang raffle (pangtest lang)</Button>
+      <AdminRaffleReset onDone={() => { setReel(""); refresh(); }} />
     </div>
   );
 }
