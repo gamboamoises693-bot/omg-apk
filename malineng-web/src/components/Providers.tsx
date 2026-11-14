@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AuthProvider } from "@/context/AuthContext";
+import { LanguageProvider } from "@/lib/i18n";
 import { AdminPendingProvider } from "@/context/AdminPendingContext";
 import { ToastProvider } from "./Toast";
 import { AdminAlertWatcher } from "./admin/AdminAlertWatcher";
@@ -15,6 +16,7 @@ import { RegisterServiceWorker } from "./InstallApp";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
+    <LanguageProvider>
     <AuthProvider>
       {/* One set of "pending approval" listeners for admins: badges + phone alerts. */}
       <AdminPendingProvider>
@@ -35,5 +37,6 @@ export function Providers({ children }: { children: ReactNode }) {
         </ToastProvider>
       </AdminPendingProvider>
     </AuthProvider>
+    </LanguageProvider>
   );
 }
