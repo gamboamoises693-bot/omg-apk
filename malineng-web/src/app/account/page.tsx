@@ -17,6 +17,7 @@ import type { Job, Listing } from "@/lib/types";
 import { Badge, Button, Card, ErrorText, Input, LinkButton, Modal, PageHeader, SectionTitle, Select, Spinner } from "@/components/ui";
 import { LoginGate } from "@/components/LoginGate";
 import { TextSizeSetting } from "@/components/TextSizeSetting";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { InstallAppCard } from "@/components/InstallApp";
 import { NotifySettings } from "@/components/NotifySettings";
 import { useToast } from "@/components/Toast";
@@ -419,6 +420,12 @@ export default function AccountPage() {
       <SectionTitle>Mga Notification</SectionTitle>
       <Card>
         <NotifySettings />
+      </Card>
+
+      <SectionTitle>Wika / Language</SectionTitle>
+      <Card className="flex items-center justify-between gap-3">
+        <p className="text-sm text-gray-600">Piliin ang wika ng site. Para sa phone na ito lang. Choose the site language (this phone only).</p>
+        <LanguageToggle />
       </Card>
 
       <SectionTitle>Laki ng text (Aa)</SectionTitle>

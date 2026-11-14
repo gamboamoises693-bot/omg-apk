@@ -5,6 +5,7 @@ import { BARANGAY_CITY } from "@/lib/constants";
 import { AdminShieldLink } from "./AdminShieldLink";
 import { PabatidBell } from "./PabatidBell";
 import { LogoButton, LogoMark } from "./BarangayLogo";
+import { LanguageToggle } from "./LanguageToggle";
 
 /** Slim app bar for inner pages. Home draws its own greeting header instead. */
 export function TopBar() {
@@ -22,6 +23,7 @@ export function TopBar() {
           </span>
         </LogoButton>
         <div className="flex items-center gap-2">
+          <LanguageToggle dark />
           <PabatidBell />
           <AdminShieldLink />
         </div>

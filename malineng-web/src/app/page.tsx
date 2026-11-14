@@ -39,6 +39,7 @@ import { InstallBanner } from "@/components/InstallApp";
 import { ServicesMenu } from "@/components/ServicesMenu";
 import { SiteFooter } from "@/components/SiteFooter";
 import { MgMark } from "@/components/MgMark";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { WatchVideos } from "@/components/WatchVideos";
 import { RaffleCard } from "@/components/RaffleCard";
 import { useWebAccess } from "@/lib/webAccess";
@@ -211,6 +212,7 @@ export default function HomePage() {
               <span className="block truncate text-[0.7rem] text-white/70">{BARANGAY_CITY}</span>
             </span>
           </LogoButton>
+          <LanguageToggle dark />
           <PabatidBell />
           <AdminShieldLink />
         </div>
