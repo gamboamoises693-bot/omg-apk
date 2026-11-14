@@ -39,8 +39,8 @@ export const ACTION_DEFS: ActionDef[] = [
   { key: "balik", name: "Hiraman: Pagbabalik ng gamit", ui: "Hiraman → Hiram", wired: true },
   { key: "amb", name: "Ambulansya: Schedule", ui: "Ambulansya", wired: true },
   { key: "ambe", name: "Ambulansya: Emergency", ui: "Ambulansya", wired: true, hasFast: true },
-  { key: "ayuda", name: "Ayuda: Paglabas ng ayuda", ui: "Ayuda", wired: false },
-  { key: "des", name: "Mahalagang desisyon", ui: "Desisyon", wired: false },
+  { key: "ayuda", name: "Ayuda: Paglabas ng ayuda", ui: "Ayuda", wired: true },
+  { key: "des", name: "Mahalagang desisyon", ui: "Desisyon", wired: true },
   { key: "dok", name: "Clearance at dokumento", ui: "Dokumento", wired: false },
   { key: "post", name: "Bagong post, paninda, trabaho", ui: "I-approve", wired: false },
 ];

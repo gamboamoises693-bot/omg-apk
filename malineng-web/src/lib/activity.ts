@@ -50,6 +50,7 @@ export const ACTIVITY_TYPES = [
   "Videos",
   "Chat",
   "Approval",
+  "Desisyon",
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 

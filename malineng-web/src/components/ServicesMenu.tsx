@@ -12,6 +12,7 @@ import {
   ClipboardList,
   FileWarning,
   HandCoins,
+  Gavel,
   HardHat,
   HeartPulse,
   IdCard,
@@ -73,6 +74,7 @@ const BY_HREF: Record<string, Service> = Object.fromEntries(
       { href: "/lost-found", label: "Lost & Found", icon: Search },
       { href: "/skills", label: "Skills", icon: Wrench },
       { href: "/proyekto", label: "Proyekto", icon: HardHat },
+      { href: "/desisyon", label: "Mga Desisyon", icon: Gavel },
       { href: "/board", label: "Board", icon: MessagesSquare },
       { href: "/register-event", label: "Magpa-rehistro", icon: ClipboardList },
       { href: "/events", label: "Events", icon: CalendarDays },
@@ -90,7 +92,7 @@ const GROUPS: { title: string; hrefs: string[] }[] = [
   { title: "Eleksyon at boto", hrefs: ["/presinto", "/botohan", "/survey"] },
   { title: "Negosyo at trabaho", hrefs: ["/tindahan", "/hiring", "/skills"] },
   { title: "Komunidad", hrefs: ["/chat", "/pabatid", "/board", "/events", "/register-event", "/liga", "/purok", "/lost-found"] },
-  { title: "Barangay", hrefs: ["/pondo", "/proyekto", "/mapa"] },
+  { title: "Barangay", hrefs: ["/pondo", "/proyekto", "/desisyon", "/mapa"] },
 ];
 
 /** Hamburger button + side drawer (same look as the admin menu) with every service, in groups. */
