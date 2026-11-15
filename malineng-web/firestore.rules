@@ -530,6 +530,14 @@ service cloud.firestore {
         && (existing().uid != request.auth.uid || isSuperAdmin())
         && changedOnly(['status', 'reason', 'reviewedBy', 'reviewedByName', 'reviewedAt'])
         && incoming().status in ['pending', 'verified', 'rejected'];
+      // After an approved profile change, the details printed with the selfie follow the profile.
+      allow update: if isAdmin()
+        && changedOnly(['fullName', 'purok', 'birthday', 'contact'])
+        && getAfter(/databases/$(database)/documents/profileChanges/$(uid)).data.status == 'approved'
+        && incoming().fullName == getAfter(/databases/$(database)/documents/profileChanges/$(uid)).data.requested.fullName
+        && incoming().purok == getAfter(/databases/$(database)/documents/profileChanges/$(uid)).data.requested.purok
+        && incoming().birthday == getAfter(/databases/$(database)/documents/profileChanges/$(uid)).data.requested.birthday
+        && incoming().contact == getAfter(/databases/$(database)/documents/profileChanges/$(uid)).data.requested.contact;
       allow delete: if isSelf(uid) || isSuperAdmin();
     }
 

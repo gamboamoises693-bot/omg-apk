@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { collection, doc, query, serverTimestamp, where, writeBatch } from "firebase/firestore";
+import { collection, doc, getDoc, query, serverTimestamp, where, writeBatch } from "firebase/firestore";
 import { UserCog } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -43,6 +43,9 @@ function ChangeCard({ c }: { c: ProfileChange }) {
           if (c.current.contact && (await phoneOwner(c.current.contact, c.uid)) === "mine") batch.delete(doc(db, "phoneIndex", c.current.contact));
         }
         batch.update(doc(db, "users", c.uid), { ...c.requested });
+        // Keep the Barangay ID check (verified badge name) and the selfie record in step with the new details.
+        if ((await getDoc(doc(db, "verifiedUsers", c.uid))).exists()) batch.update(doc(db, "verifiedUsers", c.uid), { name: c.requested.fullName });
+        if ((await getDoc(doc(db, "verifications", c.uid))).exists()) batch.update(doc(db, "verifications", c.uid), { ...c.requested });
       }
       await batch.commit();
       const what = diff.map((k) => `${FIELD_LABEL[k]} ${c.current[k] || "—"} → ${c.requested[k] || "—"}`).join(", ");
