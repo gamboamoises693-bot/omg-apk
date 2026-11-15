@@ -1604,6 +1604,405 @@
           "h": 1170
         }
       ]
+    },
+    {
+      "id": "admin-ayuda",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano maglagay ng record ng ayuda",
+        "en": "How to add an aid record"
+      },
+      "steps": [
+        {
+          "tl": "Isulat ang control number at buong pangalan ng benepisyaryo.",
+          "en": "Write the control number and the full name of the beneficiary.",
+          "img": "admin-ayuda-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Ilagay ang programa, halimbawa AICS, 4Ps o Senior Pension.",
+          "en": "Enter the programme, for example AICS, 4Ps or Senior Pension.",
+          "img": "admin-ayuda-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Piliin ang status: qualified, scheduled o claimed.",
+          "en": "Choose the status: qualified, scheduled or claimed.",
+          "img": "admin-ayuda-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang I-save. Makikita na ito ng residente sa Ayuda Checker.",
+          "en": "Tap Save. The resident can now see it in the Aid Checker.",
+          "img": "admin-ayuda-4.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Maraming tao? I-paste ang listahan (CSV) dito at pindutin ang I-import.",
+          "en": "Many people? Paste the list (CSV) here and tap Import.",
+          "img": "admin-ayuda-5.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-ayudabatch",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano gumawa ng batch ng ayuda",
+        "en": "How to make an aid batch"
+      },
+      "steps": [
+        {
+          "tl": "Pindutin ang Bagong batch ng ayuda para ilista ang mga makakatanggap sa isang paglabas ng ayuda. May approval ito ng mga opisyal bago ilabas.",
+          "en": "Tap New aid batch to list who receives aid in one release. The officials approve it before it goes out.",
+          "img": "admin-ayudabatch-1.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-households",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano tingnan ang mga household",
+        "en": "How to see the households"
+      },
+      "steps": [
+        {
+          "tl": "Piliin ang purok para makita ang mga household doon.",
+          "en": "Pick a purok to see the households there.",
+          "img": "admin-households-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang I-export bilang CSV para sa census o ulat.",
+          "en": "Tap Export as CSV for the census or a report.",
+          "img": "admin-households-2.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-sektor",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano ilista ang Senior, PWD at Solo Parent",
+        "en": "How to list Seniors, PWDs and Solo Parents"
+      },
+      "steps": [
+        {
+          "tl": "Pindutin ang Idagdag para maglagay ng senior, PWD o solo parent.",
+          "en": "Tap Add to put in a senior, a PWD or a solo parent.",
+          "img": "admin-sektor-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Hanapin ang tao sa pangalan o ID number.",
+          "en": "Find a person by name or ID number.",
+          "img": "admin-sektor-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang CSV para ma-export ang listahan.",
+          "en": "Tap CSV to export the list.",
+          "img": "admin-sektor-3.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-blotter",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano asikasuhin ang blotter at reklamo",
+        "en": "How to handle blotter and complaints"
+      },
+      "steps": [
+        {
+          "tl": "Sa Bukas makikita ang mga reklamong hindi pa tapos.",
+          "en": "Under Open you see complaints that are not finished yet.",
+          "img": "admin-blotter-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Sa Tapos na makikita ang mga naayos na.",
+          "en": "Under Done you see the ones that were settled.",
+          "img": "admin-blotter-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Hanapin ang kaso sa case number, pangalan o purok.",
+          "en": "Find a case by case number, name or purok.",
+          "img": "admin-blotter-3.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-proyekto",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano maglagay ng proyekto",
+        "en": "How to add a project"
+      },
+      "steps": [
+        {
+          "tl": "Pindutin ang Bagong proyekto para maglagay ng detalye, badyet, progreso at larawan. Lalabas ito sa Mga Proyekto ng residente.",
+          "en": "Tap New project to add the details, budget, progress and photos. It shows in the residents' Projects page.",
+          "img": "admin-proyekto-1.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-events",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano maglagay ng event",
+        "en": "How to add an event"
+      },
+      "steps": [
+        {
+          "tl": "Isulat ang pamagat ng event, halimbawa Clean-up Drive.",
+          "en": "Write the title of the event, for example Clean-up Drive.",
+          "img": "admin-events-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Piliin ang petsa at isulat ang lugar at detalye.",
+          "en": "Pick the date and write the place and details.",
+          "img": "admin-events-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang I-add ang Event. Lalabas ito sa Mga Event ng residente.",
+          "en": "Tap Add Event. It shows in the residents' Events page.",
+          "img": "admin-events-3.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-mapa",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano ayusin ang Mapa",
+        "en": "How to manage the Map"
+      },
+      "steps": [
+        {
+          "tl": "Sa Naghihintay makikita ang mga pin na inilagay ng residente na kailangan ng approval.",
+          "en": "Under Waiting you see pins residents added that need approval.",
+          "img": "admin-mapa-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Mag-pin para ikaw mismo ang maglagay ng lugar, halimbawa Evacuation Center.",
+          "en": "Tap Pin to add a place yourself, for example an Evacuation Center.",
+          "img": "admin-mapa-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Buksan ang mapa para makita ang lahat ng pin.",
+          "en": "Tap Open the map to see all pins.",
+          "img": "admin-mapa-3.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-polls",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano gumawa ng botohan",
+        "en": "How to make a poll"
+      },
+      "steps": [
+        {
+          "tl": "Isulat ang tanong, halimbawa Anong araw ang clean-up drive?",
+          "en": "Write the question, for example Which day is the clean-up drive?",
+          "img": "admin-polls-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Isulat ang mga pagpipilian, isa bawat linya.",
+          "en": "Write the choices, one per line.",
+          "img": "admin-polls-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Gumawa ng Botohan. Verified na residente lang ang makakaboto.",
+          "en": "Tap Make Poll. Only verified residents can vote.",
+          "img": "admin-polls-3.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-chat",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano bantayan ang Chat",
+        "en": "How to moderate the Chat"
+      },
+      "steps": [
+        {
+          "tl": "Sa Chat makikita ang mga mensaheng ni-report ng residente. Burahin o balewalain.",
+          "en": "Under Chat you see messages residents reported. Delete or dismiss them.",
+          "img": "admin-chat-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Sa Video makikita ang mga report sa comment ng mga video.",
+          "en": "Under Video you see reports on video comments.",
+          "img": "admin-chat-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Sa Naka-mute makikita ang mga naka-mute. Pwede mong alisin ang mute.",
+          "en": "Under Muted you see who is muted. You can lift the mute.",
+          "img": "admin-chat-3.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-purok",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano magbigay ng Purok Points",
+        "en": "How to give Purok Points"
+      },
+      "steps": [
+        {
+          "tl": "Pindutin ang +5, +10 o -5 sa purok para dagdagan o bawasan ang points.",
+          "en": "Tap +5, +10 or -5 on a purok to add or remove points.",
+          "img": "admin-purok-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang + Clean-up Drive kapag may natapos na clean-up (+20 points).",
+          "en": "Tap + Clean-up Drive when a clean-up is done (+20 points).",
+          "img": "admin-purok-2.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-report",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano gumawa ng buwanang report",
+        "en": "How to make the monthly report"
+      },
+      "steps": [
+        {
+          "tl": "Piliin ang buwan ng report.",
+          "en": "Pick the month of the report.",
+          "img": "admin-report-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Gumawa ng report. Pwede itong i-print o i-save bilang PDF.",
+          "en": "Tap Make report. You can print it or save it as PDF.",
+          "img": "admin-report-2.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-raffleverify",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano i-verify ang nanalo sa raffle",
+        "en": "How to verify a raffle winner"
+      },
+      "steps": [
+        {
+          "tl": "Pindutin ang Buksan ang scanner, tapos i-scan ang QR ng nanalo. Lalabas ang Barangay ID niya at kung nakuha na ang premyo.",
+          "en": "Tap Open scanner, then scan the winner's QR. It shows their Barangay ID and whether the prize was already claimed.",
+          "img": "admin-raffleverify-1.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-desisyon",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano maglagay ng mahalagang desisyon",
+        "en": "How to add an important decision"
+      },
+      "steps": [
+        {
+          "tl": "Pindutin ang Bagong desisyon. Dadaan ito sa approval ng mga opisyal bago lumabas sa residente (walang halaga ng pera sa publiko).",
+          "en": "Tap New decision. It goes through the officials' approval before residents see it (no amount of money is shown publicly).",
+          "img": "admin-desisyon-1.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
     }
   ]
 }
