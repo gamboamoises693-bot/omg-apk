@@ -16,9 +16,11 @@ export interface ThemeConfig {
   /** YYYY-MM-DD. The year is ignored: the season repeats every year. */
   from: string;
   to: string;
+  /** Christmas music (a soft carol that residents can switch off). Only plays while the Christmas look is on. */
+  music: boolean;
 }
 
-export const DEFAULT_THEME: ThemeConfig = { xmas: "auto", from: "2026-11-15", to: "2027-01-06" };
+export const DEFAULT_THEME: ThemeConfig = { xmas: "auto", from: "2026-11-15", to: "2027-01-06", music: true };
 
 /** Month and day as one number (Nov 15 = 1115) from a YYYY-MM-DD string. NaN when the text is not a date. */
 function monthDay(iso: string): number {
@@ -54,6 +56,7 @@ function subscribe(cb: () => void): () => void {
           xmas: d.xmas === "on" || d.xmas === "off" ? d.xmas : "auto",
           from: typeof d.from === "string" && d.from ? d.from : DEFAULT_THEME.from,
           to: typeof d.to === "string" && d.to ? d.to : DEFAULT_THEME.to,
+          music: d.music !== false,
         };
         listeners.forEach((l) => l());
       },
@@ -76,4 +79,10 @@ export function useTheme(): ThemeConfig {
 /** True while the Christmas look is on (login, Home, menus, raffle and sponsors all follow this). */
 export function useXmas(): boolean {
   return isXmas(useTheme(), Date.now());
+}
+
+/** True while the Developer allows Christmas music and the Christmas look is on. */
+export function useXmasMusicAllowed(): boolean {
+  const theme = useTheme();
+  return theme.music && isXmas(theme, Date.now());
 }

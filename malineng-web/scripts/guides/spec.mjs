@@ -19,6 +19,9 @@ export const GUIDES = [
         tl: "Sa emergency, pindutin ang pulang SOS sa gitna para tumawag agad.", en: "In an emergency, tap the red SOS in the middle to call right away." },
       { ring: 'a:visible:has-text("Account")',
         tl: "Sa Account makikita ang profile mo, ang Barangay ID mo, at ang pag-verify ng account.", en: "In Account you will find your profile, your Barangay ID, and account verification." },
+      // Only in the Christmas season (the music button is not there the rest of the year).
+      { optional: true, ring: "[data-xmas-music]",
+        tl: "Tuwing Pasko may mahinang tugtog. Pindutin ang pulang music button sa kaliwang ibaba para patayin o buksan ito.", en: "At Christmas there is soft music. Tap the red music button at the bottom left to turn it off or on." },
     ],
   },
   {

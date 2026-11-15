@@ -104,6 +104,11 @@ for (const g of GUIDES) {
       for (const a of s.before ?? []) await act(page, a);
       await dismiss(page);
       await page.waitForTimeout(300);
+      // A step marked `optional` is skipped when its button is not on the screen (for example the Christmas music button out of season).
+      if (s.optional && (await page.locator(s.ring).count()) === 0) {
+        console.log(`  step ${i + 1}: skipped (not on screen)`);
+        continue;
+      }
       console.log(`  step ${i + 1}: ${page.url().replace(BASE, "")}`);
       await ring(page, s.ring, i + 1);
       const img = `${g.id}-${i + 1}.jpg`;
