@@ -57,7 +57,8 @@ async function act(page, a) {
   if (a.click) await page.locator(a.click).first().click({ timeout: 8000 });
   else if (a.fill) await page.locator(a.fill[0]).first().fill(a.fill[1]);
   else if (a.goto) {
-    await page.goto(BASE + a.goto);
+    // __UID__ stands for the sample resident (used by the ID check page).
+    await page.goto(BASE + a.goto.replace("__UID__", process.env.GUIDE_UID || ""));
     await page.waitForTimeout(1800);
     await dismiss(page);
   }

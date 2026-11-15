@@ -71,5 +71,21 @@ export async function seed(selfieFile) {
   });
   await put("settings/raffle", { enabled: B(true), startAt: T(Date.now() - day), cutoffAt: T(Date.now() + 7 * day), drawAt: T(Date.now() + 7 * day), rounds: A([{ mapValue: { fields: { name: S("MAJOR PRIZE"), type: S("maj"), prizes: A([S("Rice cooker")]) } } }]) });
   await put("raffleSponsors/s1", { name: S("Omega Purified Ice"), what: S("Media Noche"), amount: I(1000), tier: S("main"), show: B(true), createdAt: T(Date.now() - day) });
+  // Pages that only show what the Barangay published (decisions, points, league, child health, ID check).
+  await put("decisionsPublic/d1", { title: S("Bagong ilaw sa kalsada ng Purok 3"), kind: S("Proyekto"), detail: S("Aprubado ang paglalagay ng 10 poste ng ilaw sa Purok 3 para sa kaligtasan sa gabi."), decidedAt: T(Date.now() - 3 * day) });
+  await put("decisionsPublic/d2", { title: S("Iskedyul ng pagkolekta ng basura"), kind: S("Patakaran"), detail: S("Tuwing Martes at Biyernes ang pagkolekta ng basura sa lahat ng purok."), decidedAt: T(Date.now() - 9 * day) });
+  for (const [id, purok, points, n] of [["p1", "Purok 1", 120, 3], ["p2", "Purok 2", 95, 2], ["p3", "Purok 3", 60, 1]]) {
+    await put(`purokPoints/${id}`, { purok: S(purok), points: I(points), cleanupCount: I(n) });
+  }
+  await put("children/c1", {
+    name: S("Ana Dela Cruz"), birthday: S(new Date(Date.now() - 100 * day).toISOString().slice(0, 10)), sex: S("Babae"), purok: S("Purok 1"),
+    parentId: S(uid), parentName: S("Juan Dela Cruz"), parentContact: S("09171234567"), notes: S(""), vaccines: { mapValue: { fields: {} } }, createdAt: T(Date.now() - 90 * day),
+  });
+  await put("leagues/l1", { name: S("Liga ng Malineng 2026"), sport: S("Basketball"), status: S("active"), createdAt: T(Date.now() - 10 * day) });
+  for (const [id, name, purok] of [["t1", "Purok 1 Bulls", "Purok 1"], ["t2", "Purok 2 Eagles", "Purok 2"]]) {
+    await put(`ligaTeams/${id}`, { leagueId: S("l1"), name: S(name), purok: S(purok), captainId: S("cap"), captainName: S("Kapitan ng Team"), contact: S("09170000000"), players: A([S("Pedro"), S("Mario"), S("Jose")]), status: S("approved"), createdAt: T(Date.now() - 8 * day) });
+  }
+  await put("ligaGames/g1", { leagueId: S("l1"), homeId: S("t1"), awayId: S("t2"), homeName: S("Purok 1 Bulls"), awayName: S("Purok 2 Eagles"), scheduledAt: S(new Date(Date.now() + 2 * day).toISOString().slice(0, 11) + "18:00"), venue: S("Covered Court"), status: S("scheduled"), homeScore: I(0), awayScore: I(0), period: S("") });
+  await put("ligaGames/g0", { leagueId: S("l1"), homeId: S("t2"), awayId: S("t1"), homeName: S("Purok 2 Eagles"), awayName: S("Purok 1 Bulls"), scheduledAt: S(new Date(Date.now() - 2 * day).toISOString().slice(0, 11) + "18:00"), venue: S("Covered Court"), status: S("final"), homeScore: I(58), awayScore: I(61), period: S("") });
   return uid;
 }

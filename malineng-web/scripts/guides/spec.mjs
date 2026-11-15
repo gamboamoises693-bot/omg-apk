@@ -341,4 +341,54 @@ export const GUIDES = [
         tl: "Pindutin ang I-save. Tinutulungan nito ang Barangay sa ayuda at serbisyo.", en: "Tap Save. This helps the Barangay with aid and services." },
     ],
   },
+  {
+    id: "liga", routes: ["/liga"], group: "Komunidad",
+    title: { tl: "Paano sundan ang Liga at Palaro", en: "How to follow the League and Games" },
+    steps: [
+      { before: [go("/liga/")], ring: 'button:has-text("Mga laro")',
+        tl: "Sa Mga laro makikita ang mga darating na laro, ang oras at ang score ng mga tapos na.", en: "Under Games you can see upcoming games, the time, and the scores of finished ones." },
+      { ring: 'button:has-text("Standings")',
+        tl: "Sa Standings makikita ang ranggo ng mga team.", en: "Under Standings you can see how the teams rank." },
+      { ring: 'button:has-text("Teams")',
+        tl: "Sa Teams makikita ang mga team at manlalaro. May team ang purok ninyo? Magparehistro dito.", en: "Under Teams you can see the teams and players. Does your purok have a team? Register it here." },
+    ],
+  },
+  {
+    id: "purok", routes: ["/purok"], group: "Komunidad",
+    title: { tl: "Paano gumagana ang Purok Points", en: "How Purok Points works" },
+    steps: [
+      { before: [go("/purok/")], ring: "text=Purok 1",
+        tl: "Dito makikita ang ranggo ng mga purok ayon sa points. Ang nangunguna ay may gintong kahon.", en: "Here you see the ranking of the puroks by points. The leader has a gold frame." },
+      { ring: "text=clean-up drive",
+        tl: "Kumikita ng points ang purok sa bawat clean-up at bayanihan. Sumali para umangat ang purok mo!", en: "A purok earns points for every clean-up and community effort. Join in to lift your purok!" },
+    ],
+  },
+  {
+    id: "desisyon", routes: ["/desisyon"], group: "Barangay",
+    title: { tl: "Paano basahin ang Mga Desisyon", en: "How to read the Decisions" },
+    steps: [
+      { before: [go("/desisyon/")], ring: "article >> nth=0",
+        tl: "Dito nakalathala ang mahahalagang desisyon na inaprubahan ng mga opisyal ng Barangay.", en: "Here are the important decisions the Barangay officials approved." },
+      { ring: "text=/Inaprubahan: /",
+        tl: "Makikita ang petsa ng pag-apruba. Hindi ipinapakita dito ang halaga ng pera.", en: "You can see the date it was approved. The amount of money is not shown here." },
+    ],
+  },
+  {
+    id: "kalusugan", routes: ["/kalusugan"], group: "Emergency at kalusugan",
+    title: { tl: "Paano makita ang bakuna ng anak mo", en: "How to see your child's vaccines" },
+    steps: [
+      { before: [go("/kalusugan/")], ring: "text=Ana Dela Cruz",
+        tl: "Kapag naka-link ang anak mo sa account mo, makikita mo dito ang record niya. Ang BHW ang nag-uulat nito sa Health Center.", en: "When your child is linked to your account, you see their record here. The health worker enters it at the Health Center." },
+      { ring: "p:has-text('Lampas na'), p:has-text('Susunod')",
+        tl: "Sinasabi dito kung ano ang susunod na bakuna at kailan. Dalhin ang baby book sa Health Center.", en: "This says which vaccine is next and when. Bring the baby book to the Health Center." },
+    ],
+  },
+  {
+    id: "id-check", routes: ["/id-check"], group: "Dokumento at tulong",
+    title: { tl: "Paano suriin ang Barangay ID", en: "How to check a Barangay ID" },
+    steps: [
+      { before: [go("/id-check/?u=__UID__")], ring: "text=Juan Dela Cruz",
+        tl: "I-scan ang QR code sa Barangay ID gamit ang camera ng phone. Lalabas ang pangalan at kung valid ang ID.", en: "Scan the QR code on the Barangay ID with your phone camera. It shows the name and whether the ID is valid." },
+    ],
+  },
 ];
