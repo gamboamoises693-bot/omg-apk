@@ -75,6 +75,7 @@ import { AdminApprovals } from "@/components/admin/AdminApprovals";
 import { AdminRaffle } from "@/components/admin/AdminRaffle";
 import { AdminRaffleDonations } from "@/components/admin/AdminRaffleDonations";
 import { AdminRaffleVerify } from "@/components/admin/AdminRaffleVerify";
+import { DevInbox, useDevInboxCount } from "@/components/DevInbox";
 import { AdminDecisions } from "@/components/admin/AdminDecisions";
 import { useXmas } from "@/lib/raffle";
 import { XmasLights, XmasSnow, XmasStar } from "@/components/Xmas";
@@ -141,6 +142,7 @@ const GROUPS: Group[] = [
     title: "Super Admin lang",
     superOnly: true,
     sections: [
+      { key: "devchat", label: "Mensahe sa Developer", icon: MessageCircle, Component: DevInbox },
       { key: "users", label: "Users at Roles", icon: Crown, Component: AdminUsers },
       { key: "approvals", label: "Approval", icon: ClipboardCheck, Component: AdminApprovals },
       { key: "raffle", label: "Raffle", icon: Gift, Component: AdminRaffle },
@@ -160,6 +162,8 @@ function Badge({ n }: { n?: number }) {
 export default function AdminPage() {
   const { isSuperAdmin, isAdmin, canBotika, canBorrowAdmin, isOfficer, canLiga, profile } = useAuth();
   const xmas = useXmas();
+  // People waiting for the Developer's answer (shown on the "Mensahe sa Developer" menu item).
+  const devWaiting = useDevInboxCount(isSuperAdmin);
   const { byTab, total } = useAdminPending();
   const groups = useMemo(
     () =>
@@ -237,7 +241,7 @@ export default function AdminPage() {
           </p>
           <p className="flex items-center gap-1.5 text-base font-extrabold text-brand-deep">
             <ActiveIcon className="h-4 w-4 text-brand" aria-hidden /> {active.label}
-            <Badge n={byTab[active.key]} />
+            <Badge n={active.key === "devchat" ? devWaiting : byTab[active.key]} />
           </p>
         </div>
       </div>
@@ -292,7 +296,7 @@ export default function AdminPage() {
                           <Icon className="h-[1.1rem] w-[1.1rem]" aria-hidden />
                         </span>
                         <span className={`min-w-0 flex-1 truncate text-sm ${on ? "font-bold" : "font-medium"} ${g.superOnly ? "text-purple-700" : "text-gray-800"}`}>{s.label}</span>
-                        <Badge n={byTab[s.key]} />
+                        <Badge n={s.key === "devchat" ? devWaiting : byTab[s.key]} />
                       </button>
                     );
                   })}

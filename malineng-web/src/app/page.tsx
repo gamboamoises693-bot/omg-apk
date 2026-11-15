@@ -43,6 +43,8 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { WatchVideos } from "@/components/WatchVideos";
 import { RaffleCard } from "@/components/RaffleCard";
 import { AnnouncementRotator } from "@/components/AnnouncementRotator";
+import { useXmas } from "@/lib/theme";
+import { XmasLights, XmasSnow } from "@/components/Xmas";
 import { useWebAccess } from "@/lib/webAccess";
 import type { PrecinctMeta } from "@/lib/presinto";
 
@@ -147,6 +149,7 @@ function SummaryCard() {
 export default function HomePage() {
   const { profile, isSuperAdmin, isVerified } = useAuth();
   const { settings, loading } = useSettings();
+  const xmas = useXmas();
   const [hello, setHello] = useState("Magandang araw");
   const [stats, setStats] = useState<PublicStats | null>(null);
   const online = useOnlineCount();
@@ -203,8 +206,14 @@ export default function HomePage() {
   return (
     <div>
       {/* Header: barangay identity, greeting, community numbers */}
-      <section className="-mx-4 -mt-4 bg-gradient-to-br from-brand via-brand to-brand-deep px-4 pb-16 pt-4 text-white">
-        <div className="flex items-center gap-2.5">
+      <section className={`relative -mx-4 -mt-4 overflow-hidden px-4 pb-16 text-white ${xmas ? "xmas-card pt-9" : "bg-gradient-to-br from-brand via-brand to-brand-deep pt-4"}`}>
+        {xmas && (
+          <>
+            <XmasLights />
+            <XmasSnow />
+          </>
+        )}
+        <div className="relative flex items-center gap-2.5">
           <ServicesMenu pinPresinto={electionOn} />
           <LogoButton className="flex min-w-0 flex-1 items-center gap-2.5">
             <LogoMark size="h-9 w-9" textClass="text-sm" />
@@ -218,14 +227,14 @@ export default function HomePage() {
           <AdminShieldLink />
         </div>
 
-        <div className="mt-5 flex items-center gap-3.5">
+        <div className="relative mt-5 flex items-center gap-3.5">
           {profile ? (
             <Avatar name={profile.fullName} photo={profile.photoURL} size="h-14 w-14" textClass="text-lg" ring="ring-2 ring-gold/80" />
           ) : (
             <MgMark size="h-14 w-14" className="drop-shadow" />
           )}
           <div className="min-w-0 leading-tight">
-            <p className="text-xs text-white/70">{hello},</p>
+            <p className="text-xs text-white/70">{xmas ? "Maligayang Pasko" : hello},</p>
             <p className="truncate text-2xl font-extrabold tracking-tight">{firstName ?? "Kabarangay"}</p>
             <p className="mt-1 flex items-center gap-1.5 text-[0.7rem] font-semibold text-white/80">
               {profile ? (
