@@ -20,6 +20,19 @@ const DONOR_LABEL = {
   declined: "Hindi natanggap",
 } as const;
 
+/** The business logo when there is one, otherwise the initials. */
+function SponsorMark({ s, className }: { s: { name: string; logo?: string }; className: string }) {
+  if (s.logo) {
+    return (
+      <span className={`flex shrink-0 items-center justify-center overflow-hidden bg-white ${className}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={s.logo} alt={`Logo ng ${s.name}`} className="h-full w-full object-contain p-0.5" loading="lazy" />
+      </span>
+    );
+  }
+  return <span className={`flex shrink-0 items-center justify-center font-black text-brand-deep ${className}`}>{s.name === "Hindi nagpakilala" ? "♥" : initials(s.name)}</span>;
+}
+
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
 /** Sponsors of the raffle (with the exact amounts, for transparency) and the way to pledge a donation. */
@@ -45,7 +58,7 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
         <>
           {main.map((s) => (
             <div key={s.id} className="flex items-center gap-3 rounded-2xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-3 text-[#3B2E05]">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-lg font-black text-brand-deep">{initials(s.name)}</span>
+              <SponsorMark s={s} className="h-14 w-14 rounded-2xl bg-white text-lg" />
               <span className="min-w-0">
                 <span className="block text-[0.65rem] font-extrabold tracking-wider">PANGUNAHING SPONSOR</span>
                 <b className="block truncate">{s.name}</b>
@@ -57,7 +70,7 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
             <ul className="grid grid-cols-2 gap-2">
               {(full ? others : others.slice(0, 4)).map((s) => (
                 <li key={s.id} className="flex flex-col items-center gap-1 rounded-2xl bg-surface p-2.5 text-center">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-light text-base font-black text-brand-deep">{s.name === "Hindi nagpakilala" ? "♥" : initials(s.name)}</span>
+                  <SponsorMark s={s} className="h-14 w-14 rounded-2xl bg-brand-light text-base" />
                   <b className="line-clamp-1 text-sm">{s.name}</b>
                   <span className="line-clamp-1 text-xs text-gray-600">{s.what}</span>
                   {s.amount > 0 && <span className="text-xs font-bold text-brand">{formatPeso(s.amount).replace(".00", "")}</span>}

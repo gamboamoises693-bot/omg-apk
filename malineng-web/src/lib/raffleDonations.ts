@@ -38,6 +38,8 @@ export interface Sponsor {
   tier: "main" | "reg";
   show: boolean;
   donationId?: string;
+  /** Business logo (small JPEG data URL, set by an admin). */
+  logo?: string;
   createdAt?: Timestamp;
 }
 
