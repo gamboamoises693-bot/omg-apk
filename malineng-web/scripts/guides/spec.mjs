@@ -505,6 +505,8 @@ export const GUIDES = [
     steps: [
       { before: [go("/admin/#users")], ring: 'button:has-text("Magdagdag ng account")',
         tl: "Pindutin ito para gumawa ng account ng opisyal (Kapitan, Secretary, BHW, atbp.).", en: "Tap this to create an account for an official (Kapitan, Secretary, BHW, etc.)." },
+      { ring: 'p:has-text("Miyembro kada Purok")',
+        tl: "Dito makikita kung ilang miyembro ang bawat purok, at ilan sa kanila ang verified. Makikita rin ito sa Chat (sa tabi ng bawat Purok).", en: "Here you see how many members each purok has and how many are verified. You also see it in Chat (next to each Purok)." },
       { ring: 'input[placeholder*="Hanapin"]',
         tl: "Hanapin ang user sa pangalan, purok o email.", en: "Find a user by name, purok or email." },
       { ring: 'button:has-text("Di verified")',

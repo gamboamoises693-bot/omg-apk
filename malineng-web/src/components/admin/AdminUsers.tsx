@@ -21,6 +21,7 @@ import type { UserProfile } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, FilterTabs, Modal, Select, Spinner, SelectOther } from "@/components/ui";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { AddAccountForm } from "./AddAccountForm";
+import { PurokCountsCard } from "./PurokCountsCard";
 import { releasePhone } from "@/lib/phone";
 import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
@@ -307,6 +308,9 @@ export function AdminUsers() {
       <Modal open={adding} onClose={() => setAdding(false)} title="Bagong account">
         {adding && <AddAccountForm onDone={() => setAdding(false)} />}
       </Modal>
+      <div className="mb-3">
+        <PurokCountsCard />
+      </div>
       <div className="mb-3 grid grid-cols-4 gap-2">
         {stats.map((s) => (
           <div key={s.label} className="rounded-2xl bg-white p-2.5 text-center shadow-card">
