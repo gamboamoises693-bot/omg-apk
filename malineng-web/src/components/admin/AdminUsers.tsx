@@ -1,11 +1,12 @@
 "use client";
 
 import { IdPhotoUpload } from "@/components/IdPhotoUpload";
+import { compressToDataUrl } from "@/lib/upload";
 import { verifiedSetAdd, verifiedSetRef, verifiedSetRemove } from "@/lib/verified";
 import { useEffect, useMemo, useState } from "react";
-import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, where, writeBatch, setDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch, setDoc } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { Ban, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2, UserPlus } from "lucide-react";
+import { Ban, Camera, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2, UserPlus } from "lucide-react";
 import { firebaseConfig } from "@/config/firebase.config";
 import { deleteListing } from "@/lib/listings";
 import { refreshPublicStatsQuietly } from "@/lib/stats";
@@ -34,6 +35,46 @@ const FILTERS: { key: Filter; label: string }[] = [
 ];
 
 export type UserRow = UserProfile & { id: string };
+
+/** Super Admin only: replace or remove the profile picture of an official (profile pictures are shown for staff accounts). */
+function ProfilePhotoEditor({ u }: { u: UserRow }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+
+  const save = async (photoURL: string) => {
+    setBusy(true);
+    try {
+      await updateDoc(doc(db, "users", u.id), { photoURL });
+      logActivity("Roles", photoURL ? `Pinalitan ang profile picture ni ${u.fullName}` : `Inalis ang profile picture ni ${u.fullName}`, u.id);
+      toast(photoURL ? "Napalitan ang profile picture." : "Inalis ang profile picture.");
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const pick = async (file?: File) => {
+    if (!file) return;
+    try {
+      // 200px square JPEG, under the 60KB rule limit.
+      await save(await compressToDataUrl(file, 200, 0.75, 55_000, true));
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    }
+  };
+
+  return (
+    <Card className="space-y-2 bg-gray-50 shadow-none">
+      <p className="font-bold">Profile picture (opisyal)</p>
+      <label className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white py-3 font-semibold ${busy ? "opacity-60" : ""}`}>
+        <Camera className="h-4 w-4" aria-hidden /> Palitan ang profile picture
+        <input type="file" accept="image/*" hidden disabled={busy} onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+      </label>
+      {u.photoURL && <Button variant="outline" full loading={busy} onClick={() => confirm("Alisin ang profile picture?") && save("")}>Alisin ang profile picture</Button>}
+    </Card>
+  );
+}
 
 export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; onClose: () => void }) {
   const { user, isSuperAdmin } = useAuth();
@@ -173,6 +214,8 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
         <p className="mt-1 text-xs text-gray-400">Nag-register {timeAgo(u.createdAt)}</p>
         </div>
       </div>
+
+      {isSuperAdmin && u.role !== "resident" && <ProfilePhotoEditor u={u} />}
 
       {isSuperAdmin && (
         <Card className="space-y-2 bg-gray-50 shadow-none">
