@@ -145,3 +145,60 @@ textarea {
   from { transform: rotate(-1.4deg); }
   to { transform: rotate(1.4deg); }
 }
+
+/* ---------- Certificate of Appreciation (A4 landscape, ivory paper) ---------- */
+.cert-sheet {
+  position: relative;
+  width: 1123px;
+  height: 794px;
+  overflow: hidden;
+  background: #f6f0df;
+  color: #14233f;
+  font-family: "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.cert-r1 { position: absolute; inset: 24px; border: 2px solid #14233f; }
+.cert-r2 { position: absolute; inset: 32px; border: 1px solid #b8921e; }
+.cert-nt { position: absolute; width: 34px; height: 34px; background: #f6f0df; border: 2px solid #14233f; }
+.cert-wm { position: absolute; left: 50%; top: 53%; width: 520px; height: 520px; margin: -260px 0 0 -260px; opacity: 0.07; border-radius: 50%; }
+.cert-in { position: absolute; inset: 52px 110px 80px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.cert-seal { width: 112px; height: 112px; border-radius: 50%; box-shadow: 0 8px 18px -8px rgba(0, 0, 0, 0.45); }
+.cert-org { margin-top: 10px; font: 600 12px Inter, Arial, sans-serif; letter-spacing: 0.28em; color: #6b5a25; }
+.cert-brgy { margin-top: 3px; font-weight: 700; font-size: 24px; letter-spacing: 0.3em; color: #14233f; }
+.cert-ofc { margin-top: 2px; font: 600 11px Inter, Arial, sans-serif; letter-spacing: 0.3em; color: #6b5a25; }
+.cert-title { margin-top: 22px; display: flex; align-items: center; justify-content: center; gap: 22px; width: 100%; }
+.cert-title i { height: 1px; flex: 1; max-width: 210px; background: linear-gradient(90deg, transparent, #b8921e); }
+.cert-title i:last-child { background: linear-gradient(270deg, transparent, #b8921e); }
+.cert-title h2 { margin: 0; font-weight: 700; font-size: 46px; line-height: 1; letter-spacing: 0.2em; white-space: nowrap; color: #14233f; }
+.cert-sub { margin-top: 8px; font: 600 14px Inter, Arial, sans-serif; letter-spacing: 0.34em; color: #8a6a12; }
+.cert-pres { margin-top: 24px; font-style: italic; font-weight: 500; font-size: 22px; color: #6b5a25; }
+.cert-name { margin-top: 4px; font-style: italic; font-weight: 600; font-size: 66px; line-height: 1.1; padding: 0 60px 4px; border-bottom: 1.5px solid #b8921e; max-width: 100%; overflow-wrap: anywhere; }
+.cert-body { margin-top: 16px; font-weight: 500; font-size: 21px; line-height: 1.55; max-width: 700px; color: #3a3320; }
+.cert-facts { margin-top: 18px; display: grid; grid-template-columns: repeat(4, auto); border-top: 1px solid #cdb77a; border-bottom: 1px solid #cdb77a; }
+.cert-facts div { padding: 9px 28px; border-left: 1px solid #cdb77a; text-align: center; }
+.cert-facts div:first-child { border-left: 0; }
+.cert-facts small { display: block; font: 600 10px Inter, Arial, sans-serif; letter-spacing: 0.22em; color: #8a6a12; }
+.cert-facts b { display: block; margin-top: 2px; font-weight: 700; font-size: 18px; letter-spacing: 0.04em; }
+.cert-sigs { margin-top: auto; display: grid; grid-template-columns: 1fr 70px 1fr; gap: 40px; width: 100%; align-items: end; }
+.cert-sigs > div:not(.cert-qrbox) { padding-top: 7px; border-top: 1.5px solid #14233f; }
+.cert-sigs b { display: block; font-weight: 700; font-size: 19px; letter-spacing: 0.06em; }
+.cert-sigs small { display: block; margin-top: 2px; font: 600 10.5px Inter, Arial, sans-serif; letter-spacing: 0.24em; color: #6b5a25; }
+.cert-qrbox { width: 66px; height: 66px; margin: 0 auto; padding: 4px; border: 1px solid #14233f; border-radius: 4px; }
+.cert-qr { display: block; width: 100%; height: 100%; }
+.cert-ver { position: absolute; left: 110px; right: 110px; bottom: 46px; display: flex; justify-content: space-between; font: 600 10px Inter, Arial, sans-serif; letter-spacing: 0.12em; color: #8a7a45; }
+
+@media print {
+  /* The certificate prints alone, edge to edge on A4 landscape. */
+  body.cert-printing { background: #fff !important; margin: 0 !important; height: 793px !important; overflow: hidden !important; }
+  /* One A4 page (793.7 px tall): a sheet of 794 px would spill a sliver onto a second, blank page. */
+  body.cert-printing .cert-sheet,
+  body.cert-printing .cert-scale { height: 793px !important; }
+  body.cert-printing main { min-height: 0 !important; height: 793px !important; margin: 0 !important; padding: 0 !important; max-width: none !important; overflow: hidden !important; }
+  body.cert-printing .cert-stage { margin: 0 !important; height: 793px !important; overflow: hidden !important; break-after: avoid; break-inside: avoid; }
+  body.cert-printing .cert-stage { width: auto !important; height: auto !important; box-shadow: none !important; border-radius: 0 !important; }
+  body.cert-printing .cert-scale { transform: none !important; }
+  /* Ivory paper in the printer: nothing to print behind the text, the paper itself is the ivory. */
+  body.cert-printing.cert-ivory-paper .cert-sheet,
+  body.cert-printing.cert-ivory-paper .cert-nt { background: transparent !important; }
+}

@@ -471,6 +471,8 @@ export const GUIDES = [
         tl: "Dito makikita ang mga nangakong magbigay (donor at sponsor).", en: "Here you see the people who pledged to give (donors and sponsors)." },
       { ring: 'button:has-text("Tanggapin")',
         tl: "Pindutin ang Tanggapin, tapos tawagan ang donor. Kapag naibigay na sa Barangay Hall, pindutin ang Natanggap na para gumawa ng resibo.", en: "Tap Accept, then call the donor. When it is handed in at the Barangay Hall, tap Received to make a receipt." },
+      { ring: 'a:has-text("Certificate of Appreciation")',
+        tl: "Kapag Natanggap na ang donasyon, pindutin ang Certificate of Appreciation at i-print (A4 na pahalang) kasama ng resibo. Piliin ang puting papel o ivory na papel.", en: "Once the donation is Received, tap Certificate of Appreciation and print it (A4 landscape) with the receipt. Choose white paper or ivory paper." },
       { ring: 'button:has-text("Mga sponsor")',
         tl: "Sa Mga sponsor makikita at maaayos ang listahan ng sponsor na nakikita ng lahat.", en: "Under Sponsors you can see and manage the sponsor list everyone sees." },
     ],
