@@ -16,6 +16,14 @@ export interface CertificateData {
   verifyUrl: string;
 }
 
+export type CertificateTheme = "ivory" | "navy";
+
+/** Long names get a smaller type so they stay on the line and never push the signatures down. */
+export function nameSize(name: string): number {
+  const n = name.length;
+  return n <= 18 ? 66 : n <= 24 ? 54 : n <= 32 ? 44 : n <= 44 ? 36 : 30;
+}
+
 const peso = (n: number) => `₱${n.toLocaleString("en-PH")}`;
 
 /** The QR of the verification page, drawn on the phone (no server). */
@@ -37,11 +45,12 @@ function Qr({ text }: { text: string }) {
 
 /**
  * Certificate of Appreciation for a donor, A4 landscape (1123 x 794 px = 297 x 210 mm at 96 dpi).
- * Ivory paper, navy text, thin gold rules, the official seal of the Barangay. Styles are in globals.css (.cert-*).
+ * Ivory paper (or navy), thin gold rules, the official seal of the Barangay. Styles are in globals.css (.cert-*).
  */
-export function DonorCertificate({ c }: { c: CertificateData }) {
+export function DonorCertificate({ c, theme = "ivory" }: { c: CertificateData; theme?: CertificateTheme }) {
   return (
-    <div className="cert-sheet">
+    // data-no-i18n: the certificate always reads in Filipino, even when the page is switched to English.
+    <div className={`cert-sheet ${theme === "navy" ? "cert-navy" : ""}`} data-no-i18n translate="no">
       <div className="cert-r1" />
       <div className="cert-r2" />
       {["left-[7px] top-[7px]", "right-[7px] top-[7px]", "left-[7px] bottom-[7px]", "right-[7px] bottom-[7px]"].map((p) => (
@@ -58,7 +67,7 @@ export function DonorCertificate({ c }: { c: CertificateData }) {
         <div className="cert-title"><i /><h2>CERTIFICATE</h2><i /></div>
         <div className="cert-sub">OF APPRECIATION</div>
         <div className="cert-pres">Buong pasasalamat na iginagawad kay</div>
-        <div className="cert-name">{c.donorName}</div>
+        <div className="cert-name" style={{ fontSize: nameSize(c.donorName), whiteSpace: c.donorName.length > 44 ? "normal" : "nowrap" }}>{c.donorName}</div>
         <div className="cert-body">
           bilang pagkilala sa inyong mapagbigay na donasyon para sa <b>Raffle ng Barangay</b>. Ang inyong kabutihan ay nagdala ng saya at pag-asa sa ating mga kabarangay.
         </div>

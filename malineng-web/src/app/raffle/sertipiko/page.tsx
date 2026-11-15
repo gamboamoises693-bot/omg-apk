@@ -11,7 +11,7 @@ import { useSettings } from "@/lib/useSettings";
 import { formatPeso } from "@/lib/format";
 import type { Donation } from "@/lib/raffleDonations";
 import { LoginGate } from "@/components/LoginGate";
-import { DonorCertificate, type CertificateData } from "@/components/DonorCertificate";
+import { DonorCertificate, type CertificateData, type CertificateTheme } from "@/components/DonorCertificate";
 import { Card, PageHeader, Spinner } from "@/components/ui";
 
 const CERT_W = 1123;
@@ -79,11 +79,13 @@ function Certificate({ id }: { id: string }) {
   const { user } = useAuth();
   const { settings } = useSettings();
   const [d, setD] = useState<Donation | null | undefined>(undefined);
+  const [theme, setTheme] = useState<CertificateTheme>("ivory");
   const [ivoryPaper, setIvoryPaper] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.3);
   useCertificateFonts();
-  usePrintSetup(ivoryPaper);
+  // Only the ivory design can leave its background out (the navy one needs its ink).
+  usePrintSetup(ivoryPaper && theme === "ivory");
 
   useEffect(() => {
     if (!id || !user) return;
@@ -120,25 +122,41 @@ function Certificate({ id }: { id: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="no-print space-y-2 rounded-2xl bg-white p-3 shadow-card">
-        <p className="text-sm font-bold">Papel na gagamitin sa pag-print</p>
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label="Papel">
-          {([[false, "Puting papel"], [true, "Ivory na papel"]] as const).map(([v, label]) => (
-            <button key={label} type="button" aria-pressed={ivoryPaper === v} onClick={() => setIvoryPaper(v)} className={`rounded-xl px-2 py-2.5 text-sm font-bold ${ivoryPaper === v ? "bg-brand text-white" : "bg-surface text-gray-700"}`}>
-              {label}
-            </button>
-          ))}
+      <div className="no-print space-y-3 rounded-2xl bg-white p-3 shadow-card">
+        <div className="space-y-2">
+          <p className="text-sm font-bold">Kulay ng sertipiko</p>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Kulay ng sertipiko">
+            {([["ivory", "Ivory (executive)"], ["navy", "Navy blue"]] as const).map(([v, label]) => (
+              <button key={v} type="button" aria-pressed={theme === v} onClick={() => setTheme(v)} className={`rounded-xl px-2 py-2.5 text-sm font-bold ${theme === v ? "bg-brand text-white" : "bg-surface text-gray-700"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="text-xs text-gray-600">
-          {ivoryPaper
-            ? "Hindi ipi-print ang kulay ng background, kaya ang kulay ng mismong papel (ivory) ang lalabas. Tipid sa tinta."
-            : "Ipi-print ang ivory na kulay sa puting papel. Sa print dialog, i-on ang \"Background graphics\" kung wala pa ang kulay."}
-        </p>
+        {theme === "ivory" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-bold">Papel na gagamitin sa pag-print</p>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Papel">
+              {([[false, "Puting papel"], [true, "Ivory na papel"]] as const).map(([v, label]) => (
+                <button key={label} type="button" aria-pressed={ivoryPaper === v} onClick={() => setIvoryPaper(v)} className={`rounded-xl px-2 py-2.5 text-sm font-bold ${ivoryPaper === v ? "bg-brand text-white" : "bg-surface text-gray-700"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-600">
+              {ivoryPaper
+                ? "Hindi ipi-print ang kulay ng background, kaya ang kulay ng mismong papel (ivory) ang lalabas. Tipid sa tinta."
+                : "Ipi-print ang ivory na kulay sa puting papel. Sa print dialog, i-on ang \"Background graphics\" kung wala pa ang kulay."}
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-600">Ang navy ay ipi-print sa puting papel at mas maraming tinta ang gagamitin. Mas maganda ito sa screen at bilang PDF.</p>
+        )}
       </div>
 
       <div ref={wrap} className="cert-stage w-full overflow-hidden rounded shadow-float" style={{ height: CERT_H * scale }}>
         <div className="cert-scale" style={{ width: CERT_W, height: CERT_H, transform: `scale(${scale})`, transformOrigin: "0 0" }}>
-          <DonorCertificate c={data} />
+          <DonorCertificate c={data} theme={theme} />
         </div>
       </div>
 
