@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { RESIDENT, NEWBIE } from "./seed.mjs";
+import { RESIDENT, NEWBIE, KAPITAN, DEV } from "./seed.mjs";
 import { GUIDES } from "./spec.mjs";
 
 // Playwright is installed globally (npm i -g playwright); createRequire also finds it through NODE_PATH.
@@ -68,7 +68,7 @@ async function act(page, a) {
 }
 
 const browser = await chromium.launch();
-/** One browser per kind of person: "resident" (verified, default), "newbie" (not verified yet) or "guest" (not logged in). */
+/** One browser per kind of person: "resident" (verified, default), "newbie" (not verified yet), "guest" (not logged in), "kapitan" (admin) or "dev" (Super Admin). */
 const pages = new Map();
 async function pageFor(who) {
   if (pages.has(who)) return pages.get(who);
@@ -78,7 +78,7 @@ async function pageFor(who) {
   const page = await ctx.newPage();
   page.on("pageerror", (e) => console.log("  page error:", e.message));
   if (who !== "guest") {
-    const acc = who === "newbie" ? NEWBIE : RESIDENT;
+    const acc = who === "newbie" ? NEWBIE : who === "kapitan" ? KAPITAN : who === "dev" ? DEV : RESIDENT;
     await page.goto(`${BASE}/login/`);
     await page.waitForTimeout(800);
     await page.fill("input[type=email]", acc.email);
@@ -113,7 +113,7 @@ for (const g of GUIDES) {
       steps.push({ tl: s.tl, en: s.en, img, w: 585, h: 1170 });
       for (const a of s.after ?? []) await act(page, a);
     }
-    done.set(g.id, { id: g.id, routes: g.routes, group: g.group, title: g.title, steps });
+    done.set(g.id, { id: g.id, routes: g.routes, ...(g.staff ? { staff: true } : {}), group: g.group, title: g.title, steps });
   } catch (err) {
     console.log(`  FAILED ${g.id}: ${err.message.split("\n")[0]}`);
     await page.screenshot({ path: join(here, `failed-${g.id}.png`) }).catch(() => {});

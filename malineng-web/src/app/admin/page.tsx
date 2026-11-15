@@ -76,6 +76,7 @@ import { AdminRaffle } from "@/components/admin/AdminRaffle";
 import { AdminRaffleDonations } from "@/components/admin/AdminRaffleDonations";
 import { AdminRaffleVerify } from "@/components/admin/AdminRaffleVerify";
 import { DevInbox, useDevInboxCount } from "@/components/DevInbox";
+import { HowToButton } from "@/components/HowTo";
 import { AdminDecisions } from "@/components/admin/AdminDecisions";
 import { useXmas } from "@/lib/raffle";
 import { XmasLights, XmasSnow, XmasStar } from "@/components/Xmas";
@@ -244,6 +245,8 @@ export default function AdminPage() {
             <Badge n={active.key === "devchat" ? devWaiting : byTab[active.key]} />
           </p>
         </div>
+        {/* A how-to for this section, if it has one (src/data/guides.json: "admin-<section>"). */}
+        <HowToButton id={`admin-${active.key}`} />
       </div>
 
       {active.key === "approve" && (
