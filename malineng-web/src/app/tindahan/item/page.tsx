@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { SuperPhotoTools } from "@/components/SuperPhotoTools";
 import { useSearchParams } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { ArrowLeft, ImageOff, MapPin, Tag, UserRound, CalendarClock } from "lucide-react";
@@ -68,6 +69,7 @@ function ListingDetail() {
           <ImageOff className="h-16 w-16" aria-hidden />
         </div>
       )}
+      <SuperPhotoTools collectionName="listings" id={listing.id} hasPhoto={!!(fullPhoto || listing.photoURL)} what={`item na "${listing.title}"`} tab="Tindahan" />
 
       <Card className="mt-4">
         <div className="mb-2 flex flex-wrap gap-2">

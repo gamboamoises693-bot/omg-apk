@@ -5,6 +5,7 @@ import { addDoc, collection, doc, serverTimestamp, updateDoc } from "firebase/fi
 import { ImageOff, MapPin, Phone, Plus, Search, CheckCircle2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
+import { SuperPhotoTools } from "@/components/SuperPhotoTools";
 import { useCollection } from "@/lib/useCollection";
 import { uploadImage } from "@/lib/upload";
 import { friendlyError, sortNewest, telHref, timeAgo } from "@/lib/format";
@@ -127,6 +128,7 @@ export default function LostFoundPage() {
               ) : (
                 <div className="flex h-32 items-center justify-center bg-surface text-gray-300"><ImageOff className="h-10 w-10" /></div>
               )}
+              <SuperPhotoTools collectionName="lostFound" id={i.id} hasPhoto={!!i.photoURL} what={`report na "${i.item}"`} tab="Board" />
               <div className="p-4">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <p className="text-base font-bold">{i.item}</p>

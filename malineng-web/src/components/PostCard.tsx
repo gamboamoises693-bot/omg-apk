@@ -8,6 +8,7 @@ import { QUICK_EMOJIS } from "@/lib/reactions";
 import { LikeButton, ReactionCounts, ReactionSummary, reactionPatch, useReactions } from "./ReactionBar";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
+import { SuperPhotoTools } from "@/components/SuperPhotoTools";
 import { useCollection } from "@/lib/useCollection";
 import { friendlyError, sortNewest, timeAgo } from "@/lib/format";
 import type { Comment, Post } from "@/lib/types";
@@ -274,6 +275,8 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
           <img src={post.photoURL} alt="Larawan ng post" loading="lazy" className="max-h-[480px] w-full object-cover" />
         </button>
       )}
+
+      <SuperPhotoTools collectionName="posts" id={post.id} hasPhoto={!!post.photoURL} what={`post ni ${post.authorName}`} tab="Board" />
 
       {adminMode ? (
         <div className="p-4">
