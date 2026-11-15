@@ -21,6 +21,8 @@ export interface Donation {
   amount: number;
   contact: string;
   message: string;
+  /** Optional business logo from the donor (small JPEG data URL). It is shown publicly only after the Barangay receives the donation. */
+  logo?: string;
   status: DonationStatus;
   receiptNo?: string;
   receivedBy?: string;
@@ -60,7 +62,7 @@ export function newReceiptNo(): string {
   return `RAF-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("")}`;
 }
 
-export async function pledgeDonation(uid: string, d: { name: string; anon: boolean; kind: DonationKind; what: string; amount: number; contact: string; message: string }): Promise<void> {
+export async function pledgeDonation(uid: string, d: { name: string; anon: boolean; kind: DonationKind; what: string; amount: number; contact: string; message: string; logo?: string }): Promise<void> {
   await setDoc(doc(collection(db, "raffleDonations")), {
     userId: uid,
     name: d.name.trim().slice(0, 120),
@@ -70,6 +72,7 @@ export async function pledgeDonation(uid: string, d: { name: string; anon: boole
     amount: Math.max(0, Math.round(d.amount) || 0),
     contact: d.contact.trim().slice(0, 30),
     message: d.message.trim().slice(0, 300),
+    ...(d.logo && !d.anon ? { logo: d.logo } : {}),
     status: "new",
     createdAt: serverTimestamp(),
   });
@@ -94,6 +97,8 @@ export async function markReceived(d: Donation, actor: { uid: string; name: stri
     tier: "reg",
     show: true,
     donationId: d.id,
+    // Anonymous donors never get a logo on the list.
+    ...(d.logo && !d.anon ? { logo: d.logo } : {}),
     createdAt: serverTimestamp(),
   });
   await batch.commit();

@@ -11,6 +11,7 @@ import { formatPeso, friendlyError, sortNewest } from "@/lib/format";
 import { pledgeDonation, useSponsors, type Donation, type DonationKind } from "@/lib/raffleDonations";
 import { Button, Input, Modal, Select } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { LogoPicker } from "@/components/LogoPicker";
 
 /** What the donor reads about each step of their pledge. */
 const DONOR_LABEL = {
@@ -107,6 +108,7 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
   const [contact, setContact] = useState(profile?.contact ?? "");
   const [message, setMessage] = useState("");
   const [anon, setAnon] = useState(false);
+  const [logo, setLogo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -120,7 +122,7 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
     setBusy(true);
     setError("");
     try {
-      await pledgeDonation(uid, { name, anon, kind, what: kind === "Pera" ? `₱${value.toLocaleString("en-PH")}` : what, amount: value, contact, message });
+      await pledgeDonation(uid, { name, anon, kind, what: kind === "Pera" ? `₱${value.toLocaleString("en-PH")}` : what, amount: value, contact, message, logo });
       toast("Salamat! Naipadala ang pangako mo. Makikipag-ugnayan ang Barangay.");
       onDone();
     } catch (err) {
@@ -137,6 +139,12 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
       <Input label={kind === "Pera" ? "Halaga (₱)" : "Halaga ng gamit (₱, optional)"} type="number" inputMode="numeric" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} hint="Makikita ng lahat ang halaga, para sa transparency." />
       <Input label="Numero na pwedeng tawagan" type="tel" inputMode="tel" value={contact} onChange={(e) => setContact(e.target.value)} maxLength={30} />
       <Input label="Mensahe (optional)" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={300} />
+      {!anon && (
+        <div className="space-y-1">
+          <LogoPicker logo={logo} onChange={setLogo} label="Maglagay ng logo ng negosyo (optional)" />
+          <p className="text-xs text-gray-500">Lalabas ang logo sa listahan ng sponsor kapag natanggap na ng Barangay ang donasyon mo.</p>
+        </div>
+      )}
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} className="mt-1" />
         <span>Huwag ilagay ang pangalan ko sa listahan (Hindi nagpakilala). Ilalagay pa rin ang halaga.</span>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { collection, deleteDoc, doc, updateDoc, writeBatch } from "firebase/firestore";
-import { ImageUp, Receipt } from "lucide-react";
+import { Receipt } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -11,7 +11,7 @@ import { logActivity } from "@/lib/activity";
 import { formatPeso, friendlyError, sortNewest, timeAgo } from "@/lib/format";
 import { DONATION_STATUS_LABEL, markReceived, type Donation, type Sponsor } from "@/lib/raffleDonations";
 import { Badge, Button, Card, EmptyState, FilterTabs, Input, Spinner } from "@/components/ui";
-import { compressToDataUrl } from "@/lib/upload";
+import { LogoPicker } from "@/components/LogoPicker";
 import { useToast } from "@/components/Toast";
 import { serverTimestamp, setDoc } from "firebase/firestore";
 
@@ -84,7 +84,13 @@ function PledgeCard({ d }: { d: Donation }) {
     <Card className="space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-bold">{d.name}{d.anon ? " (Hindi nagpakilala)" : ""}</p>
+          <p className="flex items-center gap-2 font-bold">
+            {d.logo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={d.logo} alt={`Logo ni ${d.name}`} className="h-10 w-10 rounded-xl bg-white object-contain ring-1 ring-gray-200" />
+            )}
+            <span>{d.name}{d.anon ? " (Hindi nagpakilala)" : ""}</span>
+          </p>
           <p className="text-sm text-gray-600">{d.kind} · <b>{d.what}</b>{d.amount ? ` · ${formatPeso(d.amount).replace(".00", "")}` : ""}</p>
           <p className="text-xs text-gray-500">☎ {d.contact} · {timeAgo(d.createdAt)}</p>
           {d.message && <p className="mt-1 text-sm text-gray-700">&ldquo;{d.message}&rdquo;</p>}
@@ -126,35 +132,6 @@ function PledgeCard({ d }: { d: Donation }) {
         </div>
       )}
     </Card>
-  );
-}
-
-/** Small picker for a business logo: shows a preview, "Palitan" and "Alisin". */
-function LogoPicker({ logo, onChange, label = "Logo ng negosyo" }: { logo?: string; onChange: (logo: string) => void; label?: string }) {
-  const toast = useToast();
-  const pick = async (file?: File) => {
-    if (!file) return;
-    try {
-      // About 160px, white background, well under the 60KB rule limit.
-      onChange(await compressToDataUrl(file, 160, 0.85, 45_000));
-    } catch (err) {
-      toast(friendlyError(err), "error");
-    }
-  };
-  return (
-    <div className="flex items-center gap-3">
-      <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-surface ring-1 ring-gray-200">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {logo ? <img src={logo} alt="" className="h-full w-full object-contain p-0.5" /> : <ImageUp className="h-5 w-5 text-gray-400" aria-hidden />}
-      </span>
-      <div className="flex flex-wrap gap-2">
-        <label className="cursor-pointer rounded-xl border-2 border-gray-200 bg-white px-3 py-2 text-sm font-bold">
-          {logo ? "Palitan ang logo" : label}
-          <input type="file" accept="image/*" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
-        </label>
-        {logo && <button type="button" onClick={() => onChange("")} className="rounded-xl px-3 py-2 text-sm font-bold text-red-700">Alisin</button>}
-      </div>
-    </div>
   );
 }
 
