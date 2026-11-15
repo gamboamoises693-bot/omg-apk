@@ -44,6 +44,8 @@ import { roleLabel } from "@/lib/activity";
 import { Avatar } from "@/components/Avatar";
 import { MgMark } from "@/components/MgMark";
 import { levelOf, useWebAccess } from "@/lib/webAccess";
+import { useXmas } from "@/lib/raffle";
+import { XmasLights, XmasSnow, XmasStar } from "@/components/Xmas";
 
 interface Service {
   href: string;
@@ -103,6 +105,7 @@ export function ServicesMenu({ pinPresinto }: { pinPresinto: boolean }) {
   const pathname = usePathname();
   const { user, profile, isStaff, isAdmin, isSuperAdmin } = useAuth();
   const { access } = useWebAccess();
+  const xmas = useXmas();
 
   // Close after navigating.
   useEffect(() => setOpen(false), [pathname]);
@@ -137,7 +140,13 @@ export function ServicesMenu({ pinPresinto }: { pinPresinto: boolean }) {
         <div className="fixed inset-0 z-50 text-gray-900" role="dialog" aria-modal="true" aria-label="Menu ng serbisyo">
           <button type="button" className="absolute inset-0 h-full w-full cursor-default bg-black/40" onClick={() => setOpen(false)} aria-label="Isara ang menu" tabIndex={-1} />
           <nav className="absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col bg-white shadow-2xl motion-safe:animate-drawer-in">
-            <div className="flex items-center gap-3 bg-gradient-to-br from-brand to-brand-deep px-4 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] text-white">
+            <div className={`relative flex items-center gap-3 overflow-hidden px-4 pb-4 text-white ${xmas ? "xmas-card pt-[max(2.25rem,calc(env(safe-area-inset-top)+1rem))]" : "bg-gradient-to-br from-brand to-brand-deep pt-[max(1.25rem,env(safe-area-inset-top))]"}`}>
+              {xmas && (
+                <>
+                  <XmasLights />
+                  <XmasSnow />
+                </>
+              )}
               {user && profile ? (
                 <Avatar name={profile.fullName} photo={profile.photoURL} size="h-11 w-11" textClass="text-base" ring="ring-2 ring-white/40" />
               ) : (
@@ -154,10 +163,11 @@ export function ServicesMenu({ pinPresinto }: { pinPresinto: boolean }) {
               </button>
             </div>
 
+            {xmas && <div className="xmas-cane" aria-hidden />}
             <div className="flex-1 overflow-y-auto px-2 pb-3">
               {groups.map((g) => (
                 <div key={g.title}>
-                  <p className="px-2 pb-1 pt-3 text-[0.68rem] font-bold uppercase tracking-wider text-gray-500">{g.title}</p>
+                  <p className={`flex items-center gap-1 px-2 pb-1 pt-3 text-[0.68rem] font-bold uppercase tracking-wider ${xmas ? "text-[#0F4A36]" : "text-gray-500"}`}>{xmas && <XmasStar className="h-2.5 w-2.5 fill-[#B3202B]" />}{g.title}</p>
                   {g.hrefs.map((href) => {
                     const { label, icon: Icon, emergency } = BY_HREF[href];
                     const on = pathname.replace(/\/$/, "") === href;
@@ -183,6 +193,7 @@ export function ServicesMenu({ pinPresinto }: { pinPresinto: boolean }) {
               ))}
             </div>
 
+            {xmas && <p className="bg-[#FFF8EA] py-1.5 text-center text-xs font-bold tracking-wide text-[#B3202B]">Maligayang Pasko, Malineng!</p>}
             <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm">
               <Link href="/" className="flex items-center gap-1 font-semibold text-brand">
                 <ArrowLeft className="h-4 w-4" /> Bumalik sa Home
