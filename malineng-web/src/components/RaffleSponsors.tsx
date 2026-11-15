@@ -12,6 +12,8 @@ import { pledgeDonation, useSponsors, type Donation, type DonationKind } from "@
 import { Button, Input, Modal, Select } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 import { LogoPicker } from "@/components/LogoPicker";
+import { useXmas } from "@/lib/raffle";
+import { XmasGarland, XmasStar } from "@/components/Xmas";
 
 /** What the donor reads about each step of their pledge. */
 const DONOR_LABEL = {
@@ -22,16 +24,18 @@ const DONOR_LABEL = {
 } as const;
 
 /** The business logo when there is one, otherwise the initials. */
-function SponsorMark({ s, className }: { s: { name: string; logo?: string }; className: string }) {
+function SponsorMark({ s, className, xmas = false }: { s: { name: string; logo?: string }; className: string; xmas?: boolean }) {
+  // At Christmas the logo sits in a round gold-ringed badge, like an ornament.
+  const ring = xmas ? "!rounded-full border-[3px] border-gold bg-white shadow-md" : "";
   if (s.logo) {
     return (
-      <span className={`flex shrink-0 items-center justify-center overflow-hidden bg-white ${className}`}>
+      <span className={`flex shrink-0 items-center justify-center overflow-hidden bg-white ${className} ${ring}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={s.logo} alt={`Logo ng ${s.name}`} className="h-full w-full object-contain p-0.5" loading="lazy" />
       </span>
     );
   }
-  return <span className={`flex shrink-0 items-center justify-center font-black text-brand-deep ${className}`}>{s.name === "Hindi nagpakilala" ? "♥" : initials(s.name)}</span>;
+  return <span className={`flex shrink-0 items-center justify-center font-black text-brand-deep ${className} ${ring}`}>{s.name === "Hindi nagpakilala" ? "♥" : initials(s.name)}</span>;
 }
 
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
@@ -39,6 +43,7 @@ const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join
 /** Sponsors of the raffle (with the exact amounts, for transparency) and the way to pledge a donation. */
 export function RaffleSponsors({ full = false }: { full?: boolean }) {
   const { user } = useAuth();
+  const xmas = useXmas();
   const { sponsors } = useSponsors();
   const [donating, setDonating] = useState(false);
   const shown = useMemo(() => sponsors.filter((s) => s.show), [sponsors]);
@@ -47,10 +52,13 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
   const total = shown.reduce((sum, s) => sum + (s.amount || 0), 0);
 
   return (
-    <section className="space-y-3 rounded-2xl bg-white p-4 shadow-card">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 font-extrabold"><HandHeart className="h-5 w-5 text-gold-dark" aria-hidden /> Mga sponsor at donor</h2>
-        {total > 0 && <span className="rounded-full bg-brand-light px-2.5 py-0.5 text-xs font-extrabold text-brand">Kabuuan: {formatPeso(total).replace(".00", "")}</span>}
+    <section className={`space-y-3 overflow-hidden rounded-2xl p-4 shadow-card ${xmas ? "bg-[#FFF8EA] pt-0" : "bg-white"}`}>
+      {xmas && <div className="xmas-cane -mx-4" aria-hidden />}
+      <div className={`flex items-center justify-between gap-2 ${xmas ? "pt-1" : ""}`}>
+        <h2 className={`flex items-center gap-2 font-extrabold ${xmas ? "text-[#0F4A36]" : ""}`}>
+          {xmas ? <XmasStar className="h-5 w-5 fill-[#B3202B]" /> : <HandHeart className="h-5 w-5 text-gold-dark" aria-hidden />} Mga sponsor at donor
+        </h2>
+        {total > 0 && <span className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold ${xmas ? "bg-[#0F4A36] text-white" : "bg-brand-light text-brand"}`}>Kabuuan: {formatPeso(total).replace(".00", "")}</span>}
       </div>
 
       {shown.length === 0 ? (
@@ -58,8 +66,9 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
       ) : (
         <>
           {main.map((s) => (
-            <div key={s.id} className="flex items-center gap-3 rounded-2xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-3 text-[#3B2E05]">
-              <SponsorMark s={s} className="h-14 w-14 rounded-2xl bg-white text-lg" />
+            <div key={s.id} className={`relative flex items-center gap-3 rounded-2xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-3 text-[#3B2E05] ${xmas ? "mt-5 pt-8" : ""}`}>
+              {xmas && <XmasStar className="absolute -top-4 left-1/2 h-9 w-9 -translate-x-1/2 fill-[#B3202B] drop-shadow-[0_2px_0_rgba(0,0,0,.25)]" />}
+              <SponsorMark s={s} xmas={xmas} className="h-14 w-14 rounded-2xl bg-white text-lg" />
               <span className="min-w-0">
                 <span className="block text-[0.65rem] font-extrabold tracking-wider">PANGUNAHING SPONSOR</span>
                 <b className="block truncate">{s.name}</b>
@@ -68,23 +77,33 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
             </div>
           ))}
           {(full ? others : others.slice(0, 4)).length > 0 && (
-            <ul className="grid grid-cols-2 gap-2">
-              {(full ? others : others.slice(0, 4)).map((s) => (
-                <li key={s.id} className="flex flex-col items-center gap-1 rounded-2xl bg-surface p-2.5 text-center">
-                  <SponsorMark s={s} className="h-14 w-14 rounded-2xl bg-brand-light text-base" />
-                  <b className="line-clamp-1 text-sm">{s.name}</b>
-                  <span className="line-clamp-1 text-xs text-gray-600">{s.what}</span>
-                  {s.amount > 0 && <span className="text-xs font-bold text-brand">{formatPeso(s.amount).replace(".00", "")}</span>}
-                </li>
-              ))}
-            </ul>
+            <>
+              {xmas && <XmasGarland />}
+              <ul className={`grid grid-cols-2 ${xmas ? "gap-x-3 gap-y-10 pt-8" : "gap-2"}`}>
+                {(full ? others : others.slice(0, 4)).map((s) => (
+                  <li key={s.id} className={`relative flex flex-col items-center gap-1 rounded-2xl p-2.5 text-center ${xmas ? "border border-gray-100 bg-white pt-9" : "bg-surface"}`}>
+                    {xmas ? (
+                      <span className="absolute -top-7 left-1/2 -translate-x-1/2">
+                        <span className="absolute -top-2.5 left-1/2 h-3 w-0.5 -translate-x-1/2 bg-gold" aria-hidden />
+                        <SponsorMark s={s} xmas className="h-14 w-14 bg-brand-light text-base" />
+                      </span>
+                    ) : (
+                      <SponsorMark s={s} className="h-14 w-14 rounded-2xl bg-brand-light text-base" />
+                    )}
+                    <b className="line-clamp-1 text-sm">{s.name}</b>
+                    <span className="line-clamp-1 text-xs text-gray-600">{s.what}</span>
+                    {s.amount > 0 && <span className={`text-xs font-bold ${xmas ? "rounded-full bg-[#FDECEE] px-2.5 py-0.5 text-[#B3202B]" : "text-brand"}`}>{formatPeso(s.amount).replace(".00", "")}</span>}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
           {!full && others.length > 4 && <Link href="/raffle" className="block text-center text-sm font-bold text-brand">Tingnan ang lahat ({shown.length})</Link>}
         </>
       )}
 
       {user ? (
-        <Button full variant="primary" onClick={() => setDonating(true)}>Magdonate o maging sponsor</Button>
+        <Button full variant="primary" className={xmas ? "!bg-[#0F4A36]" : ""} onClick={() => setDonating(true)}>Magdonate o maging sponsor</Button>
       ) : (
         <Link href="/login" className="block rounded-xl bg-brand py-2.5 text-center text-sm font-bold text-white">Mag-login para magdonate</Link>
       )}

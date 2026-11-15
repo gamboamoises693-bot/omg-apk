@@ -3,18 +3,20 @@
 import Link from "next/link";
 import { Gift, Trophy } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { countdown, formatWhen, phaseOf, raffleReady, roundsOf, useMyEntry, useNow, useRaffle, type PublicRound } from "@/lib/raffle";
+import { countdown, formatWhen, phaseOf, raffleReady, roundsOf, useMyEntry, useNow, useRaffle, useXmas, type PublicRound } from "@/lib/raffle";
+import { XmasLights, XmasSnow, XmasStar } from "@/components/Xmas";
 import { RaffleSponsors } from "@/components/RaffleSponsors";
 import { WinnerQr } from "@/components/WinnerQr";
 
 function Countdown({ target }: { target: number }) {
   const now = useNow();
   const c = countdown(target - now);
+  const xmas = useXmas();
   const parts: [number, string][] = [[c.d, "araw"], [c.h, "oras"], [c.m, "minuto"], [c.s, "segundo"]];
   return (
-    <div className="grid grid-cols-4 gap-2" role="timer" aria-label="Natitirang oras">
+    <div className={`grid grid-cols-4 ${xmas ? "gap-2.5 pt-2" : "gap-2"}`} role="timer" aria-label="Natitirang oras">
       {parts.map(([n, l]) => (
-        <div key={l} className="rounded-xl bg-white/12 py-2 text-center">
+        <div key={l} className={xmas ? "xmas-orn flex aspect-square flex-col items-center justify-center rounded-full text-center" : "rounded-xl bg-white/12 py-2 text-center"}>
           <b className="block text-xl tabular-nums">{String(n).padStart(2, "0")}</b>
           <span className="text-[0.68rem] text-white/75">{l}</span>
         </div>
@@ -56,6 +58,7 @@ function RoundResult({ r, myCode, claimed }: { r: PublicRound; myCode?: string; 
 export function RaffleCard({ full = false }: { full?: boolean }) {
   const { user, isVerified, isStaff } = useAuth();
   const { config, rounds, claims, loaded } = useRaffle();
+  const xmas = useXmas();
   const now = useNow(1000);
   const entry = useMyEntry(user?.uid);
   const phase = phaseOf(config, rounds.length, now);
@@ -71,9 +74,19 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
 
   return (
     <div className="mt-3 space-y-3">
-      <div className="space-y-3 rounded-3xl bg-gradient-to-br from-brand to-brand-deep p-4 text-white shadow-float">
-        <div className="flex items-center justify-between gap-2">
-          <p className="flex items-center gap-2 text-xs font-extrabold tracking-wider text-gold"><Gift className="h-4 w-4" aria-hidden /> RAFFLE NG BARANGAY</p>
+      <div className={`relative space-y-3 overflow-hidden rounded-3xl p-4 text-white shadow-float ${xmas ? "xmas-card pt-11" : "bg-gradient-to-br from-brand to-brand-deep"}`}>
+        {xmas && (
+          <>
+            <XmasLights />
+            <XmasSnow />
+          </>
+        )}
+        <div className="relative flex items-center justify-between gap-2">
+          {xmas ? (
+            <p className="flex items-center gap-2 rounded-l-md rounded-r-full bg-[#B3202B] py-1.5 pl-2.5 pr-3.5 text-xs font-extrabold tracking-widest shadow-[0_2px_0_rgba(0,0,0,.25)]"><XmasStar className="h-4 w-4 fill-gold" /> PAMASKONG RAFFLE</p>
+          ) : (
+            <p className="flex items-center gap-2 text-xs font-extrabold tracking-wider text-gold"><Gift className="h-4 w-4" aria-hidden /> RAFFLE NG BARANGAY</p>
+          )}
           {phase === "open" && <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-[0.68rem] font-extrabold text-green-800">Bukas ang entries</span>}
           {phase === "closed" && <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[0.68rem] font-extrabold text-red-800">Sarado na</span>}
           {phase === "live" && <span className="rounded-full bg-gold px-2.5 py-0.5 text-[0.68rem] font-extrabold text-brand-deep">Kasalukuyang bunutan</span>}
@@ -103,7 +116,7 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
               <>
                 <p className="text-lg font-extrabold">Sumali sa raffle</p>
                 <p className="text-sm text-white/85">Mag-register at mag-verify ng account para magkaroon ng entry.</p>
-                <Link href="/login" className="block rounded-xl bg-gold py-2.5 text-center text-sm font-extrabold text-brand-deep">Mag-register o mag-login</Link>
+                <Link href="/login" className={`relative block rounded-xl bg-gold py-2.5 text-center text-sm font-extrabold text-brand-deep ${xmas ? "xmas-cta" : ""}`}>Mag-register o mag-login</Link>
               </>
             ) : isStaff ? (
               <p className="text-sm text-white/85">Hindi kasali sa raffle ang mga admin at opisyal.</p>
@@ -111,7 +124,7 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
               <>
                 <p className="text-lg font-extrabold">Isa pang hakbang</p>
                 <p className="text-sm text-white/85">Ma-verify lang ang account mo (selfie at ID) at <b>awtomatiko kang magkakaroon ng entry</b>.</p>
-                <Link href="/account" className="block rounded-xl bg-gold py-2.5 text-center text-sm font-extrabold text-brand-deep">Mag-verify ngayon</Link>
+                <Link href="/account" className={`relative block rounded-xl bg-gold py-2.5 text-center text-sm font-extrabold text-brand-deep ${xmas ? "xmas-cta" : ""}`}>Mag-verify ngayon</Link>
               </>
             ) : entry ? (
               <>
@@ -146,6 +159,7 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
         )}
 
         {phase === "done" && <p className="text-sm text-white/85">{entry ? (myWins.length ? "" : "Salamat sa pagsali! Hindi napili ang entry mo ngayon.") : "Salamat sa pag-register."}</p>}
+        {xmas && <p className="relative text-center text-sm font-bold tracking-wide text-gold">Maligayang Pasko, Malineng!</p>}
       </div>
 
       {myWins.map(({ r, w }) => (

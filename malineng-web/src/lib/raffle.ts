@@ -27,6 +27,8 @@ export interface RaffleConfig {
   drawAt?: Timestamp;
   /** The rounds, drawn in order. The last one is the major prize. */
   rounds?: RaffleRoundCfg[];
+  /** Christmas look: "auto" (Nov 15 to Jan 6, the default), "on" or "off". Set by the Developer. */
+  xmas?: "auto" | "on" | "off";
   /** A person can win only once (default true). */
   onePerPerson?: boolean;
   /** Reserves drawn with each round (0 to 5, default 2). */
@@ -157,6 +159,21 @@ const EMPTY: Snapshot = { config: null, rounds: [], claims: {}, loaded: false };
 
 export function useRaffle(): Snapshot {
   return useSyncExternalStore(subscribe, () => current, () => EMPTY);
+}
+
+/** Whether the Christmas look is on: the Developer's choice, or by date (Nov 15 to Jan 6) when it is "auto". */
+export function isXmas(mode: RaffleConfig["xmas"] | undefined, nowMs: number): boolean {
+  if (mode === "on") return true;
+  if (mode === "off") return false;
+  const d = new Date(nowMs);
+  const md = (d.getMonth() + 1) * 100 + d.getDate();
+  return md >= 1115 || md <= 106;
+}
+
+/** The Christmas look for the raffle card and the sponsor list. */
+export function useXmas(): boolean {
+  const { config } = useRaffle();
+  return isXmas(config?.xmas, Date.now());
 }
 
 /** The URL in a winner's QR (an admin scans it with the phone camera). */
