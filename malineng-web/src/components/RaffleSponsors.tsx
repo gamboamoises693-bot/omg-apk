@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
-import { HandHeart, Receipt } from "lucide-react";
+import { ExternalLink, HandHeart, Receipt } from "lucide-react";
 import { collection, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -14,6 +14,7 @@ import { useToast } from "@/components/Toast";
 import { LogoPicker } from "@/components/LogoPicker";
 import { useXmas } from "@/lib/raffle";
 import { XmasGarland, XmasStar } from "@/components/Xmas";
+import { linkHost } from "@/lib/raffleDonations";
 
 /** What the donor reads about each step of their pledge. */
 const DONOR_LABEL = {
@@ -22,6 +23,29 @@ const DONOR_LABEL = {
   received: "Natanggap na ang donasyon",
   declined: "Hindi natanggap",
 } as const;
+
+/**
+ * One sponsor: a plain box, or a link to their Facebook page or website when they gave one.
+ * The link opens in a new tab, and the address is shown so people know where the tap goes.
+ */
+function SponsorBox({ s, className, children }: { s: { name: string; link?: string }; className: string; children: ReactNode }) {
+  if (!s.link) return <div className={className}>{children}</div>;
+  return (
+    <a href={s.link} target="_blank" rel="noopener noreferrer nofollow" aria-label={`Buksan ang ${s.name} (${linkHost(s.link)})`} className={`${className} block active:scale-[0.98]`}>
+      {children}
+    </a>
+  );
+}
+
+/** Small "facebook.com ↗" hint under a sponsor that has a link. */
+function LinkHint({ link, dark = false }: { link?: string; dark?: boolean }) {
+  if (!link) return null;
+  return (
+    <span className={`mt-1 inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[0.62rem] font-extrabold ${dark ? "bg-[#0F4A36]/10 text-[#0F4A36]" : "bg-brand-light text-brand"}`}>
+      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden /> <span className="truncate">{linkHost(link)}</span>
+    </span>
+  );
+}
 
 /** The business logo when there is one, otherwise the initials. */
 function SponsorMark({ s, className, xmas = false }: { s: { name: string; logo?: string }; className: string; xmas?: boolean }) {
@@ -66,35 +90,53 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
       ) : (
         <>
           {main.map((s) => (
-            <div key={s.id} className={`relative flex items-center gap-3 rounded-2xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-3 text-[#3B2E05] ${xmas ? "mt-5 pt-8" : ""}`}>
+            <SponsorBox key={s.id} s={s} className={`relative flex items-center gap-3 rounded-2xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-3 text-[#3B2E05] shadow-[0_8px_18px_-10px_rgba(120,80,0,.6)] ${xmas ? "mt-5 pt-8 ring-1 ring-[#E0B94A]" : ""}`}>
               {xmas && <XmasStar className="absolute -top-4 left-1/2 h-9 w-9 -translate-x-1/2 fill-[#B3202B] drop-shadow-[0_2px_0_rgba(0,0,0,.25)]" />}
               <SponsorMark s={s} xmas={xmas} className="h-14 w-14 rounded-2xl bg-white text-lg" />
               <span className="min-w-0">
                 <span className="block text-[0.65rem] font-extrabold tracking-wider">PANGUNAHING SPONSOR</span>
                 <b className="block truncate">{s.name}</b>
                 <span className="block text-xs">{s.what}{s.amount ? ` · ${formatPeso(s.amount).replace(".00", "")}` : ""}</span>
+                <LinkHint link={s.link} dark />
               </span>
-            </div>
+            </SponsorBox>
           ))}
           {(full ? others : others.slice(0, 4)).length > 0 && (
             <>
               {xmas && <XmasGarland />}
-              <ul className={`grid grid-cols-2 ${xmas ? "gap-x-3 gap-y-10 pt-8" : "gap-2"}`}>
-                {(full ? others : others.slice(0, 4)).map((s) => (
-                  <li key={s.id} className={`relative flex flex-col items-center gap-1 rounded-2xl p-2.5 text-center ${xmas ? "border border-gray-100 bg-white pt-9" : "bg-surface"}`}>
-                    {xmas ? (
-                      <span className="absolute -top-7 left-1/2 -translate-x-1/2">
-                        <span className="absolute -top-2.5 left-1/2 h-3 w-0.5 -translate-x-1/2 bg-gold" aria-hidden />
-                        <SponsorMark s={s} xmas className="h-14 w-14 bg-brand-light text-base" />
-                      </span>
-                    ) : (
-                      <SponsorMark s={s} className="h-14 w-14 rounded-2xl bg-brand-light text-base" />
-                    )}
-                    <b className="line-clamp-1 text-sm">{s.name}</b>
-                    <span className="line-clamp-1 text-xs text-gray-600">{s.what}</span>
-                    {s.amount > 0 && <span className={`text-xs font-bold ${xmas ? "rounded-full bg-[#FDECEE] px-2.5 py-0.5 text-[#B3202B]" : "text-brand"}`}>{formatPeso(s.amount).replace(".00", "")}</span>}
-                  </li>
-                ))}
+              <ul className={`grid grid-cols-2 ${xmas ? "items-start gap-x-3 gap-y-3" : "gap-2"}`} style={xmas ? { marginTop: "-1.1rem" } : undefined}>
+                {(full ? others : others.slice(0, 4)).map((s, i) =>
+                  xmas ? (
+                    // At Christmas each sponsor hangs from the garland on a gold string, like an ornament, at its own height.
+                    <li key={s.id} className={i % 2 ? "pt-2" : ""}>
+                      <div className="xmas-sway" style={{ animationDelay: `-${(i * 1.3) % 5}s` }}>
+                        <span className={`mx-auto block w-px bg-gradient-to-b from-[#D9B53F] to-[#9A7B12] ${i % 2 ? "h-16" : "h-9"}`} aria-hidden />
+                        <SponsorBox s={s} className="relative flex flex-col items-center">
+                          <span className="relative z-10 -mb-8">
+                            <span className="absolute -top-1.5 left-1/2 h-2 w-3 -translate-x-1/2 rounded-t-[3px] bg-gradient-to-b from-[#E8C85A] to-[#B8921E]" aria-hidden />
+                            <SponsorMark s={s} xmas className="h-16 w-16 bg-white text-base" />
+                          </span>
+                          <span className="flex w-full flex-col items-center gap-0.5 rounded-2xl border border-[#EEDFB0] bg-gradient-to-b from-white to-[#FFFAEC] px-2 pb-3 pt-10 text-center shadow-[0_10px_18px_-12px_rgba(120,80,0,.55)]">
+                            <b className="line-clamp-1 w-full text-sm">{s.name}</b>
+                            <span className="line-clamp-1 w-full text-xs text-gray-600">{s.what}</span>
+                            {s.amount > 0 && <span className="rounded-full bg-[#FDECEE] px-2.5 py-0.5 text-xs font-bold text-[#B3202B]">{formatPeso(s.amount).replace(".00", "")}</span>}
+                            <LinkHint link={s.link} dark />
+                          </span>
+                        </SponsorBox>
+                      </div>
+                    </li>
+                  ) : (
+                    <li key={s.id}>
+                      <SponsorBox s={s} className="flex flex-col items-center gap-1 rounded-2xl bg-surface p-2.5 text-center">
+                        <SponsorMark s={s} className="h-14 w-14 rounded-2xl bg-brand-light text-base" />
+                        <b className="line-clamp-1 text-sm">{s.name}</b>
+                        <span className="line-clamp-1 text-xs text-gray-600">{s.what}</span>
+                        {s.amount > 0 && <span className="text-xs font-bold text-brand">{formatPeso(s.amount).replace(".00", "")}</span>}
+                        <LinkHint link={s.link} />
+                      </SponsorBox>
+                    </li>
+                  ),
+                )}
               </ul>
             </>
           )}
@@ -128,6 +170,7 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
   const [message, setMessage] = useState("");
   const [anon, setAnon] = useState(false);
   const [logo, setLogo] = useState("");
+  const [link, setLink] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -141,7 +184,7 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
     setBusy(true);
     setError("");
     try {
-      await pledgeDonation(uid, { name, anon, kind, what: kind === "Pera" ? `₱${value.toLocaleString("en-PH")}` : what, amount: value, contact, message, logo });
+      await pledgeDonation(uid, { name, anon, kind, what: kind === "Pera" ? `₱${value.toLocaleString("en-PH")}` : what, amount: value, contact, message, logo, link });
       toast("Salamat! Naipadala ang pangako mo. Makikipag-ugnayan ang Barangay.");
       onDone();
     } catch (err) {
@@ -162,6 +205,7 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
         <div className="space-y-1">
           <LogoPicker logo={logo} onChange={setLogo} label="Maglagay ng logo ng negosyo (optional)" />
           <p className="text-xs text-gray-500">Lalabas ang logo sa listahan ng sponsor kapag natanggap na ng Barangay ang donasyon mo.</p>
+          <Input label="Facebook page o website ng negosyo (optional)" value={link} onChange={(e) => setLink(e.target.value)} maxLength={300} placeholder="hal. facebook.com/omegaice" inputMode="url" hint="Kapag pinindot ng tao ang sponsor mo sa listahan, doon sila dadalhin." />
         </div>
       )}
       <label className="flex items-start gap-2 text-sm">

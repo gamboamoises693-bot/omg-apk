@@ -23,6 +23,8 @@ export interface Donation {
   message: string;
   /** Optional business logo from the donor (small JPEG data URL). It is shown publicly only after the Barangay receives the donation. */
   logo?: string;
+  /** Optional Facebook page or website of the donor's business. */
+  link?: string;
   status: DonationStatus;
   receiptNo?: string;
   receivedBy?: string;
@@ -42,7 +44,35 @@ export interface Sponsor {
   donationId?: string;
   /** Business logo (small JPEG data URL, set by an admin). */
   logo?: string;
+  /** Facebook page or website of the business. Tapping the sponsor opens it. */
+  link?: string;
   createdAt?: Timestamp;
+}
+
+/**
+ * Cleans a pasted Facebook page or website. "facebook.com/omega" becomes "https://facebook.com/omega".
+ * Only http and https links with a real host are kept (never javascript: or anything else); anything else gives "".
+ */
+export function normalizeLink(raw: string): string {
+  const t = raw.trim().slice(0, 300);
+  if (!t) return "";
+  const withScheme = /^https?:\/\//i.test(t) ? t : /^[a-z][a-z0-9+.-]*:/i.test(t) ? "" : `https://${t}`;
+  if (!withScheme) return "";
+  try {
+    const u = new URL(withScheme);
+    return (u.protocol === "https:" || u.protocol === "http:") && u.hostname.includes(".") ? u.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+/** "https://www.facebook.com/omega" -> "facebook.com" (shown under the sponsor so people know where the tap goes). */
+export function linkHost(link: string): string {
+  try {
+    return new URL(link).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
 }
 
 export const DONATION_STATUS_LABEL: Record<DonationStatus, string> = {
@@ -62,7 +92,7 @@ export function newReceiptNo(): string {
   return `RAF-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("")}`;
 }
 
-export async function pledgeDonation(uid: string, d: { name: string; anon: boolean; kind: DonationKind; what: string; amount: number; contact: string; message: string; logo?: string }): Promise<void> {
+export async function pledgeDonation(uid: string, d: { name: string; anon: boolean; kind: DonationKind; what: string; amount: number; contact: string; message: string; logo?: string; link?: string }): Promise<void> {
   await setDoc(doc(collection(db, "raffleDonations")), {
     userId: uid,
     name: d.name.trim().slice(0, 120),
@@ -73,6 +103,7 @@ export async function pledgeDonation(uid: string, d: { name: string; anon: boole
     contact: d.contact.trim().slice(0, 30),
     message: d.message.trim().slice(0, 300),
     ...(d.logo && !d.anon ? { logo: d.logo } : {}),
+    ...(d.link && !d.anon && normalizeLink(d.link) ? { link: normalizeLink(d.link) } : {}),
     status: "new",
     createdAt: serverTimestamp(),
   });
@@ -99,6 +130,7 @@ export async function markReceived(d: Donation, actor: { uid: string; name: stri
     donationId: d.id,
     // Anonymous donors never get a logo on the list.
     ...(d.logo && !d.anon ? { logo: d.logo } : {}),
+    ...(d.link && !d.anon ? { link: d.link } : {}),
     createdAt: serverTimestamp(),
   });
   await batch.commit();
