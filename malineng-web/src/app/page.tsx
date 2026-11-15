@@ -42,6 +42,7 @@ import { MgMark } from "@/components/MgMark";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { WatchVideos } from "@/components/WatchVideos";
 import { RaffleCard } from "@/components/RaffleCard";
+import { AnnouncementRotator } from "@/components/AnnouncementRotator";
 import { useWebAccess } from "@/lib/webAccess";
 import type { PrecinctMeta } from "@/lib/presinto";
 
@@ -329,20 +330,7 @@ export default function HomePage() {
           {settings.announcements.length > 0 && (
             <>
               <SectionTitle>Mga Anunsyo</SectionTitle>
-              <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
-                {settings.announcements.map((a, i) => (
-                  <article
-                    key={`${a.title}-${i}`}
-                    className={`flex min-h-[7rem] w-[80%] max-w-sm shrink-0 snap-start flex-col justify-between rounded-2xl p-4 ${i % 2 === 0 ? "bg-gradient-to-br from-brand to-brand-deep text-white" : "bg-gradient-to-br from-gold to-gold-dark text-brand-deep"}`}
-                  >
-                    <p className="flex items-center gap-1 text-[0.7rem] font-bold uppercase tracking-wide opacity-80">
-                      <Megaphone className="h-3.5 w-3.5" /> {a.date ? formatDate(a.date) : "Anunsyo"}
-                    </p>
-                    <p className="mt-1 font-bold leading-snug">{a.title}</p>
-                    {a.body && <p className="mt-1 line-clamp-2 whitespace-pre-line text-xs opacity-90">{a.body}</p>}
-                  </article>
-                ))}
-              </div>
+              <AnnouncementRotator items={settings.announcements} />
             </>
           )}
 
