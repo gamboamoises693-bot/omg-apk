@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { collection, deleteDoc, doc, updateDoc, writeBatch } from "firebase/firestore";
-import { Receipt } from "lucide-react";
+import { Receipt, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -60,7 +60,7 @@ function Pledges({ list }: { list: Donation[] }) {
 }
 
 function PledgeCard({ d }: { d: Donation }) {
-  const { user, profile } = useAuth();
+  const { user, profile, isSuperAdmin } = useAuth();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [receiving, setReceiving] = useState(false);
@@ -130,6 +130,31 @@ function PledgeCard({ d }: { d: Donation }) {
           <span>Resibo {d.receiptNo} · tinanggap ni {d.receivedByName}</span>
           <Link href={`/raffle/resibo/?id=${d.id}`} className="flex shrink-0 items-center gap-1 font-bold underline"><Receipt className="h-4 w-4" aria-hidden /> Tingnan</Link>
         </div>
+      )}
+
+      {isSuperAdmin && (
+        <Button
+          variant="ghost"
+          full
+          loading={busy}
+          className="!text-red-700"
+          onClick={() =>
+            confirm(`Burahin nang tuluyan ang pangako ni ${d.name}?${d.status === "received" ? " Mawawala rin ang resibo ng donor at ang sponsor niya sa listahan." : ""} Hindi na ito maibabalik.`) &&
+            run(
+              async () => {
+                // The sponsor entry (same id) goes with it, so nothing is left on the public list.
+                const batch = writeBatch(db);
+                batch.delete(doc(db, "raffleDonations", d.id));
+                if (d.status === "received") batch.delete(doc(db, "raffleSponsors", d.id));
+                await batch.commit();
+              },
+              "Nabura.",
+              `Binura ang pangako ni ${d.name}`,
+            )
+          }
+        >
+          <Trash2 className="h-4 w-4" aria-hidden /> Burahin (Developer)
+        </Button>
       )}
     </Card>
   );
