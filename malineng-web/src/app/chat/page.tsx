@@ -57,6 +57,7 @@ import { Avatar } from "@/components/Avatar";
 import { Button, ErrorText, Modal, PageHeader, Spinner } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 import { LoginGate } from "@/components/LoginGate";
+import { DevInbox } from "@/components/DevInbox";
 
 const ROLE_STYLE: Record<string, string> = { Kapitan: "bg-amber-700", Secretary: "bg-teal-700", "Super Admin": "bg-purple-700" };
 /** Stored as "Super Admin" (the database rules check it); shown as "Developer". */
@@ -92,39 +93,6 @@ function RoomRow({ room }: { room: string }) {
   );
 }
 
-/** A person's line in the Developer's inbox. */
-function DevInboxRow({ c }: { c: DevChat }) {
-  const room = devRoomOf(c.uid);
-  const fresh = c.lastFrom === "user" && !!c.lastAt && c.lastAt.toMillis() > getLastRead(room);
-  return (
-    <Link href={`/chat/?room=${encodeURIComponent(room)}`} className="flex items-center gap-3 border-b border-gray-100 px-3 py-3 last:border-0 active:bg-gray-50">
-      <Avatar name={c.name || "?"} size="h-11 w-11" textClass="text-base" />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-bold">{c.name || "Residente"}</span>
-        <span className="block truncate text-xs text-gray-500">{c.lastFrom === "dev" ? "Ikaw: " : ""}{c.lastText}</span>
-      </span>
-      <span className="flex shrink-0 flex-col items-end gap-1">
-        <span className="text-[0.68rem] text-gray-500">{timeLabel(c.lastAt)}</span>
-        {fresh && <span className="rounded-full bg-red-600 px-2 py-0.5 text-[0.65rem] font-black text-white">Bago</span>}
-      </span>
-    </Link>
-  );
-}
-
-/** For the Developer: everyone who wrote to them, newest first. */
-function DevInbox() {
-  const q = useMemo(() => query(collection(db, "devChats"), orderBy("lastAt", "desc"), limit(50)), []);
-  const { data, loading } = useCollection<DevChat>(q);
-  return (
-    <>
-      <p className="px-1 text-xs font-bold tracking-wide text-purple-700">MGA MENSAHE SA DEVELOPER</p>
-      <div className="overflow-hidden rounded-2xl bg-white shadow-card">
-        {loading ? <Spinner /> : data.length === 0 ? <p className="p-4 text-center text-sm text-gray-600">Wala pang sumulat sa iyo.</p> : data.map((c) => <DevInboxRow key={c.id} c={c} />)}
-      </div>
-    </>
-  );
-}
-
 function RoomList() {
   const { user, profile, isStaff, isAdmin, isSuperAdmin } = useAuth();
   const { settings } = useSettings();
@@ -136,7 +104,7 @@ function RoomList() {
       <PageHeader title="Chat ng Barangay" subtitle="Verified na residente lang" />
       <p className="rounded-xl bg-brand-light px-3 py-2 text-xs text-brand-deep">Magalang na usapan lang po. Ang mga mensahe ay nabubura pagkatapos ng <b>7 araw</b>.</p>
       {isSuperAdmin ? (
-        <DevInbox />
+        <DevInbox heading />
       ) : (
         user && (
           <Link href={`/chat/?room=${encodeURIComponent(devRoomOf(user.uid))}`} className="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 shadow-card active:bg-gray-50">
@@ -204,6 +172,8 @@ function Conversation({ room }: { room: string }) {
   );
   const { data, loading, error: loadError } = useCollection<ChatMessage>(q);
   const messages = useMemo(() => [...data].reverse(), [data]);
+  // Who is writing to the Developer: the inbox line, or else the name on their own messages.
+  const devPerson = devWith || messages.find((m) => isDevRoom(room) && m.authorId === devRoomUid(room))?.authorName || "";
 
   useEffect(() => onSnapshot(doc(db, "chatRooms", room), (s) => setPin(s.exists() ? (s.data() as { pinText: string; pinBy: string }) : null), () => setPin(null)), [room]);
   useEffect(() => onSnapshot(doc(db, "settings", "chat"), (s) => s.exists() && setChat({ enabled: s.data().enabled !== false, photos: s.data().photos !== false }), () => {}), []);
@@ -308,7 +278,7 @@ function Conversation({ room }: { room: string }) {
   return (
     <div className="flex min-h-[calc(100dvh-13rem)] flex-col">
       <PageHeader
-        title={isDevRoom(room) && isSuperAdmin ? devWith || "Residente" : roomTitle(room)}
+        title={isDevRoom(room) && isSuperAdmin ? devPerson || "Residente" : roomTitle(room)}
         subtitle={isDevRoom(room) ? "Pribado · kayo lang ng Developer ang nakakabasa" : isStaffRoom(room) ? "Pribado · staff lang" : "Verified na residente lang"}
       />
 
@@ -604,9 +574,12 @@ function Conversation({ room }: { room: string }) {
 
 function ChatInner() {
   const room = useSearchParams().get("room");
-  const content = room ? <Conversation room={room} /> : <RoomList />;
+  const { user, isSuperAdmin } = useAuth();
+  // The Developer has no use for a chat with themself: their own room opens the inbox instead.
+  const own = !!room && isSuperAdmin && !!user && room === devRoomOf(user.uid);
+  const content = room && !own ? <Conversation room={room} /> : <RoomList />;
   // The Developer's chat only needs a login (a business asking about an ad may not be verified yet).
-  if (room && isDevRoom(room)) return <LoginGate message="Mag-login muna para makausap ang Developer.">{content}</LoginGate>;
+  if (room && isDevRoom(room) && !own) return <LoginGate message="Mag-login muna para makausap ang Developer.">{content}</LoginGate>;
   return <RequireVerified feature="sumali sa chat ng barangay">{content}</RequireVerified>;
 }
 
