@@ -332,6 +332,39 @@ export function AdminRaffle() {
         </p>
       </Card>
 
+      <Card className="space-y-2">
+        <h2 className="font-extrabold">Itsura ng Pasko</h2>
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Itsura ng Pasko">
+          {([["auto", "Auto"], ["on", "Laging naka-on"], ["off", "Naka-off"]] as const).map(([v, label]) => {
+            const active = (config?.xmas ?? "auto") === v;
+            return (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={active}
+                disabled={busy === "xmas"}
+                onClick={async () => {
+                  setBusy("xmas");
+                  try {
+                    await setDoc(doc(db, "settings", "raffle"), { xmas: v, updatedAt: serverTimestamp() }, { merge: true });
+                    logActivity("Raffle", `Itsura ng Pasko: ${label}`);
+                    toast(`Itsura ng Pasko: ${label}`);
+                  } catch (err) {
+                    toast(friendlyError(err), "error");
+                  } finally {
+                    setBusy("");
+                  }
+                }}
+                className={`rounded-xl px-2 py-2.5 text-sm font-bold ${active ? "bg-[#B3202B] text-white" : "bg-surface text-gray-600"}`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-gray-600"><b>Auto</b>: may Pasko na itsura ang raffle card at sponsor list mula Nobyembre 15 hanggang Enero 6. Pwede mo itong pilitin na naka-on o naka-off.</p>
+      </Card>
+
       <Card className="space-y-3">
         <h2 className="font-extrabold">Setup ng raffle</h2>
         <Input label="Simula (default Dec 28, 2026)" type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} disabled={locked} />
