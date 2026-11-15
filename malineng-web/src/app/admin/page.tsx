@@ -76,6 +76,8 @@ import { AdminRaffle } from "@/components/admin/AdminRaffle";
 import { AdminRaffleDonations } from "@/components/admin/AdminRaffleDonations";
 import { AdminRaffleVerify } from "@/components/admin/AdminRaffleVerify";
 import { AdminDecisions } from "@/components/admin/AdminDecisions";
+import { useXmas } from "@/lib/raffle";
+import { XmasLights, XmasSnow, XmasStar } from "@/components/Xmas";
 import { AdminAyudaBatches } from "@/components/admin/AdminAyudaBatches";
 
 interface Section {
@@ -157,6 +159,7 @@ function Badge({ n }: { n?: number }) {
 
 export default function AdminPage() {
   const { isSuperAdmin, isAdmin, canBotika, canBorrowAdmin, isOfficer, canLiga, profile } = useAuth();
+  const xmas = useXmas();
   const { byTab, total } = useAdminPending();
   const groups = useMemo(
     () =>
@@ -251,7 +254,13 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Admin menu">
           <button className="absolute inset-0 h-full w-full cursor-default bg-black/40" onClick={() => setOpen(false)} aria-label="Isara ang menu" tabIndex={-1} />
           <nav className="absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col bg-white shadow-2xl motion-safe:animate-drawer-in">
-            <div className="flex items-center gap-3 bg-gradient-to-br from-brand to-brand-deep px-4 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] text-white">
+            <div className={`relative flex items-center gap-3 overflow-hidden px-4 pb-4 text-white ${xmas ? "xmas-card pt-[max(2.25rem,calc(env(safe-area-inset-top)+1rem))]" : "bg-gradient-to-br from-brand to-brand-deep pt-[max(1.25rem,env(safe-area-inset-top))]"}`}>
+              {xmas && (
+                <>
+                  <XmasLights />
+                  <XmasSnow />
+                </>
+              )}
               <Avatar name={profile?.fullName ?? "Admin"} photo={profile?.photoURL} size="h-11 w-11" textClass="text-base" ring="ring-2 ring-white/40" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-bold">{profile?.fullName}</p>
@@ -264,10 +273,11 @@ export default function AdminPage() {
               </button>
             </div>
 
+            {xmas && <div className="xmas-cane" aria-hidden />}
             <div className="flex-1 overflow-y-auto px-2 pb-3">
               {groups.map((g) => (
                 <div key={g.title}>
-                  <p className={`px-2 pb-1 pt-3 text-[0.68rem] font-bold uppercase tracking-wider ${g.superOnly ? "text-purple-600" : "text-gray-500"}`}>{g.title}</p>
+                  <p className={`flex items-center gap-1 px-2 pb-1 pt-3 text-[0.68rem] font-bold uppercase tracking-wider ${g.superOnly ? "text-purple-600" : xmas ? "text-[#0F4A36]" : "text-gray-500"}`}>{xmas && !g.superOnly && <XmasStar className="h-2.5 w-2.5 fill-[#B3202B]" />}{g.title}</p>
                   {g.sections.map((s) => {
                     const Icon = s.icon;
                     const on = s.key === active.key;
@@ -335,6 +345,7 @@ export default function AdminPage() {
               )}
             </div>
 
+            {xmas && <p className="bg-[#FFF8EA] py-1.5 text-center text-xs font-bold tracking-wide text-[#B3202B]">Maligayang Pasko, Malineng!</p>}
             <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm">
               <Link href="/" className="flex items-center gap-1 font-semibold text-brand">
                 <ArrowLeft className="h-4 w-4" /> Bumalik sa website
