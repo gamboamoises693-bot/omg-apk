@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { collection, doc, getCountFromServer, increment, query, updateDoc, where } from "firebase/firestore";
+import Link from "next/link";
 import { Clapperboard, Eye, Megaphone, MessageCircle, Play } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
+import { devRoomOf } from "@/lib/chat";
 import { useCollection } from "@/lib/useCollection";
 import { loadVideoBlob } from "@/lib/videoUpload";
 import { DEVELOPER_NAME, DEVELOPER_URL } from "@/lib/constants";
@@ -87,16 +89,21 @@ function AdBadge({ v, className = "" }: { v: Video; className?: string }) {
 
 /** For the Ads tab: businesses cannot upload by themselves, so they ask the Developer. */
 function AdContact() {
+  const { user } = useAuth();
   return (
     <div className="mt-3 space-y-2 rounded-2xl border-2 border-dashed border-gold bg-gold-light/50 p-4 text-sm">
       <p className="font-extrabold">Gusto mong i-advertise ang negosyo mo?</p>
       <p className="text-gray-700">Magpa-upload ng video ad dito sa Home. Makipag-ugnayan lang sa Developer, at siya ang maglalagay nito.</p>
-      {DEVELOPER_URL ? (
-        <a href={DEVELOPER_URL} target="_blank" rel="noopener noreferrer" className="block rounded-xl bg-brand py-2.5 text-center font-bold text-white">
-          Kontakin si {DEVELOPER_NAME}
+      <Link
+        href={user ? `/chat/?room=${encodeURIComponent(devRoomOf(user.uid))}` : "/login"}
+        className="flex items-center justify-center gap-2 rounded-xl bg-brand py-2.5 text-center font-bold text-white"
+      >
+        <MessageCircle className="h-4 w-4" aria-hidden /> {user ? `Mag-chat kay ${DEVELOPER_NAME}` : "Mag-login para makausap ang Developer"}
+      </Link>
+      {DEVELOPER_URL && (
+        <a href={DEVELOPER_URL} target="_blank" rel="noopener noreferrer" className="block rounded-xl bg-white py-2 text-center font-bold text-brand">
+          O kontakin sa Facebook
         </a>
-      ) : (
-        <p className="rounded-xl bg-white px-3 py-2 text-center font-bold text-brand">Developer: {DEVELOPER_NAME}</p>
       )}
     </div>
   );

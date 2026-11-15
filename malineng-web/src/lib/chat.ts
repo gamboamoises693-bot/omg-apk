@@ -28,6 +28,23 @@ export const MESSAGE_LIMIT = 60;
 export const ROOM_STAFF_ADMIN = "staff-admin";
 export const ROOM_STAFF_OFFICIALS = "staff-officials";
 
+/** Direct chat with the Developer: every person has one private room, "dev-<uid>". Only that person and the Developer can read it. */
+export const DEV_PREFIX = "dev-";
+export const devRoomOf = (uid: string): string => `${DEV_PREFIX}${uid}`;
+export const isDevRoom = (room: string): boolean => room.startsWith(DEV_PREFIX) && room.length > DEV_PREFIX.length;
+export const devRoomUid = (room: string): string => room.slice(DEV_PREFIX.length);
+
+/** One line per person who wrote to the Developer (the Developer's inbox), kept in devChats/{uid}. */
+export interface DevChat {
+  id: string;
+  uid: string;
+  name: string;
+  lastText: string;
+  lastAt?: Timestamp;
+  /** Who wrote last: "user" (needs an answer) or "dev". */
+  lastFrom: "user" | "dev";
+}
+
 export function isStaffRoom(room: string): boolean {
   return room === ROOM_STAFF_ADMIN || room === ROOM_STAFF_OFFICIALS;
 }
@@ -54,6 +71,7 @@ export function callUrl(callRoom: string, displayName: string): string {
 }
 
 export function roomTitle(room: string): string {
+  if (isDevRoom(room)) return "Chat sa Developer";
   if (room === ROOM_STAFF_ADMIN) return "GC ng mga Admin";
   if (room === ROOM_STAFF_OFFICIALS) return "GC ng mga Opisyal";
   return room === ROOM_ALL ? "Buong Barangay" : room;

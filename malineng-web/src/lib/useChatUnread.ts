@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { collection, limit, onSnapshot, orderBy, query, where, type Timestamp } from "firebase/firestore";
+import { collection, doc, limit, onSnapshot, orderBy, query, where, type Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { isFresh, notifyNew } from "@/lib/notifyPrefs";
-import { CHAT_READ_EVENT, ROOM_ALL, ROOM_STAFF_ADMIN, ROOM_STAFF_OFFICIALS, cutoffTimestamp, getLastRead, isStaffRoom, parseCall, roomTitle } from "@/lib/chat";
+import { CHAT_READ_EVENT, ROOM_ALL, ROOM_STAFF_ADMIN, ROOM_STAFF_OFFICIALS, cutoffTimestamp, devRoomOf, getLastRead, isStaffRoom, parseCall, roomTitle, type DevChat } from "@/lib/chat";
 
 /**
  * Number of chat rooms with a message the person has not opened yet (for the bottom-nav badge).
@@ -14,7 +14,7 @@ import { CHAT_READ_EVENT, ROOM_ALL, ROOM_STAFF_ADMIN, ROOM_STAFF_OFFICIALS, cuto
  * Staff watch the barangay room, their own Purok (if any) and the private staff rooms they belong to.
  */
 export function useChatUnread(): number {
-  const { user, profile, isVerified, isStaff, isAdmin } = useAuth();
+  const { user, profile, isVerified, isStaff, isAdmin, isSuperAdmin } = useAuth();
   const [latest, setLatest] = useState<Record<string, { at: number; mine: boolean }>>({});
   const [, bump] = useState(0);
   // Newest message id seen per room, to notify only about messages that arrive while the app is open.
@@ -59,6 +59,39 @@ export function useChatUnread(): number {
     return () => unsubs.forEach((u) => u());
   }, [rooms, user?.uid]);
 
+  // Direct chat with the Developer. One tiny listener: the person's own inbox line, or (for the Developer)
+  // the newest 30 lines. Needs a login only, not verification.
+  const [devLines, setDevLines] = useState<DevChat[]>([]);
+  const devSeen = useRef<Record<string, number>>({});
+  useEffect(() => {
+    if (!user) {
+      setDevLines([]);
+      return;
+    }
+    const answer = (lines: DevChat[]) => {
+      setDevLines(lines);
+      for (const c of lines) {
+        const at = c.lastAt?.toMillis() ?? 0;
+        const known = devSeen.current[c.id];
+        devSeen.current[c.id] = at;
+        // Only a message that arrives while the app is open, written by the other side, and not in the open chat.
+        const wanted = isSuperAdmin ? c.lastFrom === "user" : c.lastFrom === "dev";
+        const viewing = window.location.pathname.startsWith("/chat") && document.visibilityState === "visible" && new URLSearchParams(window.location.search).get("room") === devRoomOf(c.id);
+        if (known !== undefined && at > known && wanted && isFresh(at) && !viewing) {
+          notifyNew("chat", isSuperAdmin ? `💬 ${c.name || "Residente"}` : "💬 Developer", c.lastText.slice(0, 120), `chat:${devRoomOf(c.id)}`, `/chat/?room=${encodeURIComponent(devRoomOf(c.id))}`);
+        }
+      }
+    };
+    if (isSuperAdmin) {
+      return onSnapshot(query(collection(db, "devChats"), orderBy("lastAt", "desc"), limit(30)), (snap) => answer(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as DevChat)), () => {});
+    }
+    return onSnapshot(
+      doc(db, "devChats", user.uid),
+      (snap) => answer(snap.exists() ? [{ id: snap.id, ...snap.data() } as DevChat] : []),
+      () => {},
+    );
+  }, [user, isSuperAdmin]);
+
   // Re-count when a room is opened (same tab) or read in another tab.
   useEffect(() => {
     const again = () => bump((n) => n + 1);
@@ -70,8 +103,15 @@ export function useChatUnread(): number {
     };
   }, []);
 
-  return rooms.filter((r) => {
-    const l = latest[r];
-    return !!l && l.at > 0 && !l.mine && l.at > getLastRead(r);
+  const devUnread = devLines.filter((c) => {
+    const at = c.lastAt?.toMillis() ?? 0;
+    return at > 0 && c.lastFrom === (isSuperAdmin ? "user" : "dev") && at > getLastRead(devRoomOf(c.id));
   }).length;
+
+  return (
+    rooms.filter((r) => {
+      const l = latest[r];
+      return !!l && l.at > 0 && !l.mine && l.at > getLastRead(r);
+    }).length + devUnread
+  );
 }

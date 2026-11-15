@@ -16,8 +16,9 @@ import {
   setDoc,
   Timestamp,
   where,
+  writeBatch,
 } from "firebase/firestore";
-import { Copy, Flag, Video, ImagePlus, MoreHorizontal, Pin, PinOff, Send, Trash2, VolumeX, X } from "lucide-react";
+import { Code2, Copy, Flag, Video, ImagePlus, MoreHorizontal, Pin, PinOff, Send, Trash2, VolumeX, X } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
@@ -38,6 +39,9 @@ import {
   newCallMessage,
   parseCall,
   ROOM_STAFF_OFFICIALS,
+  devRoomOf,
+  devRoomUid,
+  isDevRoom,
   isStaffRoom,
   cutoffTimestamp,
   dayLabel,
@@ -47,10 +51,12 @@ import {
   timeLabel,
   type ChatMessage,
   type ChatSettings,
+  type DevChat,
 } from "@/lib/chat";
 import { Avatar } from "@/components/Avatar";
 import { Button, ErrorText, Modal, PageHeader, Spinner } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
+import { LoginGate } from "@/components/LoginGate";
 
 const ROLE_STYLE: Record<string, string> = { Kapitan: "bg-amber-700", Secretary: "bg-teal-700", "Super Admin": "bg-purple-700" };
 /** Stored as "Super Admin" (the database rules check it); shown as "Developer". */
@@ -86,8 +92,41 @@ function RoomRow({ room }: { room: string }) {
   );
 }
 
+/** A person's line in the Developer's inbox. */
+function DevInboxRow({ c }: { c: DevChat }) {
+  const room = devRoomOf(c.uid);
+  const fresh = c.lastFrom === "user" && !!c.lastAt && c.lastAt.toMillis() > getLastRead(room);
+  return (
+    <Link href={`/chat/?room=${encodeURIComponent(room)}`} className="flex items-center gap-3 border-b border-gray-100 px-3 py-3 last:border-0 active:bg-gray-50">
+      <Avatar name={c.name || "?"} size="h-11 w-11" textClass="text-base" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-bold">{c.name || "Residente"}</span>
+        <span className="block truncate text-xs text-gray-500">{c.lastFrom === "dev" ? "Ikaw: " : ""}{c.lastText}</span>
+      </span>
+      <span className="flex shrink-0 flex-col items-end gap-1">
+        <span className="text-[0.68rem] text-gray-500">{timeLabel(c.lastAt)}</span>
+        {fresh && <span className="rounded-full bg-red-600 px-2 py-0.5 text-[0.65rem] font-black text-white">Bago</span>}
+      </span>
+    </Link>
+  );
+}
+
+/** For the Developer: everyone who wrote to them, newest first. */
+function DevInbox() {
+  const q = useMemo(() => query(collection(db, "devChats"), orderBy("lastAt", "desc"), limit(50)), []);
+  const { data, loading } = useCollection<DevChat>(q);
+  return (
+    <>
+      <p className="px-1 text-xs font-bold tracking-wide text-purple-700">MGA MENSAHE SA DEVELOPER</p>
+      <div className="overflow-hidden rounded-2xl bg-white shadow-card">
+        {loading ? <Spinner /> : data.length === 0 ? <p className="p-4 text-center text-sm text-gray-600">Wala pang sumulat sa iyo.</p> : data.map((c) => <DevInboxRow key={c.id} c={c} />)}
+      </div>
+    </>
+  );
+}
+
 function RoomList() {
-  const { profile, isStaff, isAdmin } = useAuth();
+  const { user, profile, isStaff, isAdmin, isSuperAdmin } = useAuth();
   const { settings } = useSettings();
   // Private staff rooms come first. Officials = admins without BHW (and the Developer).
   const staffRooms = [...(isStaff ? [ROOM_STAFF_ADMIN] : []), ...(isAdmin ? [ROOM_STAFF_OFFICIALS] : [])];
@@ -96,6 +135,19 @@ function RoomList() {
     <div className="space-y-3">
       <PageHeader title="Chat ng Barangay" subtitle="Verified na residente lang" />
       <p className="rounded-xl bg-brand-light px-3 py-2 text-xs text-brand-deep">Magalang na usapan lang po. Ang mga mensahe ay nabubura pagkatapos ng <b>7 araw</b>.</p>
+      {isSuperAdmin ? (
+        <DevInbox />
+      ) : (
+        user && (
+          <Link href={`/chat/?room=${encodeURIComponent(devRoomOf(user.uid))}`} className="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 shadow-card active:bg-gray-50">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-purple-700 text-white"><Code2 className="h-5 w-5" aria-hidden /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-bold">Kausapin ang Developer</span>
+              <span className="block text-xs text-gray-500">Pribado. Para sa tanong, ideya, problema, o ad ng negosyo.</span>
+            </span>
+          </Link>
+        )
+      )}
       {staffRooms.length > 0 && (
         <>
           <p className="px-1 text-xs font-bold tracking-wide text-gray-600">PRIBADO · PARA SA STAFF LANG</p>
@@ -139,6 +191,12 @@ function Conversation({ room }: { room: string }) {
   const { typers, pingTyping, stopTyping } = useTyping(room);
   const bottom = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  // In a chat with the Developer, the Developer sees who is writing.
+  const [devWith, setDevWith] = useState("");
+  useEffect(() => {
+    if (!isDevRoom(room) || !isSuperAdmin) return;
+    return onSnapshot(doc(db, "devChats", devRoomUid(room)), (s) => setDevWith(s.exists() ? String(s.data().name ?? "") : ""), () => setDevWith(""));
+  }, [room, isSuperAdmin]);
 
   const q = useMemo(
     () => query(collection(db, "chatRooms", room, "messages"), where("createdAt", ">=", cutoffTimestamp()), orderBy("createdAt", "desc"), limit(MESSAGE_LIMIT)),
@@ -190,14 +248,29 @@ function Conversation({ room }: { room: string }) {
     setError("");
     try {
       const role = isSuperAdmin ? "Super Admin" : isAdmin ? (profile.position ?? "") : "";
-      await addDoc(collection(db, "chatRooms", room, "messages"), {
+      const message = {
         text: body,
         photo: callMessage ? "" : photo,
         authorId: user.uid,
         authorName: profile.fullName,
         authorRole: role,
         createdAt: serverTimestamp(),
-      });
+      };
+      if (isDevRoom(room)) {
+        // Chat with the Developer: the message and the Developer's inbox line are written together.
+        const owner = devRoomUid(room);
+        const preview = (body || "📷 Larawan").slice(0, 80);
+        const batch = writeBatch(db);
+        batch.set(doc(collection(db, "chatRooms", room, "messages")), message);
+        if (isSuperAdmin && user.uid !== owner) {
+          batch.set(doc(db, "devChats", owner), { uid: owner, lastText: preview, lastAt: serverTimestamp(), lastFrom: "dev" }, { merge: true });
+        } else {
+          batch.set(doc(db, "devChats", owner), { uid: owner, name: profile.fullName, lastText: preview, lastAt: serverTimestamp(), lastFrom: "user" });
+        }
+        await batch.commit();
+      } else {
+        await addDoc(collection(db, "chatRooms", room, "messages"), message);
+      }
       lastSent.current = Date.now();
       stopTyping();
       if (!callMessage) {
@@ -234,7 +307,10 @@ function Conversation({ room }: { room: string }) {
   let lastDay = "";
   return (
     <div className="flex min-h-[calc(100dvh-13rem)] flex-col">
-      <PageHeader title={roomTitle(room)} subtitle={isStaffRoom(room) ? "Pribado · staff lang" : "Verified na residente lang"} />
+      <PageHeader
+        title={isDevRoom(room) && isSuperAdmin ? devWith || "Residente" : roomTitle(room)}
+        subtitle={isDevRoom(room) ? "Pribado · kayo lang ng Developer ang nakakabasa" : isStaffRoom(room) ? "Pribado · staff lang" : "Verified na residente lang"}
+      />
 
       {pin?.pinText && (
         <div className="mb-3 flex items-start gap-2 rounded-xl bg-yellow-100 px-3 py-2 text-xs text-yellow-900">
@@ -254,7 +330,7 @@ function Conversation({ room }: { room: string }) {
         ) : loadError ? (
           <ErrorText>{loadError}</ErrorText>
         ) : messages.length === 0 ? (
-          <p className="rounded-2xl bg-white p-6 text-center text-sm text-gray-600 shadow-card">Wala pang mensahe. Mauna ka na! 👋</p>
+          <p className="rounded-2xl bg-white p-6 text-center text-sm text-gray-600 shadow-card">{isDevRoom(room) && !isSuperAdmin ? "Kumusta! Isulat dito ang tanong o mensahe mo para sa Developer. Sasagot siya dito." : "Wala pang mensahe. Mauna ka na! 👋"}</p>
         ) : (
           messages.map((m) => {
             const day = dayLabel(m.createdAt);
@@ -528,15 +604,16 @@ function Conversation({ room }: { room: string }) {
 
 function ChatInner() {
   const room = useSearchParams().get("room");
-  return room ? <Conversation room={room} /> : <RoomList />;
+  const content = room ? <Conversation room={room} /> : <RoomList />;
+  // The Developer's chat only needs a login (a business asking about an ad may not be verified yet).
+  if (room && isDevRoom(room)) return <LoginGate message="Mag-login muna para makausap ang Developer.">{content}</LoginGate>;
+  return <RequireVerified feature="sumali sa chat ng barangay">{content}</RequireVerified>;
 }
 
 export default function ChatPage() {
   return (
-    <RequireVerified feature="sumali sa chat ng barangay">
-      <Suspense fallback={<Spinner />}>
-        <ChatInner />
-      </Suspense>
-    </RequireVerified>
+    <Suspense fallback={<Spinner />}>
+      <ChatInner />
+    </Suspense>
   );
 }
