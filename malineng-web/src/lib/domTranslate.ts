@@ -13,6 +13,10 @@ interface Rec {
 
 const ATTRS = ["placeholder", "aria-label", "title", "alt"] as const;
 const SKIP = new Set(["SCRIPT", "STYLE", "TEXTAREA", "CODE", "PRE", "NOSCRIPT"]);
+
+/** Anything inside an element marked `data-no-i18n` is never translated (the certificate must always read in Filipino). */
+const NO_I18N = "[data-no-i18n]";
+const skipped = (el: Element | null | undefined): boolean => !!el && !!el.closest?.(NO_I18N);
 const textRec = new WeakMap<Text, Rec>();
 const attrRec = new WeakMap<Element, Map<string, Rec>>();
 
@@ -83,14 +87,15 @@ function doAttr(el: Element, name: string): void {
 
 function walk(root: Node): void {
   if (root.nodeType === Node.TEXT_NODE) {
+    if (skipped(root.parentElement)) return;
     doText(root as Text);
     return;
   }
   if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_NODE) return;
   const el = root as Element;
-  if (el.nodeType === Node.ELEMENT_NODE && SKIP.has(el.tagName)) return;
+  if (el.nodeType === Node.ELEMENT_NODE && (SKIP.has(el.tagName) || skipped(el))) return;
   const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
-    acceptNode: (n) => (n.nodeType === Node.ELEMENT_NODE && SKIP.has((n as Element).tagName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    acceptNode: (n) => (n.nodeType === Node.ELEMENT_NODE && (SKIP.has((n as Element).tagName) || (n as Element).hasAttribute("data-no-i18n")) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
   });
   let n: Node | null = root.nodeType === Node.ELEMENT_NODE ? root : tree.nextNode();
   while (n) {
@@ -117,8 +122,11 @@ function onMutations(records: MutationRecord[]): void {
   observer.disconnect(); // our own edits must not trigger more work
   for (const r of records) {
     if (r.type === "childList") r.addedNodes.forEach((n) => walk(n));
-    else if (r.type === "characterData") doText(r.target as Text);
-    else if (r.type === "attributes" && r.attributeName) doAttr(r.target as Element, r.attributeName);
+    else if (r.type === "characterData") {
+      if (!skipped(r.target.parentElement)) doText(r.target as Text);
+    } else if (r.type === "attributes" && r.attributeName) {
+      if (!skipped(r.target as Element)) doAttr(r.target as Element, r.attributeName);
+    }
   }
   doTitleOnce();
   observe();

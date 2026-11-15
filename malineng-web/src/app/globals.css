@@ -173,13 +173,13 @@ textarea {
 .cert-title h2 { margin: 0; font-weight: 700; font-size: 46px; line-height: 1; letter-spacing: 0.2em; white-space: nowrap; color: #14233f; }
 .cert-sub { margin-top: 8px; font: 600 14px Inter, Arial, sans-serif; letter-spacing: 0.34em; color: #8a6a12; }
 .cert-pres { margin-top: 24px; font-style: italic; font-weight: 500; font-size: 22px; color: #6b5a25; }
-.cert-name { margin-top: 4px; font-style: italic; font-weight: 600; font-size: 66px; line-height: 1.1; padding: 0 60px 4px; border-bottom: 1.5px solid #b8921e; max-width: 100%; overflow-wrap: anywhere; }
+.cert-name { margin-top: 4px; font-style: italic; font-weight: 600; font-size: 66px; line-height: 1.1; padding: 0 40px 4px; border-bottom: 1.5px solid #b8921e; max-width: 100%; white-space: nowrap; }
 .cert-body { margin-top: 16px; font-weight: 500; font-size: 21px; line-height: 1.55; max-width: 700px; color: #3a3320; }
-.cert-facts { margin-top: 18px; display: grid; grid-template-columns: repeat(4, auto); border-top: 1px solid #cdb77a; border-bottom: 1px solid #cdb77a; }
-.cert-facts div { padding: 9px 28px; border-left: 1px solid #cdb77a; text-align: center; }
+.cert-facts { margin-top: 18px; max-width: 100%; display: grid; grid-template-columns: repeat(4, auto); border-top: 1px solid #cdb77a; border-bottom: 1px solid #cdb77a; }
+.cert-facts div { padding: 9px 22px; max-width: 300px; border-left: 1px solid #cdb77a; text-align: center; }
 .cert-facts div:first-child { border-left: 0; }
 .cert-facts small { display: block; font: 600 10px Inter, Arial, sans-serif; letter-spacing: 0.22em; color: #8a6a12; }
-.cert-facts b { display: block; margin-top: 2px; font-weight: 700; font-size: 18px; letter-spacing: 0.04em; }
+.cert-facts b { display: block; margin-top: 2px; font-weight: 700; font-size: 18px; letter-spacing: 0.04em; overflow-wrap: anywhere; }
 .cert-sigs { margin-top: auto; display: grid; grid-template-columns: 1fr 70px 1fr; gap: 40px; width: 100%; align-items: end; }
 .cert-sigs > div:not(.cert-qrbox) { padding-top: 7px; border-top: 1.5px solid #14233f; }
 .cert-sigs b { display: block; font-weight: 700; font-size: 19px; letter-spacing: 0.06em; }
@@ -187,6 +187,29 @@ textarea {
 .cert-qrbox { width: 66px; height: 66px; margin: 0 auto; padding: 4px; border: 1px solid #14233f; border-radius: 4px; }
 .cert-qr { display: block; width: 100%; height: 100%; }
 .cert-ver { position: absolute; left: 110px; right: 110px; bottom: 46px; display: flex; justify-content: space-between; font: 600 10px Inter, Arial, sans-serif; letter-spacing: 0.12em; color: #8a7a45; }
+
+/* Navy executive version: dark navy paper, gold lines, white name. */
+.cert-navy { background: radial-gradient(120% 100% at 50% 0%, #12386e 0%, #0a2347 55%, #071a36 100%); color: #f4ebd0; }
+.cert-navy .cert-r1 { border-color: #d8b650; }
+.cert-navy .cert-r2 { border-color: rgba(216, 182, 80, 0.55); }
+.cert-navy .cert-nt { background: #0a2347; border-color: #d8b650; }
+.cert-navy .cert-wm { opacity: 0.1; }
+.cert-navy .cert-org, .cert-navy .cert-ofc { color: #c9b27a; }
+.cert-navy .cert-brgy, .cert-navy .cert-title h2 { color: #fff6da; }
+.cert-navy .cert-title i { background: linear-gradient(90deg, transparent, #d8b650); }
+.cert-navy .cert-title i:last-child { background: linear-gradient(270deg, transparent, #d8b650); }
+.cert-navy .cert-sub { color: #d8b650; }
+.cert-navy .cert-pres { color: #c9b27a; }
+.cert-navy .cert-name { color: #fff; border-color: #d8b650; }
+.cert-navy .cert-body { color: #e6ddbe; }
+.cert-navy .cert-facts, .cert-navy .cert-facts div { border-color: rgba(216, 182, 80, 0.6); }
+.cert-navy .cert-facts small { color: #d8b650; }
+.cert-navy .cert-facts b { color: #fff6da; }
+.cert-navy .cert-sigs > div:not(.cert-qrbox) { border-color: #d8b650; }
+.cert-navy .cert-sigs b { color: #fff6da; }
+.cert-navy .cert-sigs small { color: #c9b27a; }
+.cert-navy .cert-qrbox { border-color: #d8b650; background: #f4ebd0; }
+.cert-navy .cert-ver { color: #9fb0cf; }
 
 @media print {
   /* The certificate prints alone, edge to edge on A4 landscape. */

@@ -133,6 +133,8 @@ export async function seed(selfieFile) {
   // A received donation of the sample resident, for the receipt and the certificate (same id as its sponsor entry).
   await put("raffleDonations/dncertdncertdncert", { userId: S(uid), name: S("Aling Nena Store"), anon: B(false), kind: S("Gamit / premyo"), what: S("Grocery package"), amount: I(2000), contact: S("09170001111"), message: S(""), status: S("received"), receiptNo: S("RAF-20261115-A1B2"), receivedBy: S("x"), receivedByName: S("Roberto Halimbawa"), receivedAt: T(Date.now() - day), createdAt: T(Date.now() - 3 * day) });
   await put("raffleSponsors/dncertdncertdncert", { name: S("Aling Nena Store"), what: S("Grocery package"), amount: I(2000), tier: S("reg"), show: B(true), donationId: S("dncertdncertdncert"), createdAt: T(Date.now() - day) });
+  // A long business name, to check that nothing overlaps on the certificate.
+  await put("raffleDonations/dnlongdnlongdnlong", { userId: S(uid), name: S("Omega Purified Ice Cubes and Distilled Water Refilling Station"), anon: B(false), kind: S("Gamit / premyo"), what: S("Media Noche Package at Regalo para sa mga Bata"), amount: I(1500), contact: S("09170001111"), message: S(""), status: S("received"), receiptNo: S("RAF-20261115-NABT"), receivedBy: S("x"), receivedByName: S("Roberto Halimbawa"), receivedAt: T(Date.now() - day), createdAt: T(Date.now() - 3 * day) });
   process.env.GUIDE_DONATION = "dncertdncertdncert";
   return uid;
 }
