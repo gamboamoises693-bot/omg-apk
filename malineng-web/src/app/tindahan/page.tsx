@@ -1,5 +1,6 @@
 "use client";
 
+import { HowToButton } from "@/components/HowTo";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { collection, limit, orderBy, query, where } from "firebase/firestore";
@@ -59,9 +60,12 @@ export default function TindahanPage() {
             <h1 className="text-[1.45rem] font-extrabold tracking-tight">Tindahan ng Malineng</h1>
             <p className="text-[0.85rem] text-white/85">Libre mag-benta. Walang bayad, walang commission.</p>
           </div>
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15">
-            <Store className="h-6 w-6" aria-hidden />
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <HowToButton />
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15">
+              <Store className="h-6 w-6" aria-hidden />
+            </span>
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" aria-hidden />

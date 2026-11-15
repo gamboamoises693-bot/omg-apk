@@ -1,0 +1,75 @@
+// Sample data for the guide screenshots. Talks to the LOCAL Firebase emulators only (never the real project).
+// Nobody real appears in the pictures: the resident is "Juan Dela Cruz (halimbawa)".
+import { readFileSync } from "node:fs";
+
+const PROJECT = process.env.GUIDE_PROJECT || "project-a682ecac-e2d1-469c-bc7";
+const AUTH = "http://127.0.0.1:9099";
+const STORE = `http://127.0.0.1:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
+const OWNER = { "content-type": "application/json", Authorization: "Bearer owner" };
+
+const S = (v) => ({ stringValue: v });
+const I = (v) => ({ integerValue: String(v) });
+const B = (v) => ({ booleanValue: v });
+const T = (v) => ({ timestampValue: new Date(v).toISOString() });
+const A = (v) => ({ arrayValue: { values: v } });
+
+async function put(path, fields) {
+  const r = await fetch(`${STORE}/${path}`, { method: "PATCH", headers: OWNER, body: JSON.stringify({ fields }) });
+  if (!r.ok) throw new Error(`${path}: ${r.status} ${await r.text()}`);
+}
+
+async function account(email, password) {
+  const r = await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=guides`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email, password, returnSecureToken: true }),
+  });
+  const j = await r.json();
+  if (!j.localId) throw new Error(`signUp ${email}: ${JSON.stringify(j)}`);
+  // Verified e-mail, so the sample resident is allowed to post and request.
+  await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:update`, {
+    method: "POST",
+    headers: OWNER,
+    body: JSON.stringify({ localId: j.localId, emailVerified: true }),
+  });
+  return j.localId;
+}
+
+export const RESIDENT = { email: "juan@halimbawa.test", password: "halimbawa123" };
+/** A resident who has not been verified yet (for the "I-verify ang account" guide). */
+export const NEWBIE = { email: "maria@halimbawa.test", password: "halimbawa123" };
+
+export async function seed(selfieFile) {
+  const uid = await account(RESIDENT.email, RESIDENT.password);
+  const day = 86400e3;
+  await put(`users/${uid}`, {
+    uid: S(uid), email: S(RESIDENT.email), fullName: S("Juan Dela Cruz"), role: S("resident"), purok: S("Purok 1"),
+    contact: S("09171234567"), birthday: S("1990-05-12"), createdAt: T(Date.now() - 30 * day),
+  });
+  await put(`verifiedUsers/${uid}`, { name: S("Juan Dela Cruz") });
+  if (selfieFile) {
+    await put(`verifications/${uid}`, {
+      uid: S(uid), fullName: S("Juan Dela Cruz"), purok: S("Purok 1"), birthday: S("1990-05-12"), contact: S("09171234567"),
+      email: S(RESIDENT.email), selfie: S(readFileSync(selfieFile, "utf8")), status: S("verified"), submittedAt: T(Date.now() - 20 * day),
+    });
+  }
+  const nuid = await account(NEWBIE.email, NEWBIE.password);
+  await put(`users/${nuid}`, {
+    uid: S(nuid), email: S(NEWBIE.email), fullName: S("Maria Santos"), role: S("resident"), purok: S("Purok 2"),
+    contact: S("09181234567"), birthday: S("1995-03-08"), createdAt: T(Date.now() - 2 * day),
+  });
+  // A few things to look at on the pages.
+  await put("settings/main", {
+    ambulance: { mapValue: { fields: { status: S("available"), phone: S("09171112222"), fee: S("Libre"), drivers: A([S("Mang Berto"), S("Mang Rudy")]) } } },
+    announcements: A([{ mapValue: { fields: { title: S("Barangay Kalinisan Day"), body: S("Sabado, 6:00 AM sa Barangay Hall."), date: S("2026-11-20") } } }]),
+  });
+  await put("borrowItems/tent", { name: S("Tent"), total: I(3), maxPerBorrow: I(2), fee: I(0), photo: S(""), note: S("Para sa lamay, kasal at iba pang okasyon."), hidden: B(false) });
+  await put("borrowItems/upuan", { name: S("Monoblock chairs"), total: I(40), maxPerBorrow: I(20), fee: I(0), photo: S(""), note: S(""), hidden: B(false) });
+  await put("listings/l1", {
+    sellerId: S("seller"), sellerName: S("Aling Nena"), title: S("Gulay at prutas"), price: I(50), category: S("Pagkain"), description: S("Sariwa, galing sa taniman."),
+    contact: S("09170001111"), purok: S("Purok 2"), photoURL: S(""), status: S("approved"), createdAt: T(Date.now() - 2 * day), expiresAt: T(Date.now() + 20 * day),
+  });
+  await put("settings/raffle", { enabled: B(true), startAt: T(Date.now() - day), cutoffAt: T(Date.now() + 7 * day), drawAt: T(Date.now() + 7 * day), rounds: A([{ mapValue: { fields: { name: S("MAJOR PRIZE"), type: S("maj"), prizes: A([S("Rice cooker")]) } } }]) });
+  await put("raffleSponsors/s1", { name: S("Omega Purified Ice"), what: S("Media Noche"), amount: I(1000), tier: S("main"), show: B(true), createdAt: T(Date.now() - day) });
+  return uid;
+}

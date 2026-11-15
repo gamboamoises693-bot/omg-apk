@@ -12,6 +12,7 @@ import {
   ClipboardList,
   FileWarning,
   HandCoins,
+  HelpCircle,
   Gavel,
   Gift,
   HardHat,
@@ -85,6 +86,7 @@ const BY_HREF: Record<string, Service> = Object.fromEntries(
       { href: "/botohan", label: "Botohan", icon: Vote },
       { href: "/purok", label: "Purok Points", icon: Trophy },
       { href: "/emergency", label: "Emergency", icon: Siren, emergency: true },
+      { href: "/gabay", label: "Paano gamitin", icon: HelpCircle },
     ] as Service[]
   ).map((s) => [s.href, s]),
 );
@@ -97,6 +99,7 @@ const GROUPS: { title: string; hrefs: string[] }[] = [
   { title: "Negosyo at trabaho", hrefs: ["/tindahan", "/hiring", "/skills"] },
   { title: "Komunidad", hrefs: ["/chat", "/pabatid", "/board", "/events", "/raffle", "/register-event", "/liga", "/purok", "/lost-found"] },
   { title: "Barangay", hrefs: ["/pondo", "/proyekto", "/desisyon", "/mapa"] },
+  { title: "Tulong", hrefs: ["/gabay"] },
 ];
 
 /** Hamburger button + side drawer (same look as the admin menu) with every service, in groups. */
