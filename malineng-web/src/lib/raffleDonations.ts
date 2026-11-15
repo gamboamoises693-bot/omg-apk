@@ -49,31 +49,8 @@ export interface Sponsor {
   createdAt?: Timestamp;
 }
 
-/**
- * Cleans a pasted Facebook page or website. "facebook.com/omega" becomes "https://facebook.com/omega".
- * Only http and https links with a real host are kept (never javascript: or anything else); anything else gives "".
- */
-export function normalizeLink(raw: string): string {
-  const t = raw.trim().slice(0, 300);
-  if (!t) return "";
-  const withScheme = /^https?:\/\//i.test(t) ? t : /^[a-z][a-z0-9+.-]*:/i.test(t) ? "" : `https://${t}`;
-  if (!withScheme) return "";
-  try {
-    const u = new URL(withScheme);
-    return (u.protocol === "https:" || u.protocol === "http:") && u.hostname.includes(".") ? u.toString() : "";
-  } catch {
-    return "";
-  }
-}
-
-/** "https://www.facebook.com/omega" -> "facebook.com" (shown under the sponsor so people know where the tap goes). */
-export function linkHost(link: string): string {
-  try {
-    return new URL(link).hostname.replace(/^www\./, "");
-  } catch {
-    return "";
-  }
-}
+export { linkHost, messengerLink, normalizeLink } from "@/lib/links";
+import { normalizeLink } from "@/lib/links";
 
 export const DONATION_STATUS_LABEL: Record<DonationStatus, string> = {
   new: "Bago",

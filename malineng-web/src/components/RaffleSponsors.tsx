@@ -14,7 +14,7 @@ import { useToast } from "@/components/Toast";
 import { LogoPicker } from "@/components/LogoPicker";
 import { useXmas } from "@/lib/raffle";
 import { XmasGarland, XmasStar } from "@/components/Xmas";
-import { linkHost } from "@/lib/raffleDonations";
+import { linkHost, messengerLink } from "@/lib/links";
 
 /** What the donor reads about each step of their pledge. */
 const DONOR_LABEL = {
@@ -33,6 +33,26 @@ function SponsorBox({ s, className, children }: { s: { name: string; link?: stri
   return (
     <a href={s.link} target="_blank" rel="noopener noreferrer nofollow" aria-label={`Buksan ang ${s.name} (${linkHost(s.link)})`} className={`${className} block active:scale-[0.98]`}>
       {children}
+    </a>
+  );
+}
+
+/** "Messenger" button for a sponsor whose link is a Facebook page: opens their chat (m.me/page-name) in a new tab. */
+function MessengerButton({ name, link, className = "" }: { name: string; link?: string; className?: string }) {
+  const m = link ? messengerLink(link) : "";
+  if (!m) return null;
+  return (
+    <a
+      href={m}
+      target="_blank"
+      rel="noopener noreferrer nofollow"
+      aria-label={`Mag-chat sa ${name} sa Messenger`}
+      className={`inline-flex items-center gap-1.5 rounded-full bg-[#0A7CFF] px-3 py-1.5 text-[0.7rem] font-extrabold text-white shadow-sm active:scale-95 ${className}`}
+    >
+      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
+        <path d="M12 2C6.5 2 2 6.2 2 11.5c0 2.9 1.4 5.5 3.6 7.2V22l3.3-1.8c.9.2 1.9.4 3.1.4 5.5 0 10-4.2 10-9.5S17.5 2 12 2zm1 12.8-2.5-2.7-4.9 2.7 5.4-5.7 2.6 2.7 4.8-2.7-5.4 5.7z" />
+      </svg>
+      Messenger
     </a>
   );
 }
@@ -90,7 +110,8 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
       ) : (
         <>
           {main.map((s) => (
-            <SponsorBox key={s.id} s={s} className={`relative flex items-center gap-3 rounded-2xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-3 text-[#3B2E05] shadow-[0_8px_18px_-10px_rgba(120,80,0,.6)] ${xmas ? "mt-5 pt-8 ring-1 ring-[#E0B94A]" : ""}`}>
+            <div key={s.id} className={`relative ${xmas ? "mt-5" : ""}`}>
+            <SponsorBox s={s} className={`relative flex items-center gap-3 rounded-2xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-3 text-[#3B2E05] shadow-[0_8px_18px_-10px_rgba(120,80,0,.6)] ${xmas ? "pt-8 ring-1 ring-[#E0B94A]" : ""} ${messengerLink(s.link ?? "") ? "pr-28" : ""}`}>
               {xmas && <XmasStar className="absolute -top-4 left-1/2 h-9 w-9 -translate-x-1/2 fill-[#B3202B] drop-shadow-[0_2px_0_rgba(0,0,0,.25)]" />}
               <SponsorMark s={s} xmas={xmas} className="h-14 w-14 rounded-2xl bg-white text-lg" />
               <span className="min-w-0">
@@ -100,6 +121,8 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
                 <LinkHint link={s.link} dark />
               </span>
             </SponsorBox>
+            <MessengerButton name={s.name} link={s.link} className="absolute bottom-3 right-3" />
+            </div>
           ))}
           {(full ? others : others.slice(0, 4)).length > 0 && (
             <>
@@ -111,18 +134,21 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
                     <li key={s.id} className={i % 2 ? "pt-2" : ""}>
                       <div className="xmas-sway" style={{ animationDelay: `-${(i * 1.3) % 5}s` }}>
                         <span className={`mx-auto block w-px bg-gradient-to-b from-[#D9B53F] to-[#9A7B12] ${i % 2 ? "h-16" : "h-9"}`} aria-hidden />
+                        <div className="relative">
                         <SponsorBox s={s} className="relative flex flex-col items-center">
                           <span className="relative z-10 -mb-8">
                             <span className="absolute -top-1.5 left-1/2 h-2 w-3 -translate-x-1/2 rounded-t-[3px] bg-gradient-to-b from-[#E8C85A] to-[#B8921E]" aria-hidden />
                             <SponsorMark s={s} xmas className="h-16 w-16 bg-white text-base" />
                           </span>
-                          <span className="flex w-full flex-col items-center gap-0.5 rounded-2xl border border-[#EEDFB0] bg-gradient-to-b from-white to-[#FFFAEC] px-2 pb-3 pt-10 text-center shadow-[0_10px_18px_-12px_rgba(120,80,0,.55)]">
+                          <span className={`flex w-full flex-col items-center gap-0.5 rounded-2xl border border-[#EEDFB0] bg-gradient-to-b from-white to-[#FFFAEC] px-2 pt-10 text-center shadow-[0_10px_18px_-12px_rgba(120,80,0,.55)] ${messengerLink(s.link ?? "") ? "pb-12" : "pb-3"}`}>
                             <b className="line-clamp-1 w-full text-sm">{s.name}</b>
                             <span className="line-clamp-1 w-full text-xs text-gray-600">{s.what}</span>
                             {s.amount > 0 && <span className="rounded-full bg-[#FDECEE] px-2.5 py-0.5 text-xs font-bold text-[#B3202B]">{formatPeso(s.amount).replace(".00", "")}</span>}
                             <LinkHint link={s.link} dark />
                           </span>
                         </SponsorBox>
+                        <MessengerButton name={s.name} link={s.link} className="absolute bottom-3 left-1/2 -translate-x-1/2" />
+                        </div>
                       </div>
                     </li>
                   ) : (
@@ -134,6 +160,7 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
                         {s.amount > 0 && <span className="text-xs font-bold text-brand">{formatPeso(s.amount).replace(".00", "")}</span>}
                         <LinkHint link={s.link} />
                       </SponsorBox>
+                      <MessengerButton name={s.name} link={s.link} className="mt-1.5 w-full justify-center" />
                     </li>
                   ),
                 )}
