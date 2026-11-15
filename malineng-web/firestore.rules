@@ -245,7 +245,9 @@ service cloud.firestore {
     // which includes the Developer (Super Admin). Residents can never read either, even with a Purok
     // named like them, because the staff rooms are matched first.
     function canReadRoom(room) {
-      return room == 'staff-admin' ? (isStaff() && notSuspended())
+      // Direct chat with the Developer: only the person and the Developer (no verification needed, so a business can ask about an ad).
+      return room.matches('^dev-.+$') ? (signedIn() && notSuspended() && (isSuperAdmin() || room == 'dev-' + request.auth.uid))
+        : room == 'staff-admin' ? (isStaff() && notSuspended())
         : room == 'staff-officials' ? (isAdmin() && notSuspended())
         : verifiedPoster() && (room == 'all' || room == me().get('purok', '') || isStaff());
     }
@@ -1254,7 +1256,7 @@ service cloud.firestore {
     match /chatRooms/{room} {
       // Room settings: the pinned message.
       allow read: if canReadRoom(room);
-      allow write: if isOfficer() && incoming().keys().hasOnly(['pinText', 'pinBy', 'pinAt'])
+      allow write: if isOfficer() && (!room.matches('^dev-.+$') || isSuperAdmin()) && incoming().keys().hasOnly(['pinText', 'pinBy', 'pinAt'])
         && incoming().pinText is string && incoming().pinText.size() <= 300
         && incoming().pinBy is string && incoming().pinBy.size() <= 80;
 
@@ -1279,7 +1281,8 @@ service cloud.firestore {
           && (incoming().text.size() > 0 || incoming().photo.size() > 0)
           && incoming().createdAt == request.time;
         // Officers remove anything; the writer may remove their own message for 5 minutes.
-        allow delete: if isOfficer()
+        // Other officers cannot touch a private chat with the Developer.
+        allow delete: if (isOfficer() && (!room.matches('^dev-.+$') || isSuperAdmin()))
           || (signedIn() && existing().authorId == request.auth.uid && request.time < existing().createdAt + duration.value(5, 'm'));
       }
     }
@@ -1293,6 +1296,20 @@ service cloud.firestore {
         && incoming().name == me().fullName
         && incoming().at == request.time;
       allow delete: if isSelf(uid);
+    }
+
+    // The Developer's inbox: one line per person who wrote to the Developer. The sender writes their own line with each
+    // message ("user"), the Developer answers ("dev").
+    match /devChats/{uid} {
+      allow read: if isSuperAdmin() || (signedIn() && isSelf(uid));
+      allow create, update: if incoming().keys().hasOnly(['uid', 'name', 'lastText', 'lastAt', 'lastFrom'])
+        && incoming().uid == uid
+        && incoming().lastText is string && incoming().lastText.size() <= 80
+        && incoming().lastAt == request.time
+        && ((isSelf(uid) && notSuspended() && chatOpen() && !chatMuted()
+              && incoming().lastFrom == 'user' && incoming().name == me().fullName)
+            || (isSuperAdmin() && incoming().lastFrom == 'dev'));
+      allow delete: if isSuperAdmin();
     }
 
     // Temporary mutes set by officers.
