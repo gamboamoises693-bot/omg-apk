@@ -492,7 +492,7 @@ export const GUIDES = [
       { before: [go("/admin/#settings")], ring: 'button:has-text("Mga Opisyal")',
         tl: "Dito inilalagay at inaayos ang mga opisyal na lumalabas sa Home.", en: "Here you add and edit the officials shown on Home." },
       { ring: 'button:has-text("Mga Anunsyo")',
-        tl: "Ilagay ang mga anunsyo na lumalabas sa Home. Nagpapalit ang mga ito tuwing 10 segundo.", en: "Add the announcements shown on Home. They switch every 10 seconds." },
+        tl: "Ilagay ang mga anunsyo na lumalabas sa Home. Nagpapalit ang mga ito tuwing 10 segundo. Lagyan ng petsa na 'Mawawala pagkatapos ng' para kusa itong mawala kapag tapos na ang event.", en: "Add the announcements shown on Home. They switch every 10 seconds. Set an 'Ends after' date so it disappears by itself when the event is over." },
       { ring: 'button:has-text("Alert Banner")',
         tl: "Maglagay ng alert (hal. bagyo) at i-on ang heat index.", en: "Put up an alert (for example a typhoon) and turn on the heat index." },
       { ring: 'button:has-text("Ambulansya")',

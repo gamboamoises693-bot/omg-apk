@@ -23,7 +23,7 @@ import { useCollection } from "@/lib/useCollection";
 import { APPOINTMENT_STATUS_LABEL, BARANGAY_CITY } from "@/lib/constants";
 import { REQUEST_STATUS_LABEL, formatTime12 } from "@/lib/ambulance";
 import { formatDate, sortNewest, telHref, todayISO, tsToMillis } from "@/lib/format";
-import type { AmbulanceRequest, Appointment, InfraProject, Listing } from "@/lib/types";
+import { isAnnouncementActive, type AmbulanceRequest, type Appointment, type InfraProject, type Listing } from "@/lib/types";
 import { ProgressBar, ProjectStatusPill, compareProjects } from "@/components/ProjectBits";
 import { LinkButton, Modal, SectionTitle, Spinner } from "@/components/ui";
 import { AdminShieldLink } from "@/components/AdminShieldLink";
@@ -150,6 +150,8 @@ function SummaryCard() {
 export default function HomePage() {
   const { profile, isSuperAdmin, isVerified } = useAuth();
   const { settings, loading } = useSettings();
+  // Announcements whose last day has passed are no longer shown on Home (an admin can still see them in Settings).
+  const activeAnnouncements = useMemo(() => settings.announcements.filter((a) => isAnnouncementActive(a, todayISO())), [settings.announcements]);
   const xmas = useXmas();
   const [hello, setHello] = useState("Magandang araw");
   const [stats, setStats] = useState<PublicStats | null>(null);
@@ -338,10 +340,10 @@ export default function HomePage() {
       ) : (
         <>
           {/* Announcements carousel */}
-          {settings.announcements.length > 0 && (
+          {activeAnnouncements.length > 0 && (
             <>
               <SectionTitle>Mga Anunsyo</SectionTitle>
-              <AnnouncementRotator items={settings.announcements} />
+              <AnnouncementRotator items={activeAnnouncements} />
             </>
           )}
 
