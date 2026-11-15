@@ -161,7 +161,9 @@ function OfficialsSection({ settings, onBack }: { settings: Settings; onBack: ()
 function AnnouncementsSection({ settings, onBack }: { settings: Settings; onBack: () => void }) {
   const [list, setList] = useState(settings.announcements);
   const { saving, run } = useSaver(onBack);
-  const save = () => run(() => saveSettings({ announcements: list.filter((a) => a.title.trim()) }, "Mga Anunsyo"), "Na-save ang Mga Anunsyo.");
+  // An empty end date is not saved at all (the announcement then stays until it is removed).
+  const clean = (a: Settings["announcements"][number]) => ({ title: a.title, body: a.body, date: a.date, ...(a.until ? { until: a.until } : {}) });
+  const save = () => run(() => saveSettings({ announcements: list.filter((a) => a.title.trim()).map(clean) }, "Mga Anunsyo"), "Na-save ang Mga Anunsyo.");
   return (
     <SectionPage title="Mga Anunsyo" icon={Megaphone} onBack={onBack} onSave={save} saving={saving}>
       <Button variant="outline" full onClick={() => setList([{ title: "", body: "", date: todayISO() }, ...list])}>
@@ -176,6 +178,14 @@ function AnnouncementsSection({ settings, onBack }: { settings: Settings; onBack
           </div>
           <Input label="Pamagat" value={a.title} onChange={(e) => setList(list.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
           <Input label="Petsa" type="date" value={a.date} onChange={(e) => setList(list.map((x, j) => (j === i ? { ...x, date: e.target.value } : x)))} />
+          <Input
+            label="Mawawala sa Home pagkatapos ng (optional)"
+            type="date"
+            value={a.until ?? ""}
+            onChange={(e) => setList(list.map((x, j) => (j === i ? { ...x, until: e.target.value } : x)))}
+            hint="Piliin ang huling araw na lalabas. Kinabukasan, kusa na itong mawawala sa Home. Iwanang blangko kung gusto mong manatili hanggang burahin mo."
+          />
+          {a.until && a.until < todayISO() && <p className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600">TAPOS NA: wala na ito sa Home. Burahin o palitan ang petsa.</p>}
           <Textarea label="Detalye" value={a.body} onChange={(e) => setList(list.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)))} />
         </Card>
       ))}

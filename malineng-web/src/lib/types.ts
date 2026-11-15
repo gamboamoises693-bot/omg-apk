@@ -252,6 +252,13 @@ export interface Announcement {
   title: string;
   body: string;
   date: string;
+  /** Last day it shows on Home (YYYY-MM-DD). Empty or missing = it stays until an admin removes it. */
+  until?: string;
+}
+
+/** True while the announcement should show on Home: no end date, or today is not past it. */
+export function isAnnouncementActive(a: Announcement, today: string): boolean {
+  return !a.until || a.until >= today;
 }
 
 export interface Project {

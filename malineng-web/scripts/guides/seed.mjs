@@ -93,7 +93,11 @@ export async function seed(selfieFile) {
   // A few things to look at on the pages.
   await put("settings/main", {
     ambulance: { mapValue: { fields: { status: S("available"), phone: S("09171112222"), fee: S("Libre"), drivers: A([S("Mang Berto"), S("Mang Rudy")]) } } },
-    announcements: A([{ mapValue: { fields: { title: S("Barangay Kalinisan Day"), body: S("Sabado, 6:00 AM sa Barangay Hall."), date: S("2026-11-20") } } }]),
+    announcements: A([
+      { mapValue: { fields: { title: S("Barangay Kalinisan Day"), body: S("Sabado, 6:00 AM sa Barangay Hall."), date: S("2026-11-20"), until: S(new Date(Date.now() + 5 * day).toISOString().slice(0, 10)) } } },
+      // Already over: must not show on Home.
+      { mapValue: { fields: { title: S("Tapos nang anunsyo"), body: S("Hindi ito dapat lumabas."), date: S("2026-11-01"), until: S(new Date(Date.now() - 2 * day).toISOString().slice(0, 10)) } } },
+    ]),
   });
   await put("borrowItems/tent", { name: S("Tent"), total: I(3), maxPerBorrow: I(2), fee: I(0), photo: S(""), note: S("Para sa lamay, kasal at iba pang okasyon."), hidden: B(false) });
   await put("borrowItems/upuan", { name: S("Monoblock chairs"), total: I(40), maxPerBorrow: I(20), fee: I(0), photo: S(""), note: S(""), hidden: B(false) });

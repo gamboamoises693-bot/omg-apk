@@ -1376,8 +1376,8 @@
           "h": 1170
         },
         {
-          "tl": "Ilagay ang mga anunsyo na lumalabas sa Home. Nagpapalit ang mga ito tuwing 10 segundo.",
-          "en": "Add the announcements shown on Home. They switch every 10 seconds.",
+          "tl": "Ilagay ang mga anunsyo na lumalabas sa Home. Nagpapalit ang mga ito tuwing 10 segundo. Lagyan ng petsa na 'Mawawala pagkatapos ng' para kusa itong mawala kapag tapos na ang event.",
+          "en": "Add the announcements shown on Home. They switch every 10 seconds. Set an 'Ends after' date so it disappears by itself when the event is over.",
           "img": "admin-settings-2.jpg",
           "w": 585,
           "h": 1170
