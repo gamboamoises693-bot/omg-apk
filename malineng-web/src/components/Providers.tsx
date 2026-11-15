@@ -14,6 +14,7 @@ import { BoardNotifier } from "./BoardNotifier";
 import { RaffleEntryManager } from "./RaffleEntryManager";
 import { DonationNotifier } from "./DonationNotifier";
 import { RegisterServiceWorker } from "./InstallApp";
+import { XmasMusic } from "./XmasMusic";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -33,6 +34,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <BoardNotifier />
           <RaffleEntryManager />
           <DonationNotifier />
+          <XmasMusic />
           <AdminAlertWatcher />
           <ListingHousekeeping />
           {children}

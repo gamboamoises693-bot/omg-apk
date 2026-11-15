@@ -356,17 +356,19 @@ export function XmasThemeCard() {
   const [mode, setMode] = useState<XmasMode>(theme.xmas);
   const [from, setFrom] = useState(theme.from);
   const [to, setTo] = useState(theme.to);
+  const [music, setMusic] = useState(theme.music);
   const [busy, setBusy] = useState(false);
   // Fill the form from what is saved once it arrives (the first render may still hold the defaults).
   const [synced, setSynced] = useState(false);
-  if (!synced && (theme.xmas !== DEFAULT_THEME.xmas || theme.from !== DEFAULT_THEME.from || theme.to !== DEFAULT_THEME.to)) {
+  if (!synced && (theme.xmas !== DEFAULT_THEME.xmas || theme.from !== DEFAULT_THEME.from || theme.to !== DEFAULT_THEME.to || theme.music !== DEFAULT_THEME.music)) {
     setSynced(true);
     setMode(theme.xmas);
     setFrom(theme.from);
     setTo(theme.to);
+    setMusic(theme.music);
   }
 
-  const draft = { xmas: mode, from, to };
+  const draft = { xmas: mode, from, to, music };
   const onNow = isXmas(draft, Date.now());
   const MODES: [XmasMode, string][] = [["auto", "Auto (ayon sa petsa)"], ["on", "Laging naka-on"], ["off", "Naka-off"]];
 
@@ -374,8 +376,8 @@ export function XmasThemeCard() {
     if (mode === "auto" && (!from || !to)) return toast("Ilagay ang simula at wakas ng Pasko.", "error");
     setBusy(true);
     try {
-      await setDoc(doc(db, "settings", "theme"), { xmas: mode, from, to }, { merge: true });
-      logActivity("Settings", `Tema ng Pasko: ${MODES.find((m) => m[0] === mode)?.[1]}${mode === "auto" ? ` (${from} hanggang ${to})` : ""}`);
+      await setDoc(doc(db, "settings", "theme"), { xmas: mode, from, to, music }, { merge: true });
+      logActivity("Settings", `Tema ng Pasko: ${MODES.find((m) => m[0] === mode)?.[1]}${mode === "auto" ? ` (${from} hanggang ${to})` : ""} · tugtog ${music ? "naka-on" : "naka-off"}`);
       toast("Na-save ang tema ng Pasko.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -415,6 +417,15 @@ export function XmasThemeCard() {
           <p className="text-xs text-gray-600">Inuulit ito taon-taon (buwan at araw lang ang binabasa, hindi ang taon). Default: Nobyembre 15 hanggang Enero 6.</p>
         </div>
       )}
+      <label className="flex items-center justify-between gap-3 rounded-xl bg-surface p-3">
+        <span>
+          <span className="block font-bold">Tugtog ng Pasko</span>
+          <span className="block text-xs text-gray-600">Mahinang kanta (Jingle Bells, Silent Night, atbp.) habang naka-on ang tema. May button ang bawat residente para patayin ito sa phone nila. Hindi ito tumutugtog sa Emergency, Ambulansya at Admin.</span>
+        </span>
+        <button type="button" role="switch" aria-checked={music} aria-label="Tugtog ng Pasko" onClick={() => setMusic(!music)} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${music ? "bg-[#B3202B]" : "bg-gray-300"}`}>
+          <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${music ? "left-[1.4rem]" : "left-0.5"}`} />
+        </button>
+      </label>
       <Button full loading={busy} onClick={save}>I-save</Button>
     </Card>
   );
