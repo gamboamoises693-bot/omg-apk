@@ -93,6 +93,10 @@ export async function seed(selfieFile) {
   // A few things to look at on the pages.
   await put("settings/main", {
     ambulance: { mapValue: { fields: { status: S("available"), phone: S("09171112222"), fee: S("Libre"), drivers: A([S("Mang Berto"), S("Mang Rudy")]) } } },
+    officials: A([
+      { mapValue: { fields: { name: S("Romando Felicitas Gamboa"), position: S("Punong Barangay") } } },
+      { mapValue: { fields: { name: S("Cristina H. Flores"), position: S("Barangay Secretary") } } },
+    ]),
     announcements: A([
       { mapValue: { fields: { title: S("Barangay Kalinisan Day"), body: S("Sabado, 6:00 AM sa Barangay Hall."), date: S("2026-11-20"), until: S(new Date(Date.now() + 5 * day).toISOString().slice(0, 10)) } } },
       // Already over: must not show on Home.
@@ -126,5 +130,9 @@ export async function seed(selfieFile) {
   await put("raffleSponsors/s2", { name: S("Aling Nena Store"), what: S("Grocery package"), amount: I(2000), tier: S("reg"), show: B(true), link: S("https://facebook.com/alingnenastore"), createdAt: T(Date.now() - 2 * day) });
   await put("raffleSponsors/s3", { name: S("Hindi nagpakilala"), what: S("Pera"), amount: I(500), tier: S("reg"), show: B(true), createdAt: T(Date.now() - 3 * day) });
   await put("raffleSponsors/s4", { name: S("Kuya Berto Bakery"), what: S("Pandesal at tinapay"), amount: I(800), tier: S("reg"), show: B(true), link: S("https://kuyaberto.example.com"), createdAt: T(Date.now() - 4 * day) });
+  // A received donation of the sample resident, for the receipt and the certificate (same id as its sponsor entry).
+  await put("raffleDonations/dncertdncertdncert", { userId: S(uid), name: S("Aling Nena Store"), anon: B(false), kind: S("Gamit / premyo"), what: S("Grocery package"), amount: I(2000), contact: S("09170001111"), message: S(""), status: S("received"), receiptNo: S("RAF-20261115-A1B2"), receivedBy: S("x"), receivedByName: S("Roberto Halimbawa"), receivedAt: T(Date.now() - day), createdAt: T(Date.now() - 3 * day) });
+  await put("raffleSponsors/dncertdncertdncert", { name: S("Aling Nena Store"), what: S("Grocery package"), amount: I(2000), tier: S("reg"), show: B(true), donationId: S("dncertdncertdncert"), createdAt: T(Date.now() - day) });
+  process.env.GUIDE_DONATION = "dncertdncertdncert";
   return uid;
 }

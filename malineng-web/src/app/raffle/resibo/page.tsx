@@ -59,6 +59,7 @@ function Receipt() {
         </div>
         <p className="mt-4 text-center text-[0.7rem] text-gray-500">Salamat sa iyong donasyon! Ito ay patunay ng pagtanggap ng Barangay Malineng. Hindi ito opisyal na resibo ng BIR.</p>
       </article>
+      <Link href={`/raffle/sertipiko/?id=${d.id}`} className="no-print block rounded-xl bg-gold py-2.5 text-center text-sm font-extrabold text-brand-deep">Certificate of Appreciation</Link>
       <div className="no-print grid grid-cols-2 gap-2">
         <Link href="/raffle" className="rounded-xl border border-gray-200 bg-white py-2.5 text-center text-sm font-bold text-brand">Bumalik</Link>
         <button onClick={() => window.print()} className="flex items-center justify-center gap-1.5 rounded-xl bg-brand py-2.5 text-sm font-bold text-white"><Printer className="h-4 w-4" aria-hidden /> I-print o i-save</button>

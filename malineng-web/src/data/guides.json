@@ -1324,9 +1324,16 @@
           "h": 1170
         },
         {
+          "tl": "Kapag Natanggap na ang donasyon, pindutin ang Certificate of Appreciation at i-print (A4 na pahalang) kasama ng resibo. Piliin ang puting papel o ivory na papel.",
+          "en": "Once the donation is Received, tap Certificate of Appreciation and print it (A4 landscape) with the receipt. Choose white paper or ivory paper.",
+          "img": "admin-rafflepledge-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
           "tl": "Sa Mga sponsor makikita at maaayos ang listahan ng sponsor na nakikita ng lahat.",
           "en": "Under Sponsors you can see and manage the sponsor list everyone sees.",
-          "img": "admin-rafflepledge-3.jpg",
+          "img": "admin-rafflepledge-4.jpg",
           "w": 585,
           "h": 1170
         }

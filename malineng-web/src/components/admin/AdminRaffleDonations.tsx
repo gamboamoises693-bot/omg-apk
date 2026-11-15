@@ -132,6 +132,11 @@ function PledgeCard({ d }: { d: Donation }) {
           <Link href={`/raffle/resibo/?id=${d.id}`} className="flex shrink-0 items-center gap-1 font-bold underline"><Receipt className="h-4 w-4" aria-hidden /> Tingnan</Link>
         </div>
       )}
+      {d.status === "received" && (
+        <div className="rounded-xl bg-gold-light p-2.5 text-sm">
+          <Link href={`/raffle/sertipiko/?id=${d.id}`} className="block text-center font-extrabold text-brand-deep underline">Certificate of Appreciation (i-print kasama ng resibo)</Link>
+        </div>
+      )}
 
       {isSuperAdmin && (
         <Button
