@@ -70,7 +70,13 @@ export function AmbulanceTracker({ req }: { req: AmbulanceRequest }) {
           <ApprovalTracker r={req} steps={steps} />
         </div>
       )}
-      {!stopped && req.driver && <p className="rounded-xl bg-brand-light p-3 text-brand"><b>Driver:</b> {req.driver}</p>}
+      {!stopped && req.driver && (
+        <p className="rounded-xl bg-brand-light p-3 text-brand">
+          <b>Driver:</b> {req.driver}
+          {req.status === "enroute" && <> · <b>Papunta na{req.enrouteAt ? ` mula ${req.enrouteAt.toDate().toLocaleTimeString("fil-PH", { hour: "numeric", minute: "2-digit" })}` : ""}</b></>}
+          {req.status === "done" && req.doneAt && <> · Natapos {req.doneAt.toDate().toLocaleTimeString("fil-PH", { hour: "numeric", minute: "2-digit" })}</>}
+        </p>
+      )}
       {!stopped && req.adminNote && <p className="rounded-xl bg-gold-light p-3 text-yellow-900"><b>Paalala ng Barangay:</b> {req.adminNote}</p>}
     </div>
   );

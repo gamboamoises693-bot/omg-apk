@@ -112,7 +112,7 @@ service cloud.firestore {
 
     function approvalFieldsOnly() {
       return incoming().diff(existing()).affectedKeys().hasOnly(
-        ['status', 'stage', 'trail', 'urgent', 'rejectReason', 'decidedBy', 'decidedByName', 'decidedAt', 'updatedAt', 'driver', 'durationHours', 'adminNote', 'expiresAt']);
+        ['status', 'stage', 'trail', 'urgent', 'rejectReason', 'decidedBy', 'decidedByName', 'decidedAt', 'updatedAt', 'driver', 'durationHours', 'adminNote', 'expiresAt', 'driverTokenHash']);
     }
 
     // The emergency "agaran" release: only if the Developer allowed it for this action, by the chosen position.
@@ -122,6 +122,30 @@ service cloud.firestore {
           && (approvalCfg(key).get('fastBy', 'Kapitan') == 'Kapitan' ? me().get('position', '') == 'Kapitan'
             : approvalCfg(key).get('fastBy', 'Kapitan') == 'Secretary' ? me().get('position', '') == 'Secretary'
             : me().get('position', '') in ['Kapitan', 'Secretary']));
+    }
+
+
+    // ---- Ambulance driver link: the driver has no account, so the secret in the link is the credential ----
+    // A "proof" doc is written in the SAME batch as the status change. Its id is the UPPERCASE hex sha256(secret) (toHexString() is uppercase) and it may only be
+    // created by someone who knows the secret (the rule re-hashes it), so the status change can be tied to the secret.
+    function driverProofOk(hash, reqId) {
+      return hash is string && hash.size() == 64
+        && existsAfter(/databases/$(database)/documents/ambulanceProofs/$(hash))
+        && getAfter(/databases/$(database)/documents/ambulanceProofs/$(hash)).data.at == request.time
+        && getAfter(/databases/$(database)/documents/ambulanceProofs/$(hash)).data.requestId == reqId
+        // The link must still exist (an admin deletes it when the driver changes or the trip is cancelled) and not be expired.
+        && get(/databases/$(database)/documents/ambulanceDriverLinks/$(getAfter(/databases/$(database)/documents/ambulanceProofs/$(hash)).data.secret)).data.expiresAt > request.time;
+    }
+
+    function driverStep(from, to) {
+      return (from == 'approved' && to == 'enroute') || (from == 'enroute' && to == 'done');
+    }
+
+    function driverMoveOk(reqId) {
+      return existing().get('driverTokenHash', '') != ''
+        && driverProofOk(existing().driverTokenHash, reqId)
+        && driverStep(existing().status, incoming().status)
+        && changedOnly(['status', 'enrouteAt', 'doneAt', 'enrouteBy', 'doneBy', 'updatedAt']);
     }
 
     function approvalMove(key) {
@@ -915,7 +939,8 @@ service cloud.firestore {
         && incoming().date is string && incoming().date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && incoming().time is string && incoming().time.matches('^[0-9]{2}:[0-9]{2}$');
       // Secretary -> Admin -> Kapitan decide (approvalMove); a resident may only cancel their own pending request.
-      allow update: if (existing().status != 'pending' && isKapitan() && trailUntouched())
+      allow update: if driverMoveOk(reqId)
+        || (existing().status != 'pending' && isKapitan() && trailUntouched())
         || approvalMove(existing().type == 'emergency' ? 'ambe' : 'amb')
         || isSuperAdmin()
         || (signedIn()
@@ -930,7 +955,38 @@ service cloud.firestore {
     match /ambulanceSchedule/{slotId} {
       allow read: if true;
       // Public busy window. Whoever releases a request (as set by the Developer) writes it.
-      allow write: if isAdmin();
+      allow create: if isAdmin();
+      // The driver (by link) moves it to 'enroute' and removes it when the trip is done.
+      allow update: if isAdmin()
+        || (driverProofOk(get(/databases/$(database)/documents/ambulanceRequests/$(slotId)).data.get('driverTokenHash', ''), slotId)
+          && incoming().status == 'enroute' && changedOnly(['status']));
+      allow delete: if isAdmin()
+        || (driverProofOk(get(/databases/$(database)/documents/ambulanceRequests/$(slotId)).data.get('driverTokenHash', ''), slotId)
+          && getAfter(/databases/$(database)/documents/ambulanceRequests/$(slotId)).data.status == 'done');
+    }
+
+    // ---------- ambulanceDriverLinks: the doc id IS the secret (get only, never list) ----------
+    match /ambulanceDriverLinks/{secret} {
+      allow get: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (driverProofOk(hashing.sha256(secret).toHexString(), existing().requestId)
+          && driverStep(existing().status, incoming().status)
+          && changedOnly(['status', 'enrouteAt', 'doneAt']));
+    }
+
+    // Lets staff copy the link again. Never readable by residents or the public.
+    match /ambulanceDriverSecrets/{reqId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Write-only proofs that the writer knew the secret (see driverProofOk).
+    match /ambulanceProofs/{hash} {
+      allow read: if false;
+      allow create, update: if incoming().size() == 3 && incoming().requestId is string && incoming().secret is string
+        && incoming().secret is string && incoming().secret.size() >= 24 && incoming().secret.size() <= 64
+        && incoming().at == request.time
+        && hashing.sha256(incoming().secret).toHexString() == hash;
     }
 
     // ---------- polls (Botohan) ----------

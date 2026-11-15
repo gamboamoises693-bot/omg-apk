@@ -331,6 +331,13 @@ export interface AmbulanceRequest {
   driver?: string;
   durationHours?: number;
   adminNote?: string;
+  /** UPPERCASE sha256 of the driver link secret (never the secret itself). */
+  driverTokenHash?: string;
+  enrouteAt?: Timestamp;
+  doneAt?: Timestamp;
+  /** "driver" when confirmed by the driver's link, otherwise the admin's name (emergency override). */
+  enrouteBy?: string;
+  doneBy?: string;
   /** Approval steps (see lib/approval.ts). Missing `stage` = waiting for Secretary. */
   stage?: number;
   trail?: import("./approval").TrailEntry[];

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
-import { AlertTriangle, Phone, Plus } from "lucide-react";
+import { collection, deleteDoc, doc, getDoc, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { AlertTriangle, Copy, Link2, Phone, Plus, Share2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useSettings } from "@/lib/useSettings";
 import { useCollection } from "@/lib/useCollection";
@@ -31,6 +31,7 @@ import { ApprovalTracker } from "@/components/ApprovalTracker";
 import { advanceRequest, newEntry, returnRequest, withEntry, type Actor } from "@/lib/approval";
 import { effectiveSteps, useApprovalConfig } from "@/lib/approvalConfig";
 import { AlertsSettingsCard } from "./AlertsSettingsCard";
+import { addDriverLinkWrites, driverUrl, removeDriverLink } from "@/lib/driverLink";
 
 const requestsCollection = collection(db, "ambulanceRequests");
 const AVAIL_OPTIONS: AmbulanceAvailability[] = ["available", "busy", "maintenance"];
@@ -65,8 +66,23 @@ function RequestRow({ r, onOpen }: { r: AmbulanceRequest; onOpen: () => void }) 
 const OTHER_DRIVER = "__other__";
 
 function RequestDetail({ req, all, drivers, ambulance, onClose }: { req: AmbulanceRequest; all: AmbulanceRequest[]; drivers: string[]; ambulance: AmbulanceSettings; onClose: () => void }) {
-  const { isKapitan, isAdmin } = useAuth();
+  const { isKapitan, isAdmin, profile } = useAuth();
   const toast = useToast();
+  // The driver's secret link (admins can re-copy it). undefined = still loading, null = none yet.
+  const [secret, setSecret] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!isAdmin || !(["approved", "enroute"] as string[]).includes(req.status)) {
+      setSecret(null);
+      return;
+    }
+    let live = true;
+    getDoc(doc(db, "ambulanceDriverSecrets", req.id))
+      .then((s) => live && setSecret(s.exists() ? (s.data().secret as string) : null))
+      .catch(() => live && setSecret(null));
+    return () => {
+      live = false;
+    };
+  }, [req.id, req.status, isAdmin]);
   // No driver is pre-selected: it must be chosen on purpose before the request is endorsed.
   const [driver, setDriver] = useState(req.driver ?? "");
   // A substitute driver who is not on the list (e.g. a volunteer) can be typed in when nobody on the list is available.
@@ -84,28 +100,50 @@ function RequestDetail({ req, all, drivers, ambulance, onClose }: { req: Ambulan
   const cfgKey = req.type === "emergency" ? "ambe" : "amb";
   const steps = effectiveSteps(approvals[cfgKey]);
 
-  /** Updates the request and keeps the public busy-window doc in sync. */
+  /**
+   * Updates the request and keeps the public busy-window doc and the driver link in sync.
+   * "enroute" and "done" from here are the admin's emergency override: the driver's own link is the normal way.
+   */
   const setStatus = async (status: AmbulanceRequestStatus) => {
     setBusy(true);
     try {
       const batch = writeBatch(db);
       const durationHours = Number(hours);
-      batch.update(doc(db, "ambulanceRequests", req.id), {
+      const newDriver = driver.trim();
+      const by = profile?.fullName ? `${profile.fullName} (admin)` : "admin";
+      const update: Record<string, unknown> = {
         status,
-        driver: driver.trim(),
+        driver: newDriver,
         durationHours,
         adminNote: note.trim().slice(0, 500),
         updatedAt: serverTimestamp(),
-      });
+      };
+      if (status === "enroute") Object.assign(update, { enrouteAt: serverTimestamp(), enrouteBy: by });
+      if (status === "done") Object.assign(update, { doneAt: serverTimestamp(), doneBy: by });
+      const driverChanged = status === "approved" && newDriver !== (req.driver ?? "");
+      if (driverChanged && secret) {
+        // New driver: issue a new link; the old one stops working at once.
+        const fresh = await addDriverLinkWrites(batch, req, newDriver, durationHours, secret);
+        update.driverTokenHash = fresh.hash;
+      }
+      batch.update(doc(db, "ambulanceRequests", req.id), update);
       const slotRef = doc(db, "ambulanceSchedule", req.id);
       if (status === "approved" || status === "enroute") {
         batch.set(slotRef, { date: req.date, start: req.time, end: endTime(req.time, durationHours), status });
       } else {
         batch.delete(slotRef);
       }
+      if (secret && !driverChanged) {
+        if (status === "cancelled") {
+          batch.delete(doc(db, "ambulanceDriverLinks", secret));
+          batch.delete(doc(db, "ambulanceDriverSecrets", req.id));
+        } else if (status === "enroute" || status === "done") {
+          batch.update(doc(db, "ambulanceDriverLinks", secret), { status });
+        }
+      }
       await batch.commit();
-      logActivity("Ambulansya", `${req.type === "emergency" ? "🚨 " : ""}${req.patientName} (${req.date} ${formatTime12(req.time)}): ${REQUEST_STATUS_LABEL[status]}${driver.trim() ? ` · Driver: ${driver.trim()}` : ""}`, req.id);
-      toast(`Status: ${REQUEST_STATUS_LABEL[status]}`);
+      logActivity("Ambulansya", `${req.type === "emergency" ? "🚨 " : ""}${req.patientName} (${req.date} ${formatTime12(req.time)}): ${REQUEST_STATUS_LABEL[status]}${newDriver ? ` · Driver: ${newDriver}` : ""}${status === "enroute" || status === "done" ? " · kinumpirma ng admin" : ""}`, req.id);
+      toast(driverChanged && secret ? "Nai-save. Bagong link ang ginawa para sa bagong driver." : `Status: ${REQUEST_STATUS_LABEL[status]}`);
       onClose();
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -114,12 +152,50 @@ function RequestDetail({ req, all, drivers, ambulance, onClose }: { req: Ambulan
     }
   };
 
+  /** Creates (or re-issues) the driver link for a trip that was released before links existed. */
+  const makeLink = async () => {
+    setBusy(true);
+    try {
+      const batch = writeBatch(db);
+      const fresh = await addDriverLinkWrites(batch, req, driver.trim() || req.driver || "", Number(hours), secret ?? undefined, req.status === "enroute" ? "enroute" : "approved");
+      batch.update(doc(db, "ambulanceRequests", req.id), { driverTokenHash: fresh.hash, updatedAt: serverTimestamp() });
+      await batch.commit();
+      setSecret(fresh.secret);
+      toast("Handa na ang link ng driver.");
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const linkText = (s: string) => `🚑 Biyahe ng ambulansya: ${req.patientName}, ${formatDate(req.date)} ${formatTime12(req.time)}.\nBuksan ang link, tapos pindutin ang "Papunta na ako" at "Tapos na":\n${driverUrl(s)}`;
+  const copyLink = async (s: string) => {
+    try {
+      await navigator.clipboard.writeText(linkText(s));
+      toast("Nakopya ang link. I-send sa driver.");
+    } catch {
+      toast("Hindi makopya. Subukan ang Ibahagi.", "error");
+    }
+  };
+  const shareLink = async (s: string) => {
+    try {
+      if (navigator.share) await navigator.share({ title: "Biyahe ng ambulansya", text: linkText(s) });
+      else await copyLink(s);
+    } catch {
+      /* the share sheet was closed */
+    }
+  };
+
   /** Kapitan's release (or the emergency "agaran" release): approves, saves driver and hours, and opens the public busy window. */
   const release = async (actor: Actor, noteText: string, fast: boolean) => {
     const batch = writeBatch(db);
     const durationHours = Number(hours);
+    // A private link for the driver, so the driver is the one who confirms "Papunta na" and "Tapos na".
+    const link = await addDriverLinkWrites(batch, req, driver.trim(), durationHours);
     batch.update(doc(db, "ambulanceRequests", req.id), {
       status: "approved",
+      driverTokenHash: link.hash,
       ...(fast ? { urgent: true } : {}),
       trail: withEntry(req.trail, newEntry(fast ? "fast" : "release", actor, noteText)),
       driver: driver.trim(),
@@ -146,7 +222,7 @@ function RequestDetail({ req, all, drivers, ambulance, onClose }: { req: Ambulan
   const remove = async () => {
     if (!confirm("Burahin nang tuluyan ang request na ito?")) return;
     try {
-      await Promise.all([deleteDoc(doc(db, "ambulanceRequests", req.id)), deleteDoc(doc(db, "ambulanceSchedule", req.id))]);
+      await Promise.all([deleteDoc(doc(db, "ambulanceRequests", req.id)), deleteDoc(doc(db, "ambulanceSchedule", req.id)), removeDriverLink(secret ?? undefined, req.id)]);
       logActivity("Ambulansya", `Nagbura ng ambulance request ni ${req.patientName}`, req.id);
       toast("Nabura.");
       onClose();
@@ -253,6 +329,31 @@ function RequestDetail({ req, all, drivers, ambulance, onClose }: { req: Ambulan
         </>
       )}
 
+      {isAdmin && (req.status === "approved" || req.status === "enroute" || req.status === "done") && (
+        <div className="space-y-2 rounded-xl border-2 border-brand/30 bg-brand-light/40 p-3 text-sm">
+          <p className="flex items-center gap-1.5 font-bold"><Link2 className="h-4 w-4" /> Link ng driver{req.driver ? ` · ${req.driver}` : ""}</p>
+          <p className="font-semibold text-gray-800">
+            {req.status === "done"
+              ? `✅ Tapos na${req.doneBy ? ` · kinumpirma ni ${req.doneBy === "driver" ? "driver" : req.doneBy}` : ""}`
+              : req.status === "enroute"
+                ? `🚑 Papunta na${req.enrouteBy ? ` · kinumpirma ni ${req.enrouteBy === "driver" ? "driver" : req.enrouteBy}` : ""}`
+                : "⏳ Hindi pa nakukumpirma ng driver na papunta na siya."}
+          </p>
+          {req.status !== "done" && (secret === undefined ? null : secret ? (
+            <>
+              <p className="break-all rounded-lg bg-white p-2 text-xs text-gray-600">{driverUrl(secret)}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" onClick={() => copyLink(secret)}><Copy className="h-4 w-4" /> Kopyahin</Button>
+                <Button onClick={() => shareLink(secret)}><Share2 className="h-4 w-4" /> Ibahagi</Button>
+              </div>
+              <p className="text-xs text-gray-600">Kapag nagpalit ng driver, may bagong link at titigil na ang luma. Huwag ibahagi sa iba.</p>
+            </>
+          ) : (
+            <Button variant="outline" full loading={busy} onClick={makeLink}>Gumawa ng link ng driver</Button>
+          ))}
+        </div>
+      )}
+
       {req.status === "pending" && (
         <div className="space-y-3">
           <ApprovalTracker r={req} steps={steps} />
@@ -293,13 +394,17 @@ function RequestDetail({ req, all, drivers, ambulance, onClose }: { req: Ambulan
       <div className="grid grid-cols-2 gap-2">
         {req.status === "approved" && (
           <>
-            <Button loading={busy} onClick={() => setStatus("enroute")}>🚑 Papunta na</Button>
             <Button variant="outline" loading={busy} onClick={() => setStatus("cancelled")}>I-cancel</Button>
-            <Button variant="ghost" className="col-span-2" loading={busy} onClick={() => setStatus("approved")}>I-save ang pagbabago</Button>
+            <Button variant="ghost" loading={busy} onClick={() => setStatus("approved")}>I-save ang pagbabago</Button>
+            <Button variant="ghost" className="col-span-2 text-xs" loading={busy} onClick={() => confirm("Ikaw na ang magkukumpirma na papunta na ang ambulansya (emergency lang, hindi ang driver)? Maitatala ang pangalan mo.") && setStatus("enroute")}>
+              Kumpirmahin bilang admin (emergency): Papunta na
+            </Button>
           </>
         )}
         {req.status === "enroute" && (
-          <Button className="col-span-2" loading={busy} onClick={() => setStatus("done")}>🏁 Tapos na ang biyahe</Button>
+          <Button variant="ghost" className="col-span-2 text-xs" loading={busy} onClick={() => confirm("Ikaw na ang magkukumpirma na tapos na ang biyahe (emergency lang, hindi ang driver)? Maitatala ang pangalan mo.") && setStatus("done")}>
+            Kumpirmahin bilang admin (emergency): Tapos na ang biyahe
+          </Button>
         )}
         {(req.status === "done" || req.status === "rejected" || req.status === "cancelled") && (
           <Button variant="outline" className="col-span-2" onClick={remove}>Burahin ang record</Button>
