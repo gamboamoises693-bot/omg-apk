@@ -30,6 +30,8 @@ import type { Settings } from "@/lib/types";
 import { Button, Card, Input, Select, Spinner, Textarea } from "@/components/ui";
 import { LogoButton, LogoMark } from "@/components/BarangayLogo";
 import { useToast } from "@/components/Toast";
+import { useAuth } from "@/context/AuthContext";
+import { DEFAULT_THEME, isXmas, useTheme, type XmasMode } from "@/lib/theme";
 
 type SectionKey = "officials" | "announcements" | "alert" | "emergency" | "ambulance" | "puroks";
 
@@ -347,8 +349,80 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/* ---------- Tema ng Pasko (Developer lang) ---------- */
+export function XmasThemeCard() {
+  const theme = useTheme();
+  const toast = useToast();
+  const [mode, setMode] = useState<XmasMode>(theme.xmas);
+  const [from, setFrom] = useState(theme.from);
+  const [to, setTo] = useState(theme.to);
+  const [busy, setBusy] = useState(false);
+  // Fill the form from what is saved once it arrives (the first render may still hold the defaults).
+  const [synced, setSynced] = useState(false);
+  if (!synced && (theme.xmas !== DEFAULT_THEME.xmas || theme.from !== DEFAULT_THEME.from || theme.to !== DEFAULT_THEME.to)) {
+    setSynced(true);
+    setMode(theme.xmas);
+    setFrom(theme.from);
+    setTo(theme.to);
+  }
+
+  const draft = { xmas: mode, from, to };
+  const onNow = isXmas(draft, Date.now());
+  const MODES: [XmasMode, string][] = [["auto", "Auto (ayon sa petsa)"], ["on", "Laging naka-on"], ["off", "Naka-off"]];
+
+  const save = async () => {
+    if (mode === "auto" && (!from || !to)) return toast("Ilagay ang simula at wakas ng Pasko.", "error");
+    setBusy(true);
+    try {
+      await setDoc(doc(db, "settings", "theme"), { xmas: mode, from, to }, { merge: true });
+      logActivity("Settings", `Tema ng Pasko: ${MODES.find((m) => m[0] === mode)?.[1]}${mode === "auto" ? ` (${from} hanggang ${to})` : ""}`);
+      toast("Na-save ang tema ng Pasko.");
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-extrabold">Tema ng Pasko</p>
+          <p className="text-xs text-gray-600">Para sa login, Home, mga menu, raffle at sponsor.</p>
+        </div>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.68rem] font-black ${onNow ? "bg-[#B3202B] text-white" : "bg-gray-100 text-gray-500"}`}>{onNow ? "NAKA-ON NGAYON" : "NAKA-OFF NGAYON"}</span>
+      </div>
+      <div className="grid gap-2" role="group" aria-label="Tema ng Pasko">
+        {MODES.map(([v, label]) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={mode === v}
+            onClick={() => setMode(v)}
+            className={`rounded-xl px-3 py-2.5 text-left text-sm font-bold ${mode === v ? "bg-[#B3202B] text-white" : "bg-surface text-gray-700"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {mode === "auto" && (
+        <div className="space-y-2 rounded-xl bg-surface p-3">
+          <div className="grid grid-cols-2 gap-2">
+            <Input label="Mag-on sa" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <Input label="Mag-off pagkatapos ng" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <p className="text-xs text-gray-600">Inuulit ito taon-taon (buwan at araw lang ang binabasa, hindi ang taon). Default: Nobyembre 15 hanggang Enero 6.</p>
+        </div>
+      )}
+      <Button full loading={busy} onClick={save}>I-save</Button>
+    </Card>
+  );
+}
+
 export function AdminSettings() {
   const { settings, loading } = useSettings();
+  const { isSuperAdmin } = useAuth();
   const [section, setSection] = useState<SectionKey | null>(null);
 
   if (loading) return <Spinner />;
@@ -392,6 +466,8 @@ export function AdminSettings() {
           <RowBody lead={<IconLead icon={Megaphone} tint="blue" />} title="Mga Anunsyo" sub={settings.announcements.length ? `${settings.announcements.length} anunsyo` : "Walang anunsyo"} />
         </button>
       </Group>
+
+      {isSuperAdmin && <XmasThemeCard />}
 
       <Group title="Kaligtasan">
         <button onClick={() => open("alert")} className={ROW_CLASS}>

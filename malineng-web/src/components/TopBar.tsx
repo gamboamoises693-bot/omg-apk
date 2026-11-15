@@ -6,10 +6,12 @@ import { AdminShieldLink } from "./AdminShieldLink";
 import { PabatidBell } from "./PabatidBell";
 import { LogoButton, LogoMark } from "./BarangayLogo";
 import { LanguageToggle } from "./LanguageToggle";
+import { useXmas } from "@/lib/theme";
 
 /** Slim app bar for inner pages. Home draws its own greeting header instead. */
 export function TopBar() {
   const pathname = usePathname() ?? "/";
+  const xmas = useXmas();
   if (pathname === "/") return null;
 
   return (
@@ -28,6 +30,8 @@ export function TopBar() {
           <AdminShieldLink />
         </div>
       </div>
+      {/* Candy-cane edge at Christmas */}
+      {xmas && <div className="xmas-cane !h-1.5" aria-hidden />}
     </header>
   );
 }

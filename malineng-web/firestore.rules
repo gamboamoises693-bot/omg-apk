@@ -1249,7 +1249,7 @@ service cloud.firestore {
     // ---------- settings (settings/main; settings/webAccess is Super Admin only) ----------
     match /settings/{docId} {
       allow read: if true;
-      allow write: if docId in ['webAccess', 'chat', 'approvals', 'raffle'] ? isSuperAdmin() : isAdmin();
+      allow write: if docId in ['webAccess', 'chat', 'approvals', 'raffle', 'theme'] ? isSuperAdmin() : isAdmin();
     }
 
     // ---------- Chat ng Barangay (verified residents) ----------
