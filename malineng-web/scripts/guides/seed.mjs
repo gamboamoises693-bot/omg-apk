@@ -106,7 +106,7 @@ export async function seed(selfieFile) {
     contact: S("09170001111"), purok: S("Purok 2"), photoURL: S(""), status: S("approved"), createdAt: T(Date.now() - 2 * day), expiresAt: T(Date.now() + 20 * day),
   });
   await put("settings/raffle", { enabled: B(true), startAt: T(Date.now() - day), cutoffAt: T(Date.now() + 7 * day), drawAt: T(Date.now() + 7 * day), rounds: A([{ mapValue: { fields: { name: S("MAJOR PRIZE"), type: S("maj"), prizes: A([S("Rice cooker")]) } } }]) });
-  await put("raffleSponsors/s1", { name: S("Omega Purified Ice"), what: S("Media Noche"), amount: I(1000), tier: S("main"), show: B(true), createdAt: T(Date.now() - day) });
+  await put("raffleSponsors/s1", { name: S("Omega Purified Ice"), what: S("Media Noche"), amount: I(1000), tier: S("main"), show: B(true), link: S("https://facebook.com/omegapurifiedice"), createdAt: T(Date.now() - day) });
   // Pages that only show what the Barangay published (decisions, points, league, child health, ID check).
   await put("decisionsPublic/d1", { title: S("Bagong ilaw sa kalsada ng Purok 3"), kind: S("Proyekto"), detail: S("Aprubado ang paglalagay ng 10 poste ng ilaw sa Purok 3 para sa kaligtasan sa gabi."), decidedAt: T(Date.now() - 3 * day) });
   await put("decisionsPublic/d2", { title: S("Iskedyul ng pagkolekta ng basura"), kind: S("Patakaran"), detail: S("Tuwing Martes at Biyernes ang pagkolekta ng basura sa lahat ng purok."), decidedAt: T(Date.now() - 9 * day) });
@@ -123,5 +123,8 @@ export async function seed(selfieFile) {
   }
   await put("ligaGames/g1", { leagueId: S("l1"), homeId: S("t1"), awayId: S("t2"), homeName: S("Purok 1 Bulls"), awayName: S("Purok 2 Eagles"), scheduledAt: S(new Date(Date.now() + 2 * day).toISOString().slice(0, 11) + "18:00"), venue: S("Covered Court"), status: S("scheduled"), homeScore: I(0), awayScore: I(0), period: S("") });
   await put("ligaGames/g0", { leagueId: S("l1"), homeId: S("t2"), awayId: S("t1"), homeName: S("Purok 2 Eagles"), awayName: S("Purok 1 Bulls"), scheduledAt: S(new Date(Date.now() - 2 * day).toISOString().slice(0, 11) + "18:00"), venue: S("Covered Court"), status: S("final"), homeScore: I(58), awayScore: I(61), period: S("") });
+  await put("raffleSponsors/s2", { name: S("Aling Nena Store"), what: S("Grocery package"), amount: I(2000), tier: S("reg"), show: B(true), link: S("https://facebook.com/alingnenastore"), createdAt: T(Date.now() - 2 * day) });
+  await put("raffleSponsors/s3", { name: S("Hindi nagpakilala"), what: S("Pera"), amount: I(500), tier: S("reg"), show: B(true), createdAt: T(Date.now() - 3 * day) });
+  await put("raffleSponsors/s4", { name: S("Kuya Berto Bakery"), what: S("Pandesal at tinapay"), amount: I(800), tier: S("reg"), show: B(true), link: S("https://kuyaberto.example.com"), createdAt: T(Date.now() - 4 * day) });
   return uid;
 }

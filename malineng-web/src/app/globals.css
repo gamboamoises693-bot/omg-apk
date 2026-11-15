@@ -131,3 +131,17 @@ textarea {
 @keyframes xmas-fall {
   to { transform: translateY(420px) translateX(14px); }
 }
+
+/* Sponsors hanging from the Christmas garland sway a little, each at its own pace. */
+.xmas-sway {
+  transform-origin: top center;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .xmas-sway {
+    animation: xmas-swing 5s ease-in-out infinite alternate;
+  }
+}
+@keyframes xmas-swing {
+  from { transform: rotate(-1.4deg); }
+  to { transform: rotate(1.4deg); }
+}

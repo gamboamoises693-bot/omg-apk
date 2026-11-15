@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { logActivity } from "@/lib/activity";
 import { formatPeso, friendlyError, sortNewest, timeAgo } from "@/lib/format";
-import { DONATION_STATUS_LABEL, markReceived, type Donation, type Sponsor } from "@/lib/raffleDonations";
+import { DONATION_STATUS_LABEL, markReceived, normalizeLink, type Donation, type Sponsor } from "@/lib/raffleDonations";
 import { Badge, Button, Card, EmptyState, FilterTabs, Input, Spinner } from "@/components/ui";
 import { LogoPicker } from "@/components/LogoPicker";
 import { useToast } from "@/components/Toast";
@@ -93,6 +93,7 @@ function PledgeCard({ d }: { d: Donation }) {
           </p>
           <p className="text-sm text-gray-600">{d.kind} · <b>{d.what}</b>{d.amount ? ` · ${formatPeso(d.amount).replace(".00", "")}` : ""}</p>
           <p className="text-xs text-gray-500">☎ {d.contact} · {timeAgo(d.createdAt)}</p>
+          {d.link && <p className="break-all text-xs"><a href={d.link} target="_blank" rel="noopener noreferrer nofollow" className="font-semibold text-brand underline">{d.link}</a></p>}
           {d.message && <p className="mt-1 text-sm text-gray-700">&ldquo;{d.message}&rdquo;</p>}
         </div>
         <Badge color={tone(d.status)}>{DONATION_STATUS_LABEL[d.status].split(",")[0]}</Badge>
@@ -166,20 +167,24 @@ function Sponsors({ list }: { list: Sponsor[] }) {
   const [what, setWhat] = useState("");
   const [amount, setAmount] = useState("");
   const [logo, setLogo] = useState("");
+  const [link, setLink] = useState("");
   const [busy, setBusy] = useState(false);
   const sorted = useMemo(() => [...list].sort((a, b) => Number(b.tier === "main") - Number(a.tier === "main")), [list]);
   const total = list.filter((s) => s.show).reduce((sum, s) => sum + (s.amount || 0), 0);
 
   const add = async () => {
     if (name.trim().length < 2 || !what.trim()) return toast("Ilagay ang pangalan at kung ano ang ibinigay.", "error");
+    const fixed = normalizeLink(link);
+    if (link.trim() && !fixed) return toast("Hindi tama ang link. Gamitin ang Facebook page o website (hal. facebook.com/pangalan).", "error");
     setBusy(true);
     try {
-      await setDoc(doc(collection(db, "raffleSponsors")), { name: name.trim().slice(0, 120), what: what.trim().slice(0, 120), amount: Math.max(0, Math.round(Number(amount) || 0)), tier: "reg", show: true, ...(logo ? { logo } : {}), createdAt: serverTimestamp() });
+      await setDoc(doc(collection(db, "raffleSponsors")), { name: name.trim().slice(0, 120), what: what.trim().slice(0, 120), amount: Math.max(0, Math.round(Number(amount) || 0)), tier: "reg", show: true, ...(logo ? { logo } : {}), ...(fixed ? { link: fixed } : {}), createdAt: serverTimestamp() });
       logActivity("Raffle", `Nagdagdag ng sponsor: ${name.trim()}`);
       setName("");
       setWhat("");
       setAmount("");
       setLogo("");
+      setLink("");
       toast("Naidagdag ang sponsor.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -213,6 +218,22 @@ function Sponsors({ list }: { list: Sponsor[] }) {
             <Badge color={s.tier === "main" ? "gold" : "gray"}>{s.tier === "main" ? "Pangunahin" : "Sponsor"}</Badge>
           </div>
           <LogoPicker logo={s.logo} onChange={(l) => patch(s, { logo: l }, `${l ? "Nilagyan" : "Inalis ang"} logo ang sponsor: ${s.name}`)} />
+          <Input
+            key={`${s.id}-${s.link ?? ""}`}
+            label="Link (Facebook o website)"
+            defaultValue={s.link ?? ""}
+            placeholder="hal. facebook.com/omegaice"
+            inputMode="url"
+            maxLength={300}
+            hint="Kapag pinindot ang sponsor sa Home, doon sila dadalhin. Iwanang blangko kung wala."
+            onBlur={(e) => {
+              const raw = e.target.value;
+              const fixed = normalizeLink(raw);
+              if (raw.trim() && !fixed) return toast("Hindi tama ang link.", "error");
+              if (fixed === (s.link ?? "")) return;
+              patch(s, { link: fixed }, `${fixed ? "Nilagyan" : "Inalis ang"} link ang sponsor: ${s.name}`);
+            }}
+          />
           <div className="grid grid-cols-3 gap-2">
             <Button variant="outline" onClick={() => patch(s, { tier: s.tier === "main" ? "reg" : "main" }, `Binago ang antas ng sponsor: ${s.name}`)}>{s.tier === "main" ? "Gawing karaniwan" : "Gawing pangunahin"}</Button>
             <Button variant="outline" onClick={() => patch(s, { show: !s.show }, `${s.show ? "Itinago" : "Ipinakita"} ang sponsor: ${s.name}`)}>{s.show ? "Itago" : "Ipakita"}</Button>
@@ -226,6 +247,7 @@ function Sponsors({ list }: { list: Sponsor[] }) {
         <Input label="Ibinigay" value={what} onChange={(e) => setWhat(e.target.value)} maxLength={120} placeholder="hal. Grocery package with rice" />
         <Input label="Halaga (₱)" type="number" inputMode="numeric" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} />
         <LogoPicker logo={logo} onChange={setLogo} label="Maglagay ng logo (optional)" />
+        <Input label="Link (Facebook o website, optional)" value={link} onChange={(e) => setLink(e.target.value)} placeholder="hal. facebook.com/omegaice" inputMode="url" maxLength={300} />
         <Button full loading={busy} onClick={add}>Idagdag</Button>
       </Card>
     </>
