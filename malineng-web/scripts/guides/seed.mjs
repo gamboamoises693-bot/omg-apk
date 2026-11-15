@@ -89,6 +89,8 @@ export async function seed(selfieFile) {
   if (selfieFile) {
     await put(`verifications/${pid}`, { uid: S(pid), fullName: S("Pedro Reyes"), purok: S("Purok 3"), birthday: S("1988-07-20"), contact: S("09191234567"), email: S("pedro@halimbawa.test"), selfie: S(readFileSync(selfieFile, "utf8")), status: S("pending"), submittedAt: T(Date.now() - 3600e3) });
   }
+  const idf = (purok) => ({ mapValue: { fields: { fullName: S("Pedro Reyes"), purok: S(purok), contact: S("09191234567"), birthday: S("1988-07-20") } } });
+  await put(`profileChanges/${pid}`, { uid: S(pid), current: idf("Purok 3"), requested: idf("Purok 5"), status: S("pending"), createdAt: T(Date.now() - 1800e3) });
   await put("raffleDonations/dn1", { userId: S(uid), name: S("Aling Nena Store"), anon: B(false), kind: S("Gamit / premyo"), what: S("Grocery package"), amount: I(1500), contact: S("09170001111"), message: S("Pasko po!"), status: S("new"), createdAt: T(Date.now() - 5400e3) });
   // A few things to look at on the pages.
   await put("settings/main", {

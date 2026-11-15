@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { collection, deleteDoc, doc, query, updateDoc, where, writeBatch } from "firebase/firestore";
+import { collection, deleteDoc, doc, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { BadgeCheck, Ban, Camera, CalendarCheck, IdCard, Pill, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
 import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup } from "firebase/auth";
 import { db, googleProvider } from "@/lib/firebase";
@@ -21,6 +21,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { InstallAppCard } from "@/components/InstallApp";
 import { NotifySettings } from "@/components/NotifySettings";
 import { useToast } from "@/components/Toast";
+import { FIELD_LABEL, changedFields, identityOf, useMyProfileChange, type Identity, type ProfileChange } from "@/lib/profileChange";
 import { PHONE_TAKEN_MESSAGE, claimPhoneInBatch, normalizePhone, phoneOwner, releasePhone } from "@/lib/phone";
 import { Avatar } from "@/components/Avatar";
 import { compressToDataUrl } from "@/lib/upload";
@@ -32,44 +33,57 @@ const STATUS_BADGE = {
 } as const;
 
 function ProfileForm() {
-  const { user, profile, needsProfile } = useAuth();
+  const { user, profile, needsProfile, isSuperAdmin } = useAuth();
   const puroks = usePuroks();
   const toast = useToast();
-  const [form, setForm] = useState({ fullName: "", purok: "", contact: "", birthday: "" });
+  const change = useMyProfileChange(user?.uid);
+  const [form, setForm] = useState<Identity>({ fullName: "", purok: "", contact: "", birthday: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (profile) setForm({ fullName: profile.fullName ?? "", purok: profile.purok ?? "", contact: profile.contact ?? "", birthday: profile.birthday ?? "" });
+    if (profile) setForm(identityOf(profile));
   }, [profile]);
 
-  const update = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const pending = change?.status === "pending";
+  // Once name, purok and contact are set, every change is a request that the Barangay approves.
+  const complete = !!(profile?.fullName && profile?.purok && profile?.contact);
+
+  const update = (key: keyof Identity) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !profile || pending) return;
     if (!form.fullName.trim() || !form.purok || !form.contact.trim()) return setError("Kailangan ang pangalan, purok at contact.");
     const contact = normalizePhone(form.contact);
     if (!contact) return setError("Mali ang contact number. Halimbawa: 09171234567");
+    const next: Identity = { fullName: form.fullName.trim().slice(0, 120), purok: form.purok, contact, birthday: form.birthday };
+    const old = identityOf(profile);
+    const diff = changedFields(old, next);
+    if (diff.length === 0) return setError("Wala kang binago.");
     setSaving(true);
     setError("");
     try {
-      const oldContact = profile?.contact ?? "";
-      const changed = contact !== oldContact;
-      const owner = changed ? await phoneOwner(contact, user.uid) : "mine";
+      const contactChanged = next.contact !== old.contact;
+      const owner = contactChanged ? await phoneOwner(next.contact, user.uid) : "mine";
       if (owner === "taken") throw new Error(PHONE_TAKEN_MESSAGE);
+      // Filling in a field that was still empty (first-time profile) or the Super Admin's own edit: saved at once.
+      // Anything else (changing a value that is already set) is a request for the Barangay to approve.
+      const direct = isSuperAdmin || diff.every((k) => old[k] === "");
+      if (!direct) {
+        await setDoc(doc(db, "profileChanges", user.uid), { uid: user.uid, current: old, requested: next, status: "pending", createdAt: serverTimestamp() });
+        logActivity("Account", `Humingi ng pagbabago si ${old.fullName}: ${diff.map((k) => `${FIELD_LABEL[k]} ${old[k] || "—"} → ${next[k] || "—"}`).join(", ")}`, user.uid);
+        toast("Naipadala ang request. Hintayin ang approval ng Barangay.");
+        return;
+      }
       // role is intentionally NOT included: residents cannot change it (enforced by rules).
       const batch = writeBatch(db);
-      batch.update(doc(db, "users", user.uid), {
-        fullName: form.fullName.trim().slice(0, 120),
-        purok: form.purok,
-        contact,
-        birthday: form.birthday,
-      });
-      if (owner === "free") claimPhoneInBatch(batch, contact, user.uid);
+      batch.update(doc(db, "users", user.uid), next);
+      if (owner === "free") claimPhoneInBatch(batch, next.contact, user.uid);
       await batch.commit();
       // Free the old number so its owner can use it again.
-      if (changed && oldContact) await releasePhone(oldContact, user.uid);
+      if (contactChanged && old.contact) await releasePhone(old.contact, user.uid);
+      logActivity("Account", `Nag-update ng profile si ${next.fullName}: ${diff.map((k) => FIELD_LABEL[k]).join(", ")}`, user.uid);
       toast("Na-save ang profile mo.");
     } catch (err) {
       setError(friendlyError(err));
@@ -78,18 +92,64 @@ function ProfileForm() {
     }
   };
 
+  /** Withdraws a pending request, or clears a decided one. */
+  const clearChange = async () => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, "profileChanges", user.uid));
+      if (pending) logActivity("Account", `Binawi ni ${change?.current.fullName} ang request sa pagbabago ng profile`, user.uid);
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    }
+  };
+
   return (
     <Card>
       {needsProfile && <p className="mb-3 rounded-xl bg-gold-light p-3 font-semibold text-yellow-900">Pakikumpleto ang profile mo (Purok at Contact) para magamit ang lahat ng features.</p>}
+      {change && <ChangeBanner change={change} onClear={clearChange} />}
       <form onSubmit={handleSave} className="space-y-4">
-        <Input label="Buong Pangalan" value={form.fullName} onChange={update("fullName")} required />
-        <Select label="Purok" options={puroks} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} required />
-        <Input label="Contact Number" type="tel" inputMode="tel" value={form.contact} onChange={update("contact")} required hint="Isang numero = isang account" />
-        <Input label="Birthday" type="date" value={form.birthday} onChange={update("birthday")} />
+        <fieldset disabled={pending} className="space-y-4 disabled:opacity-60">
+          <Input label="Buong Pangalan" value={form.fullName} onChange={update("fullName")} required />
+          <Select label="Purok" options={puroks} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} required />
+          <Input label="Contact Number" type="tel" inputMode="tel" value={form.contact} onChange={update("contact")} required hint="Isang numero = isang account" />
+          <Input label="Birthday" type="date" value={form.birthday} onChange={update("birthday")} />
+        </fieldset>
+        {complete && !isSuperAdmin && !pending && <p className="text-xs text-gray-500">Ang pagbabago sa detalye ay kailangan ng approval ng Barangay. Hangga&apos;t hindi pa naaaprubahan, ang lumang detalye ang ginagamit.</p>}
         <ErrorText>{error}</ErrorText>
-        <Button type="submit" full loading={saving}>I-save ang Profile</Button>
+        {!pending && <Button type="submit" full loading={saving}>{complete && !isSuperAdmin ? "Ipadala para sa approval" : "I-save ang Profile"}</Button>}
       </form>
     </Card>
+  );
+}
+
+/** Before → after for each field that was asked to change. */
+function ChangeDiff({ from, to }: { from: Identity; to: Identity }) {
+  return (
+    <div className="space-y-0.5 text-sm">
+      {changedFields(from, to).map((k) => (
+        <p key={k}>
+          <span className="text-gray-500">{FIELD_LABEL[k]}: </span>
+          <span className="text-gray-500 line-through">{from[k] || "—"}</span> → <b className="text-green-700">{to[k] || "—"}</b>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/** Status of the resident's change request: waiting, approved or rejected. */
+function ChangeBanner({ change, onClear }: { change: ProfileChange; onClear: () => void }) {
+  const tone = change.status === "pending" ? "bg-gold-light text-yellow-900" : change.status === "approved" ? "bg-green-50 text-green-900" : "bg-red-50 text-red-800";
+  return (
+    <div className={`mb-3 space-y-1.5 rounded-xl p-3 ${tone}`}>
+      <p className="font-bold">
+        {change.status === "pending" ? "⏳ Naghihintay ng approval ng Barangay" : change.status === "approved" ? "✓ Naaprubahan ang pagbabago sa profile" : "Hindi naaprubahan ang pagbabago"}
+      </p>
+      <ChangeDiff from={change.current} to={change.requested} />
+      {change.status === "rejected" && change.reason && <p className="text-sm">Dahilan: {change.reason}</p>}
+      <button type="button" onClick={onClear} className="text-xs font-bold underline">
+        {change.status === "pending" ? "Bawiin ang request" : "Sige, nabasa ko"}
+      </button>
+    </div>
   );
 }
 

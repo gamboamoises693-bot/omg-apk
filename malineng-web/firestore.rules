@@ -300,6 +300,29 @@ service cloud.firestore {
           && getAfter(/databases/$(database)/documents/phoneIndex/$(incoming().contact)).data.uid == uid);
     }
 
+    // Name, purok, contact and birthday can only be filled in directly while they are still empty.
+    // Changing a value that is already set goes through profileChanges (approved by an admin).
+    function identityDirect() {
+      let a = incoming().diff(existing()).affectedKeys();
+      return (!a.hasAny(['fullName']) || existing().get('fullName', '') == '')
+        && (!a.hasAny(['purok']) || existing().get('purok', '') == '')
+        && (!a.hasAny(['contact']) || existing().get('contact', '') == '')
+        && (!a.hasAny(['birthday']) || existing().get('birthday', '') == '');
+    }
+
+    // An admin applies a change the resident asked for, exactly as requested, after approving it in the same batch.
+    function identityApproved(uid) {
+      let c = getAfter(/databases/$(database)/documents/profileChanges/$(uid)).data;
+      return isAdmin()
+        && changedOnly(['fullName', 'purok', 'contact', 'birthday'])
+        && c.status == 'approved'
+        && incoming().fullName == c.requested.fullName
+        && incoming().purok == c.requested.purok
+        && incoming().contact == c.requested.contact
+        && incoming().birthday == c.requested.birthday
+        && contactOk(uid);
+    }
+
     match /phoneIndex/{phone} {
       // Lets the app tell "this number is taken" (a denied read on someone else's number).
       allow get: if signedIn() && (resource == null || resource.data.uid == request.auth.uid || isAdmin());
@@ -307,10 +330,15 @@ service cloud.firestore {
       // Claimed only together with the user's contact; never moved to another user.
       allow create: if phone.matches('^09[0-9]{9}$')
         && incoming().keys().hasOnly(['uid', 'createdAt'])
-        && (incoming().uid == request.auth.uid || isSuperAdmin())
+        && (incoming().uid == request.auth.uid || isSuperAdmin()
+          || (isAdmin() && getAfter(/databases/$(database)/documents/profileChanges/$(incoming().uid)).data.status == 'approved'))
         && getAfter(/databases/$(database)/documents/users/$(incoming().uid)).data.contact == phone;
       allow update: if false;
-      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isSuperAdmin());
+      // An admin releases the old number once an approved change moved the resident to a new one.
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isSuperAdmin()
+        || (isAdmin()
+          && getAfter(/databases/$(database)/documents/profileChanges/$(resource.data.uid)).data.status == 'approved'
+          && getAfter(/databases/$(database)/documents/users/$(resource.data.uid)).data.contact != phone));
     }
 
     // Duplicate groups the Super Admin marked "hindi doble".
@@ -340,9 +368,53 @@ service cloud.firestore {
           && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended'])
           && (!incoming().diff(existing()).affectedKeys().hasAny(['photoURL'])
               || (isStaff() && incoming().photoURL is string && incoming().photoURL.size() < 60000))
-          && (!incoming().diff(existing()).affectedKeys().hasAny(['contact']) || contactOk(uid)))
+          && (!incoming().diff(existing()).affectedKeys().hasAny(['contact']) || contactOk(uid))
+          && (isSuperAdmin() || identityDirect()))
+        || identityApproved(uid)
         || (isSuperAdmin() && !(isSelf(uid) && incoming().role != 'superadmin'));
       allow delete: if isSelf(uid) || isSuperAdmin();
+    }
+
+    // ---------- profileChanges (a resident asks to change name, purok, contact or birthday) ----------
+    function validIdentity(r) {
+      return r.keys().hasOnly(['fullName', 'purok', 'contact', 'birthday'])
+        && isNonEmptyString(r.fullName, 120)
+        && validPurok(r.purok)
+        && r.contact is string && r.contact.matches('^09[0-9]{9}$')
+        && r.birthday is string && r.birthday.size() <= 10;
+    }
+
+    // The "current" values must really be what the profile holds now, so an admin sees the true before/after.
+    function currentIsProfile(c, uid) {
+      let u = get(/databases/$(database)/documents/users/$(uid)).data;
+      return c.keys().hasOnly(['fullName', 'purok', 'contact', 'birthday'])
+        && c.fullName == u.get('fullName', '')
+        && c.purok == u.get('purok', '')
+        && c.contact == u.get('contact', '')
+        && c.birthday == u.get('birthday', '');
+    }
+
+    match /profileChanges/{uid} {
+      allow read: if isSelf(uid) || isAdmin();
+      // One request per resident: a new one is only accepted when the last one was already decided.
+      allow create, update: if isSelf(uid)
+        && notSuspended()
+        && (resource == null || existing().status != 'pending')
+        && incoming().keys().hasOnly(['uid', 'current', 'requested', 'status', 'createdAt'])
+        && incoming().uid == uid
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time
+        && validIdentity(incoming().requested)
+        && currentIsProfile(incoming().current, uid)
+        && incoming().requested != incoming().current;
+      // Admin decision (nobody but the Super Admin decides their own request).
+      allow update: if isAdmin()
+        && existing().status == 'pending'
+        && (existing().uid != request.auth.uid || isSuperAdmin())
+        && changedOnly(['status', 'reason', 'reviewedBy', 'reviewedByName', 'reviewedAt'])
+        && incoming().status in ['approved', 'rejected'];
+      // The resident withdraws a pending request or clears a decided one.
+      allow delete: if isSelf(uid);
     }
 
     // ---------- Botika (medicine inventory; BHW) ----------
