@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { collection, doc, getCountFromServer, increment, query, updateDoc, where } from "firebase/firestore";
-import { Clapperboard, Eye, MessageCircle, Play } from "lucide-react";
+import { Clapperboard, Eye, Megaphone, MessageCircle, Play } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { loadVideoBlob } from "@/lib/videoUpload";
+import { DEVELOPER_NAME, DEVELOPER_URL } from "@/lib/constants";
 import { LikeButton, ReactionCounts, ReactionSummary, reactionPatch, useReactions } from "./ReactionBar";
 import { VideoComments } from "./VideoComments";
 import { alreadyCounted, embedUrl, getSavedPosition, markCounted, savePosition, youtubeThumb, type Video } from "@/lib/videos";
@@ -74,6 +75,33 @@ function VideoSocial({ video }: { video: Video }) {
   );
 }
 
+/** Small "AD" label, with the name of the business when there is one. */
+function AdBadge({ v, className = "" }: { v: Video; className?: string }) {
+  if (!v.ad) return null;
+  return (
+    <span className={`inline-flex max-w-full items-center gap-1 rounded-full bg-[#B3202B] px-2 py-0.5 text-[0.65rem] font-extrabold tracking-wide text-white ${className}`}>
+      <Megaphone className="h-3 w-3 shrink-0" aria-hidden /> <span className="truncate">AD{v.sponsor ? ` · ${v.sponsor}` : ""}</span>
+    </span>
+  );
+}
+
+/** For the Ads tab: businesses cannot upload by themselves, so they ask the Developer. */
+function AdContact() {
+  return (
+    <div className="mt-3 space-y-2 rounded-2xl border-2 border-dashed border-gold bg-gold-light/50 p-4 text-sm">
+      <p className="font-extrabold">Gusto mong i-advertise ang negosyo mo?</p>
+      <p className="text-gray-700">Magpa-upload ng video ad dito sa Home. Makipag-ugnayan lang sa Developer, at siya ang maglalagay nito.</p>
+      {DEVELOPER_URL ? (
+        <a href={DEVELOPER_URL} target="_blank" rel="noopener noreferrer" className="block rounded-xl bg-brand py-2.5 text-center font-bold text-white">
+          Kontakin si {DEVELOPER_NAME}
+        </a>
+      ) : (
+        <p className="rounded-xl bg-white px-3 py-2 text-center font-bold text-brand">Developer: {DEVELOPER_NAME}</p>
+      )}
+    </div>
+  );
+}
+
 /** Home: one player + a strip of thumbnails. Every video of the barangay lives here. */
 export function WatchVideos() {
   const { isStaff } = useAuth();
@@ -86,7 +114,11 @@ export function WatchVideos() {
   const [loadPct, setLoadPct] = useState<number | null>(null);
   const [loadError, setLoadError] = useState("");
 
-  const videos = useMemo(() => data.filter((v) => !v.hidden).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [data]);
+  // "Videos" are the barangay's own; "Ads" are videos of local businesses.
+  const [tab, setTab] = useState<"video" | "ad">("video");
+  const all = useMemo(() => data.filter((v) => !v.hidden).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [data]);
+  const adCount = useMemo(() => all.filter((v) => v.ad).length, [all]);
+  const videos = useMemo(() => all.filter((v) => (tab === "ad" ? v.ad : !v.ad)), [all, tab]);
   const current = videos.find((v) => v.id === currentId) ?? videos[0];
 
   // If the playing video was deleted, go back to the first one.
@@ -141,10 +173,33 @@ export function WatchVideos() {
         <span className="text-sm text-gray-500" aria-hidden>{open ? "▲" : "▼"}</span>
       </button>
 
+      {open && (
+        <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-surface p-1" role="tablist" aria-label="Uri ng video">
+          {(["video", "ad"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => {
+                setTab(t);
+                setCurrentId(null);
+                setPlaying(false);
+                setBlobUrl(null);
+                setLoadError("");
+              }}
+              className={`rounded-lg py-2 text-sm font-bold ${tab === t ? "bg-white text-brand shadow-sm" : "text-gray-500"}`}
+            >
+              {t === "video" ? "Mga Video" : `Ads${adCount ? ` (${adCount})` : ""}`}
+            </button>
+          ))}
+        </div>
+      )}
+
       {open &&
         (!current ? (
           <p className="mt-3 rounded-2xl bg-gray-50 p-4 text-center text-sm text-gray-600">
-            Wala pang video.{isStaff ? " Magdagdag sa Admin › Videos." : " Abangan ang mga paparating."}
+            {tab === "ad" ? "Wala pang ad sa ngayon." : <>Wala pang video.{isStaff ? " Magdagdag sa Admin › Videos." : " Abangan ang mga paparating."}</>}
           </p>
         ) : (
           <div className="mt-3">
@@ -212,7 +267,10 @@ export function WatchVideos() {
 
             {loadError && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{loadError}</p>}
             <div className="mt-3 flex items-start justify-between gap-3">
-              <p className="min-w-0 text-base font-extrabold leading-snug">▶ {current.title}</p>
+              <div className="min-w-0">
+                <AdBadge v={current} className="mb-1" />
+                <p className="text-base font-extrabold leading-snug">▶ {current.title}</p>
+              </div>
               <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-gray-500">
                 <Eye className="h-4 w-4" aria-hidden /> {(current.views ?? 0).toLocaleString("en-PH")} views
               </span>
@@ -223,7 +281,7 @@ export function WatchVideos() {
             {videos.length > 1 && (
               <>
                 <p className="mt-3 flex items-center gap-1.5 text-sm font-bold text-gray-500">
-                  <Clapperboard className="h-4 w-4" aria-hidden /> Choose a video:
+                  <Clapperboard className="h-4 w-4" aria-hidden /> {tab === "ad" ? "Choose an ad:" : "Choose a video:"}
                 </p>
                 <div className="no-scrollbar -mx-1 mt-2 flex snap-x gap-3 overflow-x-auto px-1 pb-1">
                   {videos.map((v) => {
@@ -241,8 +299,9 @@ export function WatchVideos() {
                         aria-current={active}
                         className="w-36 shrink-0 snap-start text-left"
                       >
-                        <span className={`block aspect-video overflow-hidden rounded-xl bg-black ${active ? "ring-[3px] ring-brand" : ""}`}>
+                        <span className={`relative block aspect-video overflow-hidden rounded-xl bg-black ${active ? "ring-[3px] ring-brand" : ""}`}>
                           <Thumb v={v} />
+                          {v.ad && <span className="absolute left-1 top-1 rounded bg-[#B3202B] px-1 text-[0.6rem] font-extrabold text-white">AD</span>}
                         </span>
                         <span className={`mt-1 line-clamp-2 block text-xs leading-tight ${active ? "font-extrabold text-brand" : "text-gray-700"}`}>{v.title}</span>
                       </button>
@@ -253,6 +312,7 @@ export function WatchVideos() {
             )}
           </div>
         ))}
+      {open && tab === "ad" && <AdContact />}
     </section>
   );
 }

@@ -17,12 +17,20 @@ const videosRef = collection(db, "videos");
 const KIND_LABEL = { youtube: "YouTube", facebook: "Facebook", file: "MP4", upload: "Upload" } as const;
 
 /** Admin: add, rename, reorder and remove the videos shown on Home. */
+/** Fields that make a video an Ad of a business (or a normal video when the name is empty). */
+function adPatch(sponsor: string): { ad: boolean; sponsor: string } {
+  const name = sponsor.trim().replace(/\s+/g, " ").slice(0, 80);
+  return { ad: name.length > 0, sponsor: name };
+}
+
 export function AdminVideos() {
   const { data, loading } = useCollection<Video>(videosRef);
   const videos = useMemo(() => [...data].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [data]);
   const [editing, setEditing] = useState<Video | null>(null);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
+  // Name of the business when the video is an Ad (empty = a normal video).
+  const [sponsor, setSponsor] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const { isSuperAdmin } = useAuth();
@@ -33,6 +41,7 @@ export function AdminVideos() {
     setEditing(v);
     setTitle(v?.title ?? "");
     setUrl(v?.url ?? "");
+    setSponsor(v?.ad ? (v.sponsor ?? "") : "");
     setError("");
   }
 
@@ -41,10 +50,11 @@ export function AdminVideos() {
     setError("");
     const name = title.trim().replace(/\s+/g, " ");
     if (!name) return setError("Isulat ang pamagat.");
+    const adFields = adPatch(sponsor);
     if (editing?.kind === "upload") {
       setBusy(true);
       try {
-        await updateDoc(doc(db, "videos", editing.id), { title: name.slice(0, 100) });
+        await updateDoc(doc(db, "videos", editing.id), { title: name.slice(0, 100), ...adFields });
         logActivity("Videos", `Binago ang video: ${name}`, editing.id);
         setEditing(null);
         setTitle("");
@@ -60,16 +70,17 @@ export function AdminVideos() {
     setBusy(true);
     try {
       if (editing) {
-        await updateDoc(doc(db, "videos", editing.id), { title: name.slice(0, 100), url: parsed.url, kind: parsed.kind, videoId: parsed.videoId });
+        await updateDoc(doc(db, "videos", editing.id), { title: name.slice(0, 100), url: parsed.url, kind: parsed.kind, videoId: parsed.videoId, ...adFields });
         logActivity("Videos", `Binago ang video: ${name}`, editing.id);
       } else {
         // Negative timestamp = newest first, without renumbering the others.
-        const ref = await addDoc(videosRef, { title: name.slice(0, 100), url: parsed.url, kind: parsed.kind, videoId: parsed.videoId, order: -Date.now(), views: 0, createdAt: serverTimestamp() });
+        const ref = await addDoc(videosRef, { title: name.slice(0, 100), url: parsed.url, kind: parsed.kind, videoId: parsed.videoId, order: -Date.now(), views: 0, ...adFields, createdAt: serverTimestamp() });
         logActivity("Videos", `Nagdagdag ng video: ${name}`, ref.id);
       }
       setEditing(null);
       setTitle("");
       setUrl("");
+      setSponsor("");
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -104,10 +115,12 @@ export function AdminVideos() {
         mime: prepared.mime.slice(0, 60),
         size: prepared.blob.size,
         thumb: prepared.thumb,
+        ...adPatch(sponsor),
         createdAt: serverTimestamp(),
       });
-      logActivity("Videos", `Nag-upload ng video: ${name} (${(prepared.blob.size / 1048576).toFixed(1)} MB)`, id);
+      logActivity("Videos", `Nag-upload ng ${sponsor.trim() ? "ad" : "video"}: ${name} (${(prepared.blob.size / 1048576).toFixed(1)} MB)`, id);
       setTitle("");
+      setSponsor("");
     } catch (err) {
       // Do not leave half-uploaded pieces behind.
       deleteVideoChunks(id).catch(() => {});
@@ -157,6 +170,7 @@ export function AdminVideos() {
         <p className="text-xs font-bold tracking-wide text-gray-600">BAGONG VIDEO</p>
         <Input label="Pamagat" value={formOpen ? "" : title} onChange={(e) => setTitle(e.target.value)} placeholder="hal. Paano mag-request ng Clearance" maxLength={100} disabled={formOpen} />
         <Input label="Link ng video" value={formOpen ? "" : url} onChange={(e) => setUrl(e.target.value)} placeholder="https://youtu.be/..." inputMode="url" disabled={formOpen} />
+        <Input label="Ad ng negosyo (optional)" value={formOpen ? "" : sponsor} onChange={(e) => setSponsor(e.target.value)} placeholder="Pangalan ng negosyo. Iwanang blangko kung hindi ad" maxLength={80} disabled={formOpen} hint="Kapag may pangalan, mapupunta ang video sa tab na Ads sa Home." />
         {!formOpen && <ErrorText>{error}</ErrorText>}
         <Button type="submit" full loading={busy && !formOpen && !phase} disabled={formOpen || busy}>Idagdag ang link</Button>
 
@@ -206,6 +220,7 @@ export function AdminVideos() {
                 <p className="line-clamp-2 text-sm font-bold leading-tight">{v.title}</p>
                 <p className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
                   <span className="rounded bg-gray-100 px-1.5 font-semibold">{KIND_LABEL[v.kind]}</span>
+                  {v.ad && <span className="rounded bg-red-100 px-1.5 font-semibold text-red-700">Ad{v.sponsor ? ` · ${v.sponsor}` : ""}</span>}
                   {v.hidden && <span className="rounded bg-amber-100 px-1.5 font-semibold text-amber-800">Nakatago</span>}
                   {v.kind === "upload" && v.size ? <span>{(v.size / 1048576).toFixed(1)} MB</span> : null}
                   <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" aria-hidden /> {(v.views ?? 0).toLocaleString("en-PH")}</span>
@@ -233,6 +248,8 @@ export function AdminVideos() {
         <form onSubmit={submit} className="space-y-3">
           <Input label="Pamagat" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} />
           {editing?.kind !== "upload" && <Input label="Link ng video" value={url} onChange={(e) => setUrl(e.target.value)} inputMode="url" />}
+          <Input label="Ad ng negosyo (optional)" value={sponsor} onChange={(e) => setSponsor(e.target.value)} placeholder="Pangalan ng negosyo. Iwanang blangko kung hindi ad" maxLength={80}  hint="Kapag may pangalan, mapupunta ang video sa tab na Ads sa Home." />
+
           <ErrorText>{error}</ErrorText>
           <div className="grid grid-cols-2 gap-2">
             <Button type="button" variant="outline" onClick={() => setEditing(null)}>Kanselahin</Button>
