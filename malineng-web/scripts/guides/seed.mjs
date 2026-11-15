@@ -37,6 +37,9 @@ async function account(email, password) {
 
 export const RESIDENT = { email: "juan@halimbawa.test", password: "halimbawa123" };
 /** A resident who has not been verified yet (for the "I-verify ang account" guide). */
+/** Staff accounts for the guides meant for admins. */
+export const KAPITAN = { email: "kap@halimbawa.test", password: "halimbawa123" };
+export const DEV = { email: "dev@halimbawa.test", password: "halimbawa123" };
 export const NEWBIE = { email: "maria@halimbawa.test", password: "halimbawa123" };
 
 export async function seed(selfieFile) {
@@ -58,6 +61,35 @@ export async function seed(selfieFile) {
     uid: S(nuid), email: S(NEWBIE.email), fullName: S("Maria Santos"), role: S("resident"), purok: S("Purok 2"),
     contact: S("09181234567"), birthday: S("1995-03-08"), createdAt: T(Date.now() - 2 * day),
   });
+  const kuid = await account(KAPITAN.email, KAPITAN.password);
+  await put(`users/${kuid}`, {
+    uid: S(kuid), email: S(KAPITAN.email), fullName: S("Roberto Halimbawa"), role: S("admin"), position: S("Kapitan"), purok: S("Purok 1"),
+    contact: S("09170000001"), birthday: S("1975-01-01"), createdAt: T(Date.now() - 90 * day),
+  });
+  const duid = await account(DEV.email, DEV.password);
+  await put(`users/${duid}`, {
+    uid: S(duid), email: S(DEV.email), fullName: S("Developer Halimbawa"), role: S("superadmin"), purok: S("Purok 1"),
+    contact: S("09170000002"), birthday: S("1990-01-01"), createdAt: T(Date.now() - 90 * day),
+  });
+  // Waiting for the staff to act on (admin guides).
+  const tomorrow = new Date(Date.now() + day).toISOString().slice(0, 10);
+  await put("ambulanceRequests/a1", {
+    userId: S(uid), type: S("schedule"), patientName: S("Lola Rosa Santos"), purok: S("Purok 2"), reason: S("Dialysis"), date: S(tomorrow), time: S("08:00"),
+    pickup: S("Purok 2, tapat ng kapilya"), destination: S("Cuyapo District Hospital"), notes: S("Naka-wheelchair"), contact: S("09171234567"), status: S("pending"), stage: I(1), driver: S("Mang Berto"), durationHours: I(3), createdAt: T(Date.now() - 3600e3),
+  });
+  await put("appointments/ap1", { userId: S(uid), fullName: S("Juan Dela Cruz"), service: S("Barangay Clearance"), date: S(tomorrow), contact: S("09171234567"), notes: S("Para sa trabaho"), status: S("natanggap"), createdAt: T(Date.now() - 7200e3) });
+  await put("posts/pp1", { authorId: S(uid), authorName: S("Juan Dela Cruz"), content: S("Libreng gupit sa Sabado sa Barangay Hall para sa mga bata."), photoURL: S(""), status: S("pending"), likes: A([]), createdAt: T(Date.now() - 1800e3) });
+  await put("borrowRequests/br1", {
+    userId: S(uid), userName: S("Juan Dela Cruz"), purok: S("Purok 1"), contact: S("09171234567"),
+    items: A([{ mapValue: { fields: { itemId: S("tent"), name: S("Tent"), qty: I(1) } } }]), itemIds: A([S("tent")]),
+    start: T(Date.now() + 2 * day), end: T(Date.now() + 3 * day), purpose: S("Lamay / Burol"), note: S("Sa Purok 3"), status: S("pending"), stage: I(1), createdAt: T(Date.now() - 4000e3),
+  });
+  const pid = await account("pedro@halimbawa.test", "halimbawa123");
+  await put(`users/${pid}`, { uid: S(pid), email: S("pedro@halimbawa.test"), fullName: S("Pedro Reyes"), role: S("resident"), purok: S("Purok 3"), contact: S("09191234567"), birthday: S("1988-07-20"), createdAt: T(Date.now() - 3 * day) });
+  if (selfieFile) {
+    await put(`verifications/${pid}`, { uid: S(pid), fullName: S("Pedro Reyes"), purok: S("Purok 3"), birthday: S("1988-07-20"), contact: S("09191234567"), email: S("pedro@halimbawa.test"), selfie: S(readFileSync(selfieFile, "utf8")), status: S("pending"), submittedAt: T(Date.now() - 3600e3) });
+  }
+  await put("raffleDonations/dn1", { userId: S(uid), name: S("Aling Nena Store"), anon: B(false), kind: S("Gamit / premyo"), what: S("Grocery package"), amount: I(1500), contact: S("09170001111"), message: S("Pasko po!"), status: S("new"), createdAt: T(Date.now() - 5400e3) });
   // A few things to look at on the pages.
   await put("settings/main", {
     ambulance: { mapValue: { fields: { status: S("available"), phone: S("09171112222"), fee: S("Libre"), drivers: A([S("Mang Berto"), S("Mang Rudy")]) } } },
@@ -71,5 +103,21 @@ export async function seed(selfieFile) {
   });
   await put("settings/raffle", { enabled: B(true), startAt: T(Date.now() - day), cutoffAt: T(Date.now() + 7 * day), drawAt: T(Date.now() + 7 * day), rounds: A([{ mapValue: { fields: { name: S("MAJOR PRIZE"), type: S("maj"), prizes: A([S("Rice cooker")]) } } }]) });
   await put("raffleSponsors/s1", { name: S("Omega Purified Ice"), what: S("Media Noche"), amount: I(1000), tier: S("main"), show: B(true), createdAt: T(Date.now() - day) });
+  // Pages that only show what the Barangay published (decisions, points, league, child health, ID check).
+  await put("decisionsPublic/d1", { title: S("Bagong ilaw sa kalsada ng Purok 3"), kind: S("Proyekto"), detail: S("Aprubado ang paglalagay ng 10 poste ng ilaw sa Purok 3 para sa kaligtasan sa gabi."), decidedAt: T(Date.now() - 3 * day) });
+  await put("decisionsPublic/d2", { title: S("Iskedyul ng pagkolekta ng basura"), kind: S("Patakaran"), detail: S("Tuwing Martes at Biyernes ang pagkolekta ng basura sa lahat ng purok."), decidedAt: T(Date.now() - 9 * day) });
+  for (const [id, purok, points, n] of [["p1", "Purok 1", 120, 3], ["p2", "Purok 2", 95, 2], ["p3", "Purok 3", 60, 1]]) {
+    await put(`purokPoints/${id}`, { purok: S(purok), points: I(points), cleanupCount: I(n) });
+  }
+  await put("children/c1", {
+    name: S("Ana Dela Cruz"), birthday: S(new Date(Date.now() - 100 * day).toISOString().slice(0, 10)), sex: S("Babae"), purok: S("Purok 1"),
+    parentId: S(uid), parentName: S("Juan Dela Cruz"), parentContact: S("09171234567"), notes: S(""), vaccines: { mapValue: { fields: {} } }, createdAt: T(Date.now() - 90 * day),
+  });
+  await put("leagues/l1", { name: S("Liga ng Malineng 2026"), sport: S("Basketball"), status: S("active"), createdAt: T(Date.now() - 10 * day) });
+  for (const [id, name, purok] of [["t1", "Purok 1 Bulls", "Purok 1"], ["t2", "Purok 2 Eagles", "Purok 2"]]) {
+    await put(`ligaTeams/${id}`, { leagueId: S("l1"), name: S(name), purok: S(purok), captainId: S("cap"), captainName: S("Kapitan ng Team"), contact: S("09170000000"), players: A([S("Pedro"), S("Mario"), S("Jose")]), status: S("approved"), createdAt: T(Date.now() - 8 * day) });
+  }
+  await put("ligaGames/g1", { leagueId: S("l1"), homeId: S("t1"), awayId: S("t2"), homeName: S("Purok 1 Bulls"), awayName: S("Purok 2 Eagles"), scheduledAt: S(new Date(Date.now() + 2 * day).toISOString().slice(0, 11) + "18:00"), venue: S("Covered Court"), status: S("scheduled"), homeScore: I(0), awayScore: I(0), period: S("") });
+  await put("ligaGames/g0", { leagueId: S("l1"), homeId: S("t2"), awayId: S("t1"), homeName: S("Purok 2 Eagles"), awayName: S("Purok 1 Bulls"), scheduledAt: S(new Date(Date.now() - 2 * day).toISOString().slice(0, 11) + "18:00"), venue: S("Covered Court"), status: S("final"), homeScore: I(58), awayScore: I(61), period: S("") });
   return uid;
 }

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, HelpCircle, X } from "lucide-react";
 import { useLang } from "@/lib/i18n";
-import { guideFor, type Guide } from "@/lib/guides";
+import { guideById, guideFor, type Guide } from "@/lib/guides";
 
 /** Text in the language the resident chose. The guides carry both languages, so the page translator is not needed here. */
 function useT() {
@@ -104,16 +104,17 @@ export function GuideSheet({ guide, onClose }: { guide: Guide; onClose: () => vo
 }
 
 /**
- * The gold "Paano gamitin" button. It looks at the page the resident is on and shows only when that page has a guide,
+ * The gold "Paano gamitin" button. It looks at the page the resident is on (or the `id` it was given) and shows only when there is a guide,
  * so every page gets it just by being in the guide list (src/data/guides.json).
  */
-export function HowToButton({ className = "" }: { className?: string }) {
+export function HowToButton({ className = "", id }: { className?: string; id?: string }) {
   const pathname = usePathname() ?? "/";
   const t = useT();
-  const guide = guideFor(pathname);
+  // `id` picks a guide directly (the Admin page, where one address holds many sections); otherwise the page decides.
+  const guide = id ? guideById(id) : guideFor(pathname);
   const [open, setOpen] = useState(false);
   // Close when the page changes.
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => setOpen(false), [pathname, id]);
   if (!guide) return null;
   return (
     <>
