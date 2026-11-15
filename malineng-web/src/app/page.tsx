@@ -43,6 +43,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { WatchVideos } from "@/components/WatchVideos";
 import { RaffleCard } from "@/components/RaffleCard";
 import { AnnouncementRotator } from "@/components/AnnouncementRotator";
+import { HowToButton } from "@/components/HowTo";
 import { useXmas } from "@/lib/theme";
 import { XmasLights, XmasSnow } from "@/components/Xmas";
 import { useWebAccess } from "@/lib/webAccess";
@@ -247,6 +248,7 @@ export default function HomePage() {
               )}
             </p>
           </div>
+          <HowToButton className="ml-auto self-start" />
         </div>
 
         {(online !== null || (stats && (stats.members > 0 || stats.verified > 0 || stats.households > 0))) && (

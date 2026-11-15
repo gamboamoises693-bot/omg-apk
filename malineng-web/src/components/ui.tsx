@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { forwardRef, useEffect, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { ChevronLeft, Loader2, X } from "lucide-react";
+import { HowToButton } from "@/components/HowTo";
 
 /* ---------------- Button ---------------- */
 type Variant = "primary" | "gold" | "outline" | "danger" | "ghost" | "soft";
@@ -213,6 +214,8 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
           {subtitle && <p className="text-[0.85rem] text-white/75">{subtitle}</p>}
         </div>
         {action}
+        {/* Every page that has a guide (src/data/guides.json) gets the "Paano gamitin" button here. */}
+        <HowToButton />
       </div>
       <div className="pointer-events-none absolute inset-x-6 bottom-0 h-[3px] rounded-full bg-gradient-to-r from-transparent via-gold to-transparent opacity-80" aria-hidden />
     </div>
