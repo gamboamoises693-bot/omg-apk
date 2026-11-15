@@ -38,7 +38,7 @@ function SponsorBox({ s, className, children }: { s: { name: string; link?: stri
 }
 
 /** "Messenger" button for a sponsor whose link is a Facebook page: opens their chat (m.me/page-name) in a new tab. */
-function MessengerButton({ name, link, className = "" }: { name: string; link?: string; className?: string }) {
+function MessengerButton({ name, link, className = "", compact = false }: { name: string; link?: string; className?: string; compact?: boolean }) {
   const m = link ? messengerLink(link) : "";
   if (!m) return null;
   return (
@@ -47,12 +47,12 @@ function MessengerButton({ name, link, className = "" }: { name: string; link?: 
       target="_blank"
       rel="noopener noreferrer nofollow"
       aria-label={`Mag-chat sa ${name} sa Messenger`}
-      className={`inline-flex items-center gap-1.5 rounded-full bg-[#0A7CFF] px-3 py-1.5 text-[0.7rem] font-extrabold text-white shadow-sm active:scale-95 ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full bg-[#0A7CFF] font-extrabold text-white shadow-sm active:scale-95 ${compact ? "p-1.5" : "px-3 py-1.5 text-[0.7rem]"} ${className}`}
     >
       <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" aria-hidden>
         <path d="M12 2C6.5 2 2 6.2 2 11.5c0 2.9 1.4 5.5 3.6 7.2V22l3.3-1.8c.9.2 1.9.4 3.1.4 5.5 0 10-4.2 10-9.5S17.5 2 12 2zm1 12.8-2.5-2.7-4.9 2.7 5.4-5.7 2.6 2.7 4.8-2.7-5.4 5.7z" />
       </svg>
-      Messenger
+      {!compact && "Messenger"}
     </a>
   );
 }
@@ -82,6 +82,79 @@ function SponsorMark({ s, className, xmas = false }: { s: { name: string; logo?:
   return <span className={`flex shrink-0 items-center justify-center font-black text-brand-deep ${className} ${ring}`}>{s.name === "Hindi nagpakilala" ? "♥" : initials(s.name)}</span>;
 }
 
+/** Tier by amount: Ginto from ₱4,000, Pilak from ₱2,000, everyone else (including anonymous donors) is a Kaibigan ng Barangay. */
+export const TIERS = ["Ginto", "Pilak", "Kaibigan ng Barangay"] as const;
+type Tier = (typeof TIERS)[number];
+export function sponsorTier(amount: number): Tier {
+  if (amount >= 4000) return "Ginto";
+  if (amount >= 2000) return "Pilak";
+  return "Kaibigan ng Barangay";
+}
+
+type ListSponsor = { id: string; name: string; what: string; amount: number; logo?: string; link?: string };
+const PAGE = 12;
+
+/** Compact, searchable list for when there are many sponsors: tier chips, one line per sponsor, 12 more per tap. */
+function SponsorDirectory({ list, xmas }: { list: ListSponsor[]; xmas: boolean }) {
+  const [q, setQ] = useState("");
+  const [tier, setTier] = useState<"all" | Tier>("all");
+  const [count, setCount] = useState(PAGE);
+  const counts = useMemo(() => {
+    const c: Record<Tier, number> = { Ginto: 0, Pilak: 0, "Kaibigan ng Barangay": 0 };
+    list.forEach((s) => { c[sponsorTier(s.amount)]++; });
+    return c;
+  }, [list]);
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return list.filter((s) => (tier === "all" || sponsorTier(s.amount) === tier) && (!needle || s.name.toLowerCase().includes(needle) || s.what.toLowerCase().includes(needle)));
+  }, [list, q, tier]);
+  const visible = filtered.slice(0, count);
+  const chip = (active: boolean) => `shrink-0 rounded-full px-3 py-1 text-xs font-extrabold ${active ? (xmas ? "bg-[#0F4A36] text-white" : "bg-brand text-white") : "bg-white text-gray-600 ring-1 ring-gray-200"}`;
+
+  return (
+    <div className="space-y-2" data-no-i18n>
+      <input
+        type="search"
+        value={q}
+        onChange={(e) => { setQ(e.target.value); setCount(PAGE); }}
+        placeholder="Hanapin ang sponsor o donor…"
+        aria-label="Hanapin ang sponsor o donor"
+        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+      />
+      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+        <button type="button" onClick={() => { setTier("all"); setCount(PAGE); }} className={chip(tier === "all")}>Lahat ({list.length})</button>
+        {TIERS.map((t) => (
+          <button key={t} type="button" onClick={() => { setTier(t); setCount(PAGE); }} className={chip(tier === t)}>{t} ({counts[t]})</button>
+        ))}
+      </div>
+      {visible.length === 0 ? (
+        <p className="rounded-xl bg-surface p-3 text-center text-sm text-gray-500">Walang nahanap.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {visible.map((s) => (
+            <li key={s.id} className={`flex items-center gap-2 rounded-xl p-2 ${xmas ? "border border-[#EEDFB0] bg-white" : "bg-surface"}`}>
+              <SponsorBox s={s} className="flex min-w-0 flex-1 items-center gap-2">
+                <SponsorMark s={s} className={`h-10 w-10 rounded-xl text-xs ${xmas ? "bg-white" : "bg-brand-light"}`} />
+                <span className="min-w-0">
+                  <b className="block truncate text-sm">{s.name}</b>
+                  <span className="block truncate text-xs text-gray-600">{s.what}</span>
+                </span>
+              </SponsorBox>
+              {s.amount > 0 && <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${xmas ? "bg-[#FDECEE] text-[#B3202B]" : "bg-brand-light text-brand"}`}>{formatPeso(s.amount).replace(".00", "")}</span>}
+              <MessengerButton name={s.name} link={s.link} compact className="shrink-0" />
+            </li>
+          ))}
+        </ul>
+      )}
+      {filtered.length > count && (
+        <button type="button" onClick={() => setCount((c) => c + PAGE)} className="w-full rounded-xl border-2 border-dashed border-gray-300 py-2 text-sm font-bold text-gray-600 active:scale-[0.99]">
+          Ipakita pa ({Math.min(PAGE, filtered.length - count)} pa, natitira ang {filtered.length - count})
+        </button>
+      )}
+    </div>
+  );
+}
+
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
 /** Sponsors of the raffle (with the exact amounts, for transparency) and the way to pledge a donation. */
@@ -93,6 +166,13 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
   const shown = useMemo(() => sponsors.filter((s) => s.show), [sponsors]);
   const main = shown.filter((s) => s.tier === "main");
   const others = shown.filter((s) => s.tier !== "main");
+  // With many sponsors (9+) on the full page, only the top 3 by amount hang; the rest go to a searchable list.
+  // Array.sort is stable, so equal amounts keep the newest sponsor first.
+  const many = full && others.length > 8;
+  const byAmount = useMemo(() => (many ? [...others].sort((a, b) => (b.amount || 0) - (a.amount || 0)) : others), [many, others]);
+  const hanging = many ? byAmount.slice(0, 3) : full ? others : others.slice(0, 4);
+  const rest = many ? byAmount.slice(3) : [];
+  const compact = many;
   const total = shown.reduce((sum, s) => sum + (s.amount || 0), 0);
 
   return (
@@ -124,11 +204,11 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
             <MessengerButton name={s.name} link={s.link} className="absolute bottom-3 right-3" />
             </div>
           ))}
-          {(full ? others : others.slice(0, 4)).length > 0 && (
+          {hanging.length > 0 && (
             <>
               {xmas && <XmasGarland />}
-              <ul className={`grid grid-cols-2 ${xmas ? "items-start gap-x-3 gap-y-3" : "gap-2"}`} style={xmas ? { marginTop: "-1.1rem" } : undefined}>
-                {(full ? others : others.slice(0, 4)).map((s, i) =>
+              <ul className={`grid ${compact ? "grid-cols-3" : "grid-cols-2"} ${xmas ? "items-start gap-x-3 gap-y-3" : "gap-2"}`} style={xmas ? { marginTop: "-1.1rem" } : undefined}>
+                {hanging.map((s, i) =>
                   xmas ? (
                     // At Christmas each sponsor hangs from the garland on a gold string, like an ornament, at its own height.
                     <li key={s.id} className={i % 2 ? "pt-2" : ""}>
@@ -136,18 +216,18 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
                         <span className={`mx-auto block w-px bg-gradient-to-b from-[#D9B53F] to-[#9A7B12] ${i % 2 ? "h-16" : "h-9"}`} aria-hidden />
                         <div className="relative">
                         <SponsorBox s={s} className="relative flex flex-col items-center">
-                          <span className="relative z-10 -mb-8">
+                          <span className={`relative z-10 ${compact ? "-mb-6" : "-mb-8"}`}>
                             <span className="absolute -top-1.5 left-1/2 h-2 w-3 -translate-x-1/2 rounded-t-[3px] bg-gradient-to-b from-[#E8C85A] to-[#B8921E]" aria-hidden />
-                            <SponsorMark s={s} xmas className="h-16 w-16 bg-white text-base" />
+                            <SponsorMark s={s} xmas className={`bg-white text-base ${compact ? "h-12 w-12" : "h-16 w-16"}`} />
                           </span>
-                          <span className={`flex w-full flex-col items-center gap-0.5 rounded-2xl border border-[#EEDFB0] bg-gradient-to-b from-white to-[#FFFAEC] px-2 pt-10 text-center shadow-[0_10px_18px_-12px_rgba(120,80,0,.55)] ${messengerLink(s.link ?? "") ? "pb-12" : "pb-3"}`}>
+                          <span className={`flex w-full flex-col items-center gap-0.5 rounded-2xl border border-[#EEDFB0] bg-gradient-to-b from-white to-[#FFFAEC] px-2 text-center shadow-[0_10px_18px_-12px_rgba(120,80,0,.55)] ${compact ? "pt-8" : "pt-10"} ${messengerLink(s.link ?? "") ? (compact ? "pb-10" : "pb-12") : "pb-3"}`}>
                             <b className="line-clamp-1 w-full text-sm">{s.name}</b>
                             <span className="line-clamp-1 w-full text-xs text-gray-600">{s.what}</span>
                             {s.amount > 0 && <span className="rounded-full bg-[#FDECEE] px-2.5 py-0.5 text-xs font-bold text-[#B3202B]">{formatPeso(s.amount).replace(".00", "")}</span>}
                             <LinkHint link={s.link} dark />
                           </span>
                         </SponsorBox>
-                        <MessengerButton name={s.name} link={s.link} className="absolute bottom-3 left-1/2 -translate-x-1/2" />
+                        <MessengerButton name={s.name} link={s.link} compact={compact} className="absolute bottom-3 left-1/2 -translate-x-1/2" />
                         </div>
                       </div>
                     </li>
@@ -160,13 +240,14 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
                         {s.amount > 0 && <span className="text-xs font-bold text-brand">{formatPeso(s.amount).replace(".00", "")}</span>}
                         <LinkHint link={s.link} />
                       </SponsorBox>
-                      <MessengerButton name={s.name} link={s.link} className="mt-1.5 w-full justify-center" />
+                      <MessengerButton name={s.name} link={s.link} compact={compact} className="mt-1.5 w-full justify-center" />
                     </li>
                   ),
                 )}
               </ul>
             </>
           )}
+          {rest.length > 0 && <SponsorDirectory list={rest} xmas={xmas} />}
           {!full && others.length > 4 && <Link href="/raffle" className="block text-center text-sm font-bold text-brand">Tingnan ang lahat ({shown.length})</Link>}
         </>
       )}
