@@ -506,6 +506,463 @@
           "h": 1170
         }
       ]
+    },
+    {
+      "id": "emergency",
+      "routes": [
+        "/emergency"
+      ],
+      "group": "Emergency at kalusugan",
+      "title": {
+        "tl": "Ano ang gagawin sa emergency",
+        "en": "What to do in an emergency"
+      },
+      "steps": [
+        {
+          "tl": "Gulo, nakawan o aksidente? Pindutin ang TANOD. Tatawag agad ang phone mo.",
+          "en": "Trouble, theft or an accident? Tap TANOD. Your phone will call right away.",
+          "img": "emergency-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "May sakit at kailangan ng doktor? Pindutin ang HEALTH CENTER.",
+          "en": "Someone is sick and needs a doctor? Tap HEALTH CENTER.",
+          "img": "emergency-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Sunog? Pindutin ang BFP (Bumbero).",
+          "en": "A fire? Tap BFP (the fire station).",
+          "img": "emergency-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Kailangan ng ambulansya? Pindutin ito para sa request ng ambulansya ng Barangay.",
+          "en": "Need an ambulance? Tap this to request the Barangay ambulance.",
+          "img": "emergency-4.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Para sa pambansang emergency, pindutin ang 911.",
+          "en": "For a national emergency, tap 911.",
+          "img": "emergency-5.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "botika",
+      "routes": [
+        "/botika"
+      ],
+      "group": "Emergency at kalusugan",
+      "title": {
+        "tl": "Paano tingnan ang gamot sa Botika",
+        "en": "How to check medicine at the pharmacy"
+      },
+      "steps": [
+        {
+          "tl": "I-type ang pangalan ng gamot na hinahanap mo.",
+          "en": "Type the name of the medicine you are looking for.",
+          "img": "botika-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Meron para makita ang gamot na may stock ngayon.",
+          "en": "Tap In stock to see the medicine available now.",
+          "img": "botika-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Ubos para makita kung ano ang naubos na.",
+          "en": "Tap Out of stock to see what has run out.",
+          "img": "botika-3.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "board",
+      "routes": [
+        "/board"
+      ],
+      "group": "Komunidad",
+      "title": {
+        "tl": "Paano mag-post sa Community Board",
+        "en": "How to post on the Community Board"
+      },
+      "steps": [
+        {
+          "tl": "Pindutin ang kahon at isulat ang gusto mong i-post sa komunidad.",
+          "en": "Tap the box and write what you want to share with the community.",
+          "img": "board-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pwede kang magdagdag ng larawan.",
+          "en": "You can add a photo.",
+          "img": "board-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Mag-post. Susuriin muna ng Barangay bago ito lumabas.",
+          "en": "Tap Post. The Barangay checks it before it appears.",
+          "img": "board-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Piliin ang Lahat, Purok ko, o Post ko para makita ang gusto mo.",
+          "en": "Choose All, My Purok, or My Posts to see what you want.",
+          "img": "board-4.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "pabatid",
+      "routes": [
+        "/pabatid"
+      ],
+      "group": "Komunidad",
+      "title": {
+        "tl": "Paano makatanggap ng pabatid",
+        "en": "How to get announcements"
+      },
+      "steps": [
+        {
+          "tl": "Pindutin ito para tumunog ang phone kapag may bagong pabatid.",
+          "en": "Tap this so your phone rings when there is a new announcement.",
+          "img": "pabatid-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Para sa akin: ang mga pabatid para sa purok mo at sa buong Barangay.",
+          "en": "For me: announcements for your purok and the whole Barangay.",
+          "img": "pabatid-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Lahat ng purok: makita ang mga pabatid ng ibang purok.",
+          "en": "All puroks: see the announcements of other puroks.",
+          "img": "pabatid-3.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "events",
+      "routes": [
+        "/events",
+        "/register-event"
+      ],
+      "group": "Komunidad",
+      "title": {
+        "tl": "Paano magparehistro sa event",
+        "en": "How to register for an event"
+      },
+      "steps": [
+        {
+          "tl": "Pindutin ang Magparehistro sa Event.",
+          "en": "Tap Register for an Event.",
+          "img": "events-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Isulat ang buong pangalan, purok at contact number.",
+          "en": "Write your full name, purok and contact number.",
+          "img": "events-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Piliin kung para saan ang pagpaparehistro, halimbawa Ayuda o Clean-up.",
+          "en": "Choose what you are registering for, for example Aid or Clean-up.",
+          "img": "events-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Mag-register para tapusin.",
+          "en": "Tap Register to finish.",
+          "img": "events-4.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "lost-found",
+      "routes": [
+        "/lost-found"
+      ],
+      "group": "Komunidad",
+      "title": {
+        "tl": "Paano gamitin ang Lost & Found",
+        "en": "How to use Lost & Found"
+      },
+      "steps": [
+        {
+          "tl": "Nawawala ang gamit mo? Tingnan dito kung may nakakita na.",
+          "en": "Lost something? Check here if someone found it.",
+          "img": "lost-found-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Nakakita ka ng gamit ng iba? Tingnan dito ang mga nakita.",
+          "en": "Found something that belongs to someone else? See the found items here.",
+          "img": "lost-found-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Mag-report para ilista ang nawawala o nakita mo, kasama ang larawan.",
+          "en": "Tap Report to list what you lost or found, with a photo.",
+          "img": "lost-found-3.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "survey",
+      "routes": [
+        "/survey"
+      ],
+      "group": "Komunidad",
+      "title": {
+        "tl": "Paano magbigay ng mungkahi",
+        "en": "How to give a suggestion"
+      },
+      "steps": [
+        {
+          "tl": "Isulat ang mungkahi mo para sa Barangay.",
+          "en": "Write your suggestion for the Barangay.",
+          "img": "survey-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Ipadala. Binabasa ito ng mga opisyal.",
+          "en": "Tap Send. The officials read it.",
+          "img": "survey-2.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "hiring",
+      "routes": [
+        "/hiring"
+      ],
+      "group": "Negosyo at trabaho",
+      "title": {
+        "tl": "Paano maghanap ng trabaho sa Hiring",
+        "en": "How to find a job in Hiring"
+      },
+      "steps": [
+        {
+          "tl": "Maghanap ng trabaho, halimbawa helper, driver o cashier.",
+          "en": "Search for a job, for example helper, driver or cashier.",
+          "img": "hiring-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Piliin ang uri ng trabaho: Full-time, Part-time o Pana-panahon.",
+          "en": "Pick the kind of job: full-time, part-time or seasonal.",
+          "img": "hiring-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Sa Inapply ko makikita ang mga inaplayan mo.",
+          "en": "Under Applied you can see the jobs you applied for.",
+          "img": "hiring-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "May negosyo ka at kailangan ng tao? Pindutin ang Mag-post.",
+          "en": "Have a business and need workers? Tap Post.",
+          "img": "hiring-4.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "routes": [
+        "/skills"
+      ],
+      "group": "Negosyo at trabaho",
+      "title": {
+        "tl": "Paano gamitin ang Skills Directory",
+        "en": "How to use the Skills Directory"
+      },
+      "steps": [
+        {
+          "tl": "Maghanap ng may skill na kailangan mo, halimbawa tubero.",
+          "en": "Look for someone with the skill you need, for example a plumber.",
+          "img": "skills-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "May skill ka? Pindutin ang Magpa-lista ng Skill para mahanap ka ng mga kabarangay.",
+          "en": "Have a skill? Tap List my skill so neighbours can find you.",
+          "img": "skills-2.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "mapa",
+      "routes": [
+        "/mapa"
+      ],
+      "group": "Barangay",
+      "title": {
+        "tl": "Paano gamitin ang Mapa",
+        "en": "How to use the Map"
+      },
+      "steps": [
+        {
+          "tl": "Maghanap ng lugar sa Malineng, halimbawa tindahan o paaralan.",
+          "en": "Search for a place in Malineng, for example a shop or a school.",
+          "img": "mapa-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pumili ng uri ng lugar para makita lang ang mga iyon.",
+          "en": "Pick a kind of place to see only those.",
+          "img": "mapa-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Nasaan ako para makita ang kinatatayuan mo sa mapa.",
+          "en": "Tap Where am I to see where you are on the map.",
+          "img": "mapa-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "May negosyo o lugar na wala pa rito? Pindutin ang Mag-pin ng lugar.",
+          "en": "Have a business or a place that is not here yet? Tap Pin a place.",
+          "img": "mapa-4.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "proyekto",
+      "routes": [
+        "/proyekto"
+      ],
+      "group": "Barangay",
+      "title": {
+        "tl": "Paano tingnan ang mga proyekto",
+        "en": "How to see the projects"
+      },
+      "steps": [
+        {
+          "tl": "Piliin ang kalagayan ng proyekto: Ginagawa, Nakaplano, Tapos na o Naantala.",
+          "en": "Pick the status of the project: in progress, planned, done or delayed.",
+          "img": "proyekto-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Tapos na para makita ang mga natapos nang proyekto. Sa bawat proyekto makikita ang larawan, badyet at progreso.",
+          "en": "Tap Done to see the finished projects. Each project shows its photos, budget and progress.",
+          "img": "proyekto-2.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "pondo",
+      "routes": [
+        "/pondo"
+      ],
+      "group": "Barangay",
+      "title": {
+        "tl": "Paano tingnan ang Pondo ng Barangay",
+        "en": "How to see the Barangay Fund"
+      },
+      "steps": [
+        {
+          "tl": "Piliin ang taon para makita ang badyet at kung saan napunta ang pondo.",
+          "en": "Pick the year to see the budget and where the funds went.",
+          "img": "pondo-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Sa Mga gastos makikita kung saan ginastos ang pera ng Barangay.",
+          "en": "Under Expenses you can see where the Barangay money was spent.",
+          "img": "pondo-2.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "pamilya",
+      "routes": [
+        "/pamilya"
+      ],
+      "group": "Dokumento at tulong",
+      "title": {
+        "tl": "Paano i-lista ang pamilya mo",
+        "en": "How to list your family"
+      },
+      "steps": [
+        {
+          "tl": "Piliin ang purok at isulat ang address ng bahay ninyo.",
+          "en": "Pick your purok and write your home address.",
+          "img": "pamilya-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Magdagdag ng miyembro para ilista ang bawat kasama sa bahay.",
+          "en": "Tap Add member to list each person in your household.",
+          "img": "pamilya-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang I-save. Tinutulungan nito ang Barangay sa ayuda at serbisyo.",
+          "en": "Tap Save. This helps the Barangay with aid and services.",
+          "img": "pamilya-3.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
     }
   ]
 }

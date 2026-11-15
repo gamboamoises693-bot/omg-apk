@@ -1,5 +1,6 @@
 "use client";
 
+import { HowToButton } from "@/components/HowTo";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -330,6 +331,7 @@ function MapaContent() {
         {/* Map buttons */}
         {!selected && !drawing && (
           <div className="absolute bottom-4 right-3 z-[500] flex flex-col items-end gap-2">
+            <HowToButton />
             {isAdmin && (
               <button onClick={saveCenter} className="rounded-full bg-white px-3 py-2 text-xs font-bold text-brand shadow-lg">
                 Gawing gitna ng mapa
