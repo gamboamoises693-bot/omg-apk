@@ -176,8 +176,8 @@ export const GUIDES = [
     steps: [
       { before: [go("/account/")], ring: 'h2:has-text("PROFILE KO")',
         tl: "Dito mo mababago ang pangalan, purok, contact number at birthday mo.", en: "Here you can change your name, purok, contact number and birthday." },
-      { ring: 'button:has-text("I-save ang Profile")',
-        tl: "Pindutin ang I-save ang Profile pagkatapos magpalit.", en: "Tap Save Profile after you change something." },
+      { ring: 'button:has-text("Ipadala para sa approval")',
+        tl: "Pagkatapos magpalit, pindutin ang Ipadala para sa approval. Ang Barangay ang mag-aaprub; hangga't hindi pa, ang lumang detalye ang ginagamit. Makikita mo rito kung naaprubahan o hindi.", en: "After you change something, tap Send for approval. The Barangay approves it; until then your old details stay. You will see here if it was approved or not." },
       { ring: 'h2:has-text("WIKA")',
         tl: "Piliin ang wika (TL o EN) at ang laki ng text (Aa) para mas madaling basahin.", en: "Choose the language (TL or EN) and the text size (Aa) so it is easier to read." },
       { ring: 'button:has-text("Mag-logout")',
@@ -421,6 +421,18 @@ export const GUIDES = [
         tl: "Kung tugma ang mukha at detalye, pindutin ang I-verify. Magkakaroon na siya ng Barangay ID.", en: "If the face and details match, tap Verify. They then get a Barangay ID." },
       { ring: 'label:has-text("Dahilan ng pag-reject")',
         tl: "Kung malabo o mali, piliin ang dahilan at pindutin ang I-reject. Makikita ito ng residente.", en: "If it is blurry or wrong, pick the reason and tap Reject. The resident will see it." },
+    ],
+  },
+  {
+    id: "admin-profilechange", as: "kapitan", staff: true, routes: [], group: "Para sa admin",
+    title: { tl: "Paano mag-aprub ng pagbabago sa profile", en: "How to approve a profile change" },
+    steps: [
+      { before: [go("/admin/#profilechange")], ring: 'li:has-text("Pedro Reyes")',
+        tl: "Dito makikita ang mga residenteng humihiling magpalit ng pangalan, purok, contact o birthday. Makikita ang dati at bagong detalye.", en: "Here you see residents who asked to change their name, purok, contact or birthday, with the old and new details." },
+      { ring: 'button:has-text("Aprubahan")',
+        tl: "Kung tama, pindutin ang Aprubahan. Ma-u-update agad ang profile niya at may tala sa Activity Log.", en: "If it is correct, tap Approve. His profile is updated right away and it is written in the Activity Log." },
+      { ring: 'label:has-text("Dahilan ng pag-reject")',
+        tl: "Kung mali o kulang ang patunay, piliin ang dahilan at pindutin ang I-reject. Makikita ito ng residente.", en: "If it is wrong or there is no proof, pick the reason and tap Reject. The resident will see it." },
     ],
   },
   {
