@@ -58,6 +58,7 @@ import { Button, ErrorText, Modal, PageHeader, Spinner } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
 import { LoginGate } from "@/components/LoginGate";
 import { DevInbox } from "@/components/DevInbox";
+import { usePurokCounts } from "@/lib/purokStats";
 
 const ROLE_STYLE: Record<string, string> = { Kapitan: "bg-amber-700", Secretary: "bg-teal-700", "Super Admin": "bg-purple-700" };
 /** Stored as "Super Admin" (the database rules check it); shown as "Developer". */
@@ -65,7 +66,7 @@ const roleText = (role: string) => (role === "Super Admin" ? "Developer" : role)
 
 /* ------------------------------ Room list ------------------------------ */
 
-function RoomRow({ room }: { room: string }) {
+function RoomRow({ room, members }: { room: string; members?: number }) {
   const q = useMemo(
     () => query(collection(db, "chatRooms", room, "messages"), where("createdAt", ">=", cutoffTimestamp()), orderBy("createdAt", "desc"), limit(1)),
     [room],
@@ -80,7 +81,7 @@ function RoomRow({ room }: { room: string }) {
     <Link href={`/chat/?room=${encodeURIComponent(room)}`} className="flex items-center gap-3 border-b border-gray-100 px-3 py-3 last:border-0 active:bg-gray-50">
       <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-extrabold text-white ${staff ? "bg-brand-deep" : room === ROOM_ALL ? "bg-brand" : "bg-teal-600"}`}>{initial}</span>
       <span className="min-w-0 flex-1">
-        <span className="block font-bold">{roomTitle(room)}</span>
+        <span className="block font-bold">{roomTitle(room)}{members !== undefined && <span className="ml-1.5 text-xs font-semibold text-brand">· {members} miyembro</span>}</span>
         <span className="block truncate text-xs text-gray-500">
           {last ? `${last.authorName.split(" ")[0]}: ${last.text && parseCall(last.text) ? "📹 Video call" : last.text || "📷 Larawan"}` : "Walang mensahe pa"}
         </span>
@@ -96,6 +97,9 @@ function RoomRow({ room }: { room: string }) {
 function RoomList() {
   const { user, profile, isStaff, isAdmin, isSuperAdmin } = useAuth();
   const { settings } = useSettings();
+  // Admins see how many members each purok has.
+  const counts = usePurokCounts(isAdmin);
+  const memberOf = (room: string): number | undefined => (isAdmin ? counts.rows.find((r) => r.purok === room)?.members : undefined);
   // Private staff rooms come first. Officials = admins without BHW (and the Developer).
   const staffRooms = [...(isStaff ? [ROOM_STAFF_ADMIN] : []), ...(isAdmin ? [ROOM_STAFF_OFFICIALS] : [])];
   const rooms = [ROOM_ALL, ...(isStaff ? settings.puroks : profile?.purok ? [profile.purok] : [])];
@@ -129,7 +133,7 @@ function RoomList() {
       <p className="px-1 text-xs font-bold tracking-wide text-gray-600">MGA CHAT ROOM</p>
       <div className="overflow-hidden rounded-2xl bg-white shadow-card">
         {rooms.map((r) => (
-          <RoomRow key={r} room={r} />
+          <RoomRow key={r} room={r} members={memberOf(r)} />
         ))}
       </div>
       <p className="text-xs text-gray-600">

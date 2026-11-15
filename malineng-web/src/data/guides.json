@@ -1416,23 +1416,30 @@
           "h": 1170
         },
         {
+          "tl": "Dito makikita kung ilang miyembro ang bawat purok, at ilan sa kanila ang verified. Makikita rin ito sa Chat (sa tabi ng bawat Purok).",
+          "en": "Here you see how many members each purok has and how many are verified. You also see it in Chat (next to each Purok).",
+          "img": "admin-users-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
           "tl": "Hanapin ang user sa pangalan, purok o email.",
           "en": "Find a user by name, purok or email.",
-          "img": "admin-users-2.jpg",
+          "img": "admin-users-3.jpg",
           "w": 585,
           "h": 1170
         },
         {
           "tl": "Piliin ang Di verified para makita ang mga hindi pa verified.",
           "en": "Choose Not verified to see those who are not verified yet.",
-          "img": "admin-users-3.jpg",
+          "img": "admin-users-4.jpg",
           "w": 585,
           "h": 1170
         },
         {
           "tl": "Pindutin ang user para palitan ang role, i-suspend o palitan ang litrato sa ID.",
           "en": "Tap a user to change the role, suspend, or change the photo on the ID.",
-          "img": "admin-users-4.jpg",
+          "img": "admin-users-5.jpg",
           "w": 585,
           "h": 1170
         }
