@@ -1,7 +1,7 @@
 /**
  * Christmas music made on the phone with the Web Audio API: no sound files, no download, no licence to pay.
  * The tunes are old public-domain carols (Jingle Bells 1857, Silent Night 1818, We Wish You a Merry Christmas,
- * Joy to the World 1719), played softly like a music box.
+ * Joy to the World 1719, Deck the Halls), played softly like a music box.
  * Browsers only allow sound after the person has touched the screen, so `startMusic()` must be called from a tap.
  */
 
@@ -45,12 +45,18 @@ const JOY_TO_THE_WORLD: Note[] = [
   ["E4", 0.5], ["D4", 0.5], ["C4", 1], ["C5", 1], ["A4", 1.5], ["G4", 0.5], ["F4", 1], ["E4", 1], ["F4", 1], ["E4", 1], ["D4", 1], ["C4", 3],
 ];
 
+/** Deck the Halls (old Welsh tune, 1700s): the first half, written from memory. */
+const A: Note[] = [["G4", 1.5], ["F4", 0.5], ["E4", 1], ["D4", 1], ["C4", 1], ["D4", 1], ["E4", 1], ["C4", 1]];
+const B: Note[] = [["D4", 0.5], ["E4", 0.5], ["F4", 0.5], ["D4", 0.5], ["E4", 1.5], ["D4", 0.5], ["C4", 1], ["B3", 1], ["C4", 2]];
+const DECK_THE_HALLS: Note[] = [...A, ...B, ["R", 1], ...A, ...B];
+
 /** Tempo (seconds per beat) of each tune. */
 const PLAYLIST: { notes: Note[]; beat: number }[] = [
   { notes: JINGLE_BELLS, beat: 0.42 },
   { notes: SILENT_NIGHT, beat: 0.62 },
   { notes: WISH_YOU, beat: 0.5 },
   { notes: JOY_TO_THE_WORLD, beat: 0.45 },
+  { notes: DECK_THE_HALLS, beat: 0.4 },
 ];
 
 const VOLUME = 0.12;
