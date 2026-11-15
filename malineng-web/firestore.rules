@@ -1327,8 +1327,10 @@ service cloud.firestore {
       allow read: if true;
       // Everything about videos (links, uploads, hide, delete) belongs to the Super Admin.
       allow create: if isSuperAdmin()
-        && incoming().keys().hasOnly(['title', 'url', 'kind', 'videoId', 'order', 'views', 'hidden', 'chunks', 'mime', 'size', 'thumb', 'createdAt'])
+        && incoming().keys().hasOnly(['title', 'url', 'kind', 'videoId', 'order', 'views', 'hidden', 'ad', 'sponsor', 'chunks', 'mime', 'size', 'thumb', 'createdAt'])
         && isNonEmptyString(incoming().title, 100)
+        && incoming().get('ad', false) is bool
+        && incoming().get('sponsor', '') is string && incoming().get('sponsor', '').size() <= 80
         && incoming().order is number
         && incoming().views == 0
         && incoming().get('hidden', false) is bool
@@ -1344,11 +1346,15 @@ service cloud.firestore {
             && incoming().size is int && incoming().size > 0 && incoming().size <= 14000000
             && incoming().thumb is string && incoming().thumb.size() <= 60000)
         );
-      allow update: if (isSuperAdmin() && changedOnly(['title', 'order', 'hidden'])
+      allow update: if (isSuperAdmin() && changedOnly(['title', 'order', 'hidden', 'ad', 'sponsor'])
           && isNonEmptyString(incoming().title, 100)
-          && incoming().get('hidden', false) is bool)
-        || (isSuperAdmin() && existing().kind != 'upload' && changedOnly(['title', 'url', 'kind', 'videoId', 'order'])
+          && incoming().get('hidden', false) is bool
+          && incoming().get('ad', false) is bool
+          && incoming().get('sponsor', '') is string && incoming().get('sponsor', '').size() <= 80)
+        || (isSuperAdmin() && existing().kind != 'upload' && changedOnly(['title', 'url', 'kind', 'videoId', 'order', 'ad', 'sponsor'])
           && isNonEmptyString(incoming().title, 100)
+          && incoming().get('ad', false) is bool
+          && incoming().get('sponsor', '') is string && incoming().get('sponsor', '').size() <= 80
           && isNonEmptyString(incoming().url, 500)
           && incoming().kind in ['youtube', 'facebook', 'file']
           && incoming().videoId is string && incoming().videoId.size() <= 20)

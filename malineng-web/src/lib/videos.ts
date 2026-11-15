@@ -15,6 +15,10 @@ export interface Video {
   views: number;
   /** Hidden videos are not shown on Home (only the Super Admin sees them in Admin). */
   hidden?: boolean;
+  /** An advertisement from a local business (shown in the Ads tab). Only the Developer can add videos, so advertisers contact the Developer. */
+  ad?: boolean;
+  /** Name of the business for an ad. */
+  sponsor?: string;
   /** Everyone who reacted, and uid -> reaction key (same shape as posts). */
   likes?: string[];
   reactions?: Record<string, string>;
