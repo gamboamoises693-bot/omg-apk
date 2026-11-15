@@ -11,6 +11,7 @@ import { logActivity } from "@/lib/activity";
 import { formatPeso, friendlyError, sortNewest, timeAgo } from "@/lib/format";
 import { DONATION_STATUS_LABEL, markReceived, type Donation, type Sponsor } from "@/lib/raffleDonations";
 import { Badge, Button, Card, EmptyState, FilterTabs, Input, Spinner } from "@/components/ui";
+import { LogoPicker } from "@/components/LogoPicker";
 import { useToast } from "@/components/Toast";
 import { serverTimestamp, setDoc } from "firebase/firestore";
 
@@ -83,7 +84,13 @@ function PledgeCard({ d }: { d: Donation }) {
     <Card className="space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-bold">{d.name}{d.anon ? " (Hindi nagpakilala)" : ""}</p>
+          <p className="flex items-center gap-2 font-bold">
+            {d.logo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={d.logo} alt={`Logo ni ${d.name}`} className="h-10 w-10 rounded-xl bg-white object-contain ring-1 ring-gray-200" />
+            )}
+            <span>{d.name}{d.anon ? " (Hindi nagpakilala)" : ""}</span>
+          </p>
           <p className="text-sm text-gray-600">{d.kind} · <b>{d.what}</b>{d.amount ? ` · ${formatPeso(d.amount).replace(".00", "")}` : ""}</p>
           <p className="text-xs text-gray-500">☎ {d.contact} · {timeAgo(d.createdAt)}</p>
           {d.message && <p className="mt-1 text-sm text-gray-700">&ldquo;{d.message}&rdquo;</p>}
@@ -133,6 +140,7 @@ function Sponsors({ list }: { list: Sponsor[] }) {
   const [name, setName] = useState("");
   const [what, setWhat] = useState("");
   const [amount, setAmount] = useState("");
+  const [logo, setLogo] = useState("");
   const [busy, setBusy] = useState(false);
   const sorted = useMemo(() => [...list].sort((a, b) => Number(b.tier === "main") - Number(a.tier === "main")), [list]);
   const total = list.filter((s) => s.show).reduce((sum, s) => sum + (s.amount || 0), 0);
@@ -141,11 +149,12 @@ function Sponsors({ list }: { list: Sponsor[] }) {
     if (name.trim().length < 2 || !what.trim()) return toast("Ilagay ang pangalan at kung ano ang ibinigay.", "error");
     setBusy(true);
     try {
-      await setDoc(doc(collection(db, "raffleSponsors")), { name: name.trim().slice(0, 120), what: what.trim().slice(0, 120), amount: Math.max(0, Math.round(Number(amount) || 0)), tier: "reg", show: true, createdAt: serverTimestamp() });
+      await setDoc(doc(collection(db, "raffleSponsors")), { name: name.trim().slice(0, 120), what: what.trim().slice(0, 120), amount: Math.max(0, Math.round(Number(amount) || 0)), tier: "reg", show: true, ...(logo ? { logo } : {}), createdAt: serverTimestamp() });
       logActivity("Raffle", `Nagdagdag ng sponsor: ${name.trim()}`);
       setName("");
       setWhat("");
       setAmount("");
+      setLogo("");
       toast("Naidagdag ang sponsor.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -178,6 +187,7 @@ function Sponsors({ list }: { list: Sponsor[] }) {
             </div>
             <Badge color={s.tier === "main" ? "gold" : "gray"}>{s.tier === "main" ? "Pangunahin" : "Sponsor"}</Badge>
           </div>
+          <LogoPicker logo={s.logo} onChange={(l) => patch(s, { logo: l }, `${l ? "Nilagyan" : "Inalis ang"} logo ang sponsor: ${s.name}`)} />
           <div className="grid grid-cols-3 gap-2">
             <Button variant="outline" onClick={() => patch(s, { tier: s.tier === "main" ? "reg" : "main" }, `Binago ang antas ng sponsor: ${s.name}`)}>{s.tier === "main" ? "Gawing karaniwan" : "Gawing pangunahin"}</Button>
             <Button variant="outline" onClick={() => patch(s, { show: !s.show }, `${s.show ? "Itinago" : "Ipinakita"} ang sponsor: ${s.name}`)}>{s.show ? "Itago" : "Ipakita"}</Button>
@@ -190,6 +200,7 @@ function Sponsors({ list }: { list: Sponsor[] }) {
         <Input label="Pangalan o negosyo" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
         <Input label="Ibinigay" value={what} onChange={(e) => setWhat(e.target.value)} maxLength={120} placeholder="hal. Grocery package with rice" />
         <Input label="Halaga (₱)" type="number" inputMode="numeric" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <LogoPicker logo={logo} onChange={setLogo} label="Maglagay ng logo (optional)" />
         <Button full loading={busy} onClick={add}>Idagdag</Button>
       </Card>
     </>

@@ -11,6 +11,7 @@ import { formatPeso, friendlyError, sortNewest } from "@/lib/format";
 import { pledgeDonation, useSponsors, type Donation, type DonationKind } from "@/lib/raffleDonations";
 import { Button, Input, Modal, Select } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { LogoPicker } from "@/components/LogoPicker";
 
 /** What the donor reads about each step of their pledge. */
 const DONOR_LABEL = {
@@ -19,6 +20,19 @@ const DONOR_LABEL = {
   received: "Natanggap na ang donasyon",
   declined: "Hindi natanggap",
 } as const;
+
+/** The business logo when there is one, otherwise the initials. */
+function SponsorMark({ s, className }: { s: { name: string; logo?: string }; className: string }) {
+  if (s.logo) {
+    return (
+      <span className={`flex shrink-0 items-center justify-center overflow-hidden bg-white ${className}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={s.logo} alt={`Logo ng ${s.name}`} className="h-full w-full object-contain p-0.5" loading="lazy" />
+      </span>
+    );
+  }
+  return <span className={`flex shrink-0 items-center justify-center font-black text-brand-deep ${className}`}>{s.name === "Hindi nagpakilala" ? "♥" : initials(s.name)}</span>;
+}
 
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 
@@ -45,7 +59,7 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
         <>
           {main.map((s) => (
             <div key={s.id} className="flex items-center gap-3 rounded-2xl bg-gradient-to-b from-gold-light to-[#EAD27A] p-3 text-[#3B2E05]">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-lg font-black text-brand-deep">{initials(s.name)}</span>
+              <SponsorMark s={s} className="h-14 w-14 rounded-2xl bg-white text-lg" />
               <span className="min-w-0">
                 <span className="block text-[0.65rem] font-extrabold tracking-wider">PANGUNAHING SPONSOR</span>
                 <b className="block truncate">{s.name}</b>
@@ -57,7 +71,7 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
             <ul className="grid grid-cols-2 gap-2">
               {(full ? others : others.slice(0, 4)).map((s) => (
                 <li key={s.id} className="flex flex-col items-center gap-1 rounded-2xl bg-surface p-2.5 text-center">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-light text-base font-black text-brand-deep">{s.name === "Hindi nagpakilala" ? "♥" : initials(s.name)}</span>
+                  <SponsorMark s={s} className="h-14 w-14 rounded-2xl bg-brand-light text-base" />
                   <b className="line-clamp-1 text-sm">{s.name}</b>
                   <span className="line-clamp-1 text-xs text-gray-600">{s.what}</span>
                   {s.amount > 0 && <span className="text-xs font-bold text-brand">{formatPeso(s.amount).replace(".00", "")}</span>}
@@ -94,6 +108,7 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
   const [contact, setContact] = useState(profile?.contact ?? "");
   const [message, setMessage] = useState("");
   const [anon, setAnon] = useState(false);
+  const [logo, setLogo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -107,7 +122,7 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
     setBusy(true);
     setError("");
     try {
-      await pledgeDonation(uid, { name, anon, kind, what: kind === "Pera" ? `₱${value.toLocaleString("en-PH")}` : what, amount: value, contact, message });
+      await pledgeDonation(uid, { name, anon, kind, what: kind === "Pera" ? `₱${value.toLocaleString("en-PH")}` : what, amount: value, contact, message, logo });
       toast("Salamat! Naipadala ang pangako mo. Makikipag-ugnayan ang Barangay.");
       onDone();
     } catch (err) {
@@ -124,6 +139,12 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
       <Input label={kind === "Pera" ? "Halaga (₱)" : "Halaga ng gamit (₱, optional)"} type="number" inputMode="numeric" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} hint="Makikita ng lahat ang halaga, para sa transparency." />
       <Input label="Numero na pwedeng tawagan" type="tel" inputMode="tel" value={contact} onChange={(e) => setContact(e.target.value)} maxLength={30} />
       <Input label="Mensahe (optional)" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={300} />
+      {!anon && (
+        <div className="space-y-1">
+          <LogoPicker logo={logo} onChange={setLogo} label="Maglagay ng logo ng negosyo (optional)" />
+          <p className="text-xs text-gray-500">Lalabas ang logo sa listahan ng sponsor kapag natanggap na ng Barangay ang donasyon mo.</p>
+        </div>
+      )}
       <label className="flex items-start gap-2 text-sm">
         <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} className="mt-1" />
         <span>Huwag ilagay ang pangalan ko sa listahan (Hindi nagpakilala). Ilalagay pa rin ang halaga.</span>

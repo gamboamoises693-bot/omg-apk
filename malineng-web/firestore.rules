@@ -863,7 +863,8 @@ service cloud.firestore {
     match /raffleDonations/{id} {
       allow read: if (signedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if signedIn() && notSuspended()
-        && incoming().keys().hasOnly(['userId', 'name', 'anon', 'kind', 'what', 'amount', 'contact', 'message', 'status', 'createdAt'])
+        && incoming().keys().hasOnly(['userId', 'name', 'anon', 'kind', 'what', 'amount', 'contact', 'message', 'logo', 'status', 'createdAt'])
+        && incoming().get('logo', '') is string && incoming().get('logo', '').size() < 60000
         && incoming().userId == request.auth.uid
         && incoming().status == 'new'
         && isNonEmptyString(incoming().name, 120)
@@ -887,7 +888,8 @@ service cloud.firestore {
     match /raffleSponsors/{id} {
       allow read: if true;
       allow create, update: if isAdmin()
-        && incoming().keys().hasOnly(['name', 'what', 'amount', 'tier', 'show', 'donationId', 'createdAt'])
+        && incoming().keys().hasOnly(['name', 'what', 'amount', 'tier', 'show', 'donationId', 'logo', 'createdAt'])
+        && incoming().get('logo', '') is string && incoming().get('logo', '').size() < 60000
         && isNonEmptyString(incoming().name, 120)
         && isNonEmptyString(incoming().what, 120)
         && incoming().amount is number && incoming().amount >= 0 && incoming().amount <= 100000000
