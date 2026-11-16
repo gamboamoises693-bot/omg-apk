@@ -5,6 +5,7 @@ import Link from "next/link";
 import { collection, doc, getDoc, getDocs, updateDoc, type Timestamp } from "firebase/firestore";
 import { ImageUp, RefreshCw, Search } from "lucide-react";
 import { makeFaceThumb } from "@/lib/faceThumb";
+import { ChatWithButton } from "./ChatWithButton";
 import { db } from "@/lib/firebase";
 import { useVerifiedSet } from "@/lib/useVerifiedSet";
 import { roleLabel } from "@/lib/activity";
@@ -201,6 +202,7 @@ export function MembersList({ initialFilter = "lahat" }: { initialFilter?: Filte
                   <p className={`text-[0.72rem] font-bold ${st.text}`}>{st.label}</p>
                   <p className="text-[0.65rem] text-gray-500">{m.status === "online" ? "Ngayon" : lastSeenText(m.lastSeen, now)}</p>
                 </div>
+                <ChatWithButton uid={m.id} name={m.profile.fullName} compact />
               </li>
             );
           })}

@@ -8,6 +8,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, up
 import { sendPasswordResetEmail } from "firebase/auth";
 import { Ban, Camera, Copy, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2, UserPlus } from "lucide-react";
 import { VERIFY_LINK, verifyInviteText } from "@/lib/nextPath";
+import { ChatWithButton } from "@/components/ChatWithButton";
 import { firebaseConfig } from "@/config/firebase.config";
 import { deleteListing } from "@/lib/listings";
 import { refreshPublicStatsQuietly } from "@/lib/stats";
@@ -227,6 +228,8 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
         <p className="mt-1 text-xs text-gray-400">Nag-register {timeAgo(u.createdAt)}</p>
         </div>
       </div>
+
+      <ChatWithButton uid={u.id} name={u.fullName} />
 
       {!verified && u.role === "resident" && (
         <Card className="space-y-2 bg-gold-light shadow-none">

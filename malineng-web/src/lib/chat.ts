@@ -92,7 +92,7 @@ export function callUrl(callRoom: string, displayName: string): string {
 
 export function roomTitle(room: string): string {
   if (isDevRoom(room)) return "Chat sa Developer";
-  if (isHelpRoom(room)) return "Tulong sa Setup";
+  if (isHelpRoom(room)) return "Chat sa Admin ng Barangay";
   if (room === ROOM_STAFF_ADMIN) return "GC ng mga Admin";
   if (room === ROOM_STAFF_OFFICIALS) return "GC ng mga Opisyal";
   return room === ROOM_ALL ? "Buong Barangay" : room;

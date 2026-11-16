@@ -14,6 +14,7 @@ import { formatDate, friendlyError, telHref, timeAgo, tsToMillis } from "@/lib/f
 import type { Verification, VerificationStatus } from "@/lib/types";
 import { Badge, Button, EmptyState, FilterTabs, Modal, Select, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
+import { ChatWithButton } from "@/components/ChatWithButton";
 
 const verificationsCollection = collection(db, "verifications");
 const TABS: { key: VerificationStatus; label: string }[] = [
@@ -85,6 +86,7 @@ function Review({ v, onClose }: { v: Verification; onClose: () => void }) {
           <Phone className="h-4 w-4" /> Tawagan para makumpirma
         </a>
       )}
+      <ChatWithButton uid={v.uid} name={v.fullName} />
       <p className="text-xs text-gray-500">Tingnan kung kilala mo ang tao at kung tugma ang edad at purok. Kapag hindi sigurado, tawagan muna.</p>
 
       {v.status !== "verified" && (

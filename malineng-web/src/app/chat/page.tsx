@@ -8,6 +8,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   limit,
   onSnapshot,
   orderBy,
@@ -192,7 +193,13 @@ function Conversation({ room }: { room: string }) {
   // "Nakita ni ..." under my newest message (staff rooms, Developer chat and Purok rooms).
   const seen = useSeen(room, messages);
   // Who is writing to the Developer: the inbox line, or else the name on their own messages.
-  const helpPerson = isHelpRoom(room) ? messages.find((m) => m.authorId === helpRoomUid(room))?.authorName || "" : "";
+  // An admin opening someone's private chat sees that person's name, even before the first message.
+  const [helpWith, setHelpWith] = useState("");
+  useEffect(() => {
+    if (!isHelpRoom(room) || !isAdmin || helpRoomUid(room) === user?.uid) return;
+    getDoc(doc(db, "users", helpRoomUid(room))).then((s) => setHelpWith(s.exists() ? String(s.data().fullName ?? "") : "")).catch(() => setHelpWith(""));
+  }, [room, isAdmin, user?.uid]);
+  const helpPerson = isHelpRoom(room) ? helpWith || messages.find((m) => m.authorId === helpRoomUid(room))?.authorName || "" : "";
   const devPerson = devWith || messages.find((m) => isDevRoom(room) && m.authorId === devRoomUid(room))?.authorName || "";
 
   useEffect(() => onSnapshot(doc(db, "chatRooms", room), (s) => setPin(s.exists() ? (s.data() as { pinText: string; pinBy: string }) : null), () => setPin(null)), [room]);
@@ -265,7 +272,8 @@ function Conversation({ room }: { room: string }) {
         const batch = writeBatch(db);
         batch.set(doc(collection(db, "chatRooms", room, "messages")), message);
         if (isAdmin && user.uid !== owner) {
-          batch.set(doc(db, "helpChats", owner), { uid: owner, lastText: preview, lastAt: serverTimestamp(), lastFrom: "staff" }, { merge: true });
+          // The name goes along so the person's line has it even when an admin starts the chat.
+          batch.set(doc(db, "helpChats", owner), { uid: owner, name: helpPerson || "Residente", lastText: preview, lastAt: serverTimestamp(), lastFrom: "staff" }, { merge: true });
         } else {
           batch.set(doc(db, "helpChats", owner), { uid: owner, name: profile.fullName, lastText: preview, lastAt: serverTimestamp(), lastFrom: "user" });
         }
