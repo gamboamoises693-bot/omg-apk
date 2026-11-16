@@ -12,6 +12,7 @@ import { friendlyError } from "@/lib/format";
 import { Button, Card, ErrorText, Input } from "@/components/ui";
 import { GoogleButton } from "@/components/GoogleButton";
 import { useToast } from "@/components/Toast";
+import { nextFromLocation } from "@/lib/nextPath";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function LoginPage() {
 
   // Already logged in -> go to account.
   useEffect(() => {
-    if (!authLoading && user) router.replace("/account");
+    if (!authLoading && user) router.replace(nextFromLocation() || "/account");
   }, [user, authLoading, router]);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -34,7 +35,7 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
       toast("Welcome back!");
-      router.replace("/");
+      router.replace(nextFromLocation() || "/");
     } catch (err) {
       setError(friendlyError(err));
     } finally {

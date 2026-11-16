@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { LinkButton, Spinner } from "./ui";
@@ -11,6 +12,7 @@ import { LinkButton, Spinner } from "./ui";
  */
 export function LoginGate({ children, message = "Mag-login muna para magamit ito." }: { children: ReactNode; message?: string }) {
   const { user, loading } = useAuth();
+  const pathname = usePathname() ?? "/";
   if (loading) return <Spinner />;
   if (!user) {
     return (
@@ -18,7 +20,7 @@ export function LoginGate({ children, message = "Mag-login muna para magamit ito
         <LogIn className="mx-auto mb-2 h-8 w-8 text-brand" aria-hidden />
         <p className="mb-3 font-semibold text-gray-800">{message}</p>
         <div className="flex gap-2">
-          <LinkButton href="/login" full>Mag-login</LinkButton>
+          <LinkButton href={`/login?next=${encodeURIComponent(pathname)}`} full>Mag-login</LinkButton>
           <LinkButton href="/register" variant="outline" full>Mag-register</LinkButton>
         </div>
       </div>
