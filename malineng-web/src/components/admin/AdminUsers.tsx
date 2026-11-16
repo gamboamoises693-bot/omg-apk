@@ -6,7 +6,8 @@ import { verifiedSetAdd, verifiedSetRef, verifiedSetRemove } from "@/lib/verifie
 import { useEffect, useMemo, useState } from "react";
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch, setDoc } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { Ban, Camera, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2, UserPlus } from "lucide-react";
+import { Ban, Camera, Copy, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2, UserPlus } from "lucide-react";
+import { VERIFY_LINK, verifyInviteText } from "@/lib/nextPath";
 import { firebaseConfig } from "@/config/firebase.config";
 import { deleteListing } from "@/lib/listings";
 import { refreshPublicStatsQuietly } from "@/lib/stats";
@@ -199,6 +200,17 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
     }
   };
 
+  /** Copies a ready message with the verification link (falls back to showing it when the phone refuses to copy). */
+  const copyInvite = async (name: string) => {
+    const text = verifyInviteText(name);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("Nakopya na. I-paste sa Messenger o text.");
+    } catch {
+      toast(text, "error");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-3">
@@ -215,6 +227,15 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
         <p className="mt-1 text-xs text-gray-400">Nag-register {timeAgo(u.createdAt)}</p>
         </div>
       </div>
+
+      {!verified && u.role === "resident" && (
+        <Card className="space-y-2 bg-gold-light shadow-none">
+          <p className="font-bold">Link para ma-verify siya</p>
+          <p className="break-all rounded-lg bg-white px-2.5 py-2 text-xs text-gray-700">{VERIFY_LINK}</p>
+          <Button full onClick={() => copyInvite(u.fullName)}><Copy className="h-4 w-4" aria-hidden /> Kopyahin ang mensahe at link</Button>
+          <p className="text-xs text-gray-600">I-paste sa Messenger o text. Pagbukas niya, magla-login siya at dadalhin na sa pagkuha ng selfie.</p>
+        </Card>
+      )}
 
       {isSuperAdmin && u.role !== "resident" && <ProfilePhotoEditor u={u} />}
 
