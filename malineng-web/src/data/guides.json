@@ -231,8 +231,8 @@
           "h": 1170
         },
         {
-          "tl": "Pindutin ang Ipadala. Nabubura ang mga mensahe pagkatapos ng 7 araw.",
-          "en": "Tap Send. Messages are deleted after 7 days.",
+          "tl": "Pindutin ang Ipadala. Sa Purok room, sa chat ng staff at sa Developer, makikita sa ilalim ng huling mensahe mo kung sino ang nakabasa (\"Nakita ni...\"). Pwede itong i-off sa Account. Nabubura ang mga mensahe pagkatapos ng 7 araw.",
+          "en": "Tap Send. In your Purok room, the staff chat and the Developer chat, you see under your last message who has read it (\"Seen by...\"). You can turn this off in Account. Messages are deleted after 7 days.",
           "img": "chat-3.jpg",
           "w": 585,
           "h": 1170
@@ -1611,8 +1611,8 @@
           "h": 1170
         },
         {
-          "tl": "O pumili ng video file sa phone mo (hanggang 1 minuto ang pinakamagandang haba).",
-          "en": "Or pick a video file on your phone (about 1 minute is best).",
+          "tl": "O pumili ng video file sa phone mo (hanggang 1 minuto ang pinakamagandang haba). Pagkatapos, sa listahan sa ibaba, pindutin ang bilang ng views (\"Sino?\") para makita kung sino ang naka-login na nanood.",
+          "en": "Or pick a video file on your phone (about 1 minute is best). Then, in the list below, tap the views number (\"Sino?\" / Who?) to see which logged-in people watched.",
           "img": "admin-videos-5.jpg",
           "w": 585,
           "h": 1170

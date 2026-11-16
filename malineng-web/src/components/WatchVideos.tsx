@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { collection, doc, getCountFromServer, increment, query, updateDoc, where } from "firebase/firestore";
+import { collection, doc, getCountFromServer, increment, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import Link from "next/link";
 import { Clapperboard, Eye, Megaphone, MessageCircle, Play } from "lucide-react";
 import { db } from "@/lib/firebase";
@@ -12,7 +12,7 @@ import { loadVideoBlob } from "@/lib/videoUpload";
 import { DEVELOPER_NAME, DEVELOPER_URL } from "@/lib/constants";
 import { LikeButton, ReactionCounts, ReactionSummary, reactionPatch, useReactions } from "./ReactionBar";
 import { VideoComments } from "./VideoComments";
-import { alreadyCounted, embedUrl, getSavedPosition, markCounted, savePosition, youtubeThumb, type Video } from "@/lib/videos";
+import { alreadyCounted, embedUrl, getSavedPosition, markCounted, rememberWatchMark, savePosition, watchMarkFresh, youtubeThumb, type Video } from "@/lib/videos";
 
 const videosRef = collection(db, "videos");
 const NO_LIKES: string[] = [];
@@ -112,7 +112,7 @@ function AdContact() {
 
 /** Home: one player + a strip of thumbnails. Every video of the barangay lives here. */
 export function WatchVideos() {
-  const { isStaff } = useAuth();
+  const { isStaff, user, profile } = useAuth();
   const { data, loading } = useCollection<Video>(videosRef);
   const [open, setOpen] = useState(true);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -167,6 +167,11 @@ export function WatchVideos() {
     if (!alreadyCounted(current.id)) {
       markCounted(current.id);
       updateDoc(doc(db, "videos", current.id), { views: increment(1) }).catch(() => {});
+    }
+    // Logged-in viewers leave one small mark per video (name and purok) that the Developer can read.
+    if (user && profile && !watchMarkFresh(current.id)) {
+      rememberWatchMark(current.id);
+      setDoc(doc(db, "videos", current.id, "viewers", user.uid), { name: profile.fullName, purok: profile.purok ?? "", at: serverTimestamp() }).catch(() => {});
     }
   }
 
@@ -283,6 +288,8 @@ export function WatchVideos() {
                 <Eye className="h-4 w-4" aria-hidden /> {(current.views ?? 0).toLocaleString("en-PH")} views
               </span>
             </div>
+
+            <p className="mt-1 text-[0.68rem] text-gray-400">Kapag naka-login ka, makikita ng Developer na nanood ka ng video na ito.</p>
 
             <VideoSocial key={current.id} video={current} />
 

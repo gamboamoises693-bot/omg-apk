@@ -117,3 +117,35 @@ export function savePosition(id: string, seconds: number): void {
     // Storage blocked: playback just starts from the beginning next time.
   }
 }
+
+/* ---- Who watched (logged-in viewers only; the Developer reads the list) ---- */
+const WATCHED_KEY = "malineng-videos-watched";
+/** A logged-in viewer's mark is refreshed at most this often per device and video (keeps writes low on the free plan). */
+const WATCH_MARK_MS = 6 * 3600_000;
+
+/** True when this device already wrote the viewer mark for this video recently. */
+export function watchMarkFresh(id: string): boolean {
+  try {
+    const map = JSON.parse(localStorage.getItem(WATCHED_KEY) ?? "{}") as Record<string, number>;
+    return Date.now() - (map[id] ?? 0) < WATCH_MARK_MS;
+  } catch {
+    return false;
+  }
+}
+export function rememberWatchMark(id: string): void {
+  try {
+    const map = JSON.parse(localStorage.getItem(WATCHED_KEY) ?? "{}") as Record<string, number>;
+    const recent = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 100);
+    localStorage.setItem(WATCHED_KEY, JSON.stringify({ ...Object.fromEntries(recent), [id]: Date.now() }));
+  } catch {
+    // Private mode: the mark may be written again next time.
+  }
+}
+
+/** One person who watched a video (videos/{id}/viewers/{uid}). */
+export interface VideoViewer {
+  id: string; // = uid
+  name: string;
+  purok: string;
+  at?: import("firebase/firestore").Timestamp;
+}

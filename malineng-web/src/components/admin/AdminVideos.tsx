@@ -1,16 +1,16 @@
 "use client";
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { addDoc, collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { ArrowUpToLine, Clapperboard, Eye, EyeOff, Pencil, Trash2, Upload } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { logActivity } from "@/lib/activity";
-import { friendlyError } from "@/lib/format";
+import { friendlyError, timeAgo, tsToMillis } from "@/lib/format";
 import { useCollection } from "@/lib/useCollection";
 import { MAX_VIDEO_SECONDS, prepareVideo } from "@/lib/videoCompress";
 import { deleteVideoChunks, uploadVideoChunks } from "@/lib/videoUpload";
-import { VIDEO_HELP, parseVideoUrl, youtubeThumb, type Video } from "@/lib/videos";
+import { VIDEO_HELP, parseVideoUrl, youtubeThumb, type Video, type VideoViewer } from "@/lib/videos";
 import { Button, Card, EmptyState, ErrorText, Input, Modal, Spinner } from "@/components/ui";
 
 const videosRef = collection(db, "videos");
@@ -23,10 +23,37 @@ function adPatch(sponsor: string): { ad: boolean; sponsor: string } {
   return { ad: name.length > 0, sponsor: name };
 }
 
+/** The people (logged in) who pressed Play on a video, newest first. Guests are only counted in the views number. */
+function Viewers({ video }: { video: Video }) {
+  const ref = useMemo(() => collection(db, "videos", video.id, "viewers"), [video.id]);
+  const { data, loading } = useCollection<VideoViewer>(ref);
+  const list = useMemo(() => [...data].sort((a, b) => tsToMillis(b.at) - tsToMillis(a.at)), [data]);
+  if (loading) return <Spinner />;
+  const guests = Math.max(0, (video.views ?? 0) - list.length);
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-gray-600">{(video.views ?? 0).toLocaleString("en-PH")} views · {list.length} may pangalan · {guests} bisita o noong wala pang listahan</p>
+      {list.length === 0 ? (
+        <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Wala pang naitalang pangalan. Ang mga susunod na manonood na naka-login ay lalabas dito.</p>
+      ) : (
+        <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-100">
+          {list.map((v) => (
+            <li key={v.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+              <span className="min-w-0"><b className="block truncate">{v.name}</b><span className="text-xs text-gray-500">{v.purok || "Walang purok"}</span></span>
+              <span className="shrink-0 text-xs text-gray-500">{timeAgo(v.at)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function AdminVideos() {
   const { data, loading } = useCollection<Video>(videosRef);
   const videos = useMemo(() => [...data].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [data]);
   const [editing, setEditing] = useState<Video | null>(null);
+  const [viewing, setViewing] = useState<Video | null>(null);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   // Name of the business when the video is an Ad (empty = a normal video).
@@ -154,6 +181,8 @@ export function AdminVideos() {
     if (!window.confirm(`Burahin ang "${v.title}"?`)) return;
     try {
       if (v.kind === "upload") await deleteVideoChunks(v.id);
+      // The list of viewers is a sub-collection: remove it too so nothing is left behind.
+      await getDocs(collection(db, "videos", v.id, "viewers")).then((s) => Promise.all(s.docs.map((d) => deleteDoc(d.ref)))).catch(() => undefined);
       await deleteDoc(doc(db, "videos", v.id));
       logActivity("Videos", `Binura ang video: ${v.title}`, v.id);
     } catch (err) {
@@ -223,7 +252,7 @@ export function AdminVideos() {
                   {v.ad && <span className="rounded bg-red-100 px-1.5 font-semibold text-red-700">Ad{v.sponsor ? ` · ${v.sponsor}` : ""}</span>}
                   {v.hidden && <span className="rounded bg-amber-100 px-1.5 font-semibold text-amber-800">Nakatago</span>}
                   {v.kind === "upload" && v.size ? <span>{(v.size / 1048576).toFixed(1)} MB</span> : null}
-                  <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" aria-hidden /> {(v.views ?? 0).toLocaleString("en-PH")}</span>
+                  <button type="button" onClick={() => setViewing(v)} aria-label={`Tingnan kung sino ang nanood ng ${v.title}`} className="flex items-center gap-0.5 rounded bg-brand-light px-1.5 font-bold text-brand active:opacity-70"><Eye className="h-3 w-3" aria-hidden /> {(v.views ?? 0).toLocaleString("en-PH")} · Sino?</button>
                 </p>
               </div>
               <div className="flex shrink-0 flex-col gap-1">
@@ -243,6 +272,10 @@ export function AdminVideos() {
         </div>
       )}
       {!formOpen && !loading && error && videos.length > 0 && <ErrorText>{error}</ErrorText>}
+
+      <Modal open={!!viewing} onClose={() => setViewing(null)} title={viewing ? `Nanood: ${viewing.title}` : "Nanood"}>
+        {viewing && <Viewers video={viewing} />}
+      </Modal>
 
       <Modal open={formOpen} onClose={() => setEditing(null)} title="I-edit ang video">
         <form onSubmit={submit} className="space-y-3">
