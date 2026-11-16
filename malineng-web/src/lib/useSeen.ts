@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { collection, doc, limit, onSnapshot, query, serverTimestamp, setDoc, Timestamp, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { ROOM_ALL, isDevRoom, isStaffRoom, type ChatMessage } from "@/lib/chat";
+import { ROOM_ALL, isDevRoom, isHelpRoom, isStaffRoom, type ChatMessage } from "@/lib/chat";
 
 /** One "seen" mark per person per room is refreshed at most this often (keeps writes low on the free plan). */
 const MIN_WRITE_MS = 10_000;
@@ -63,7 +63,7 @@ export function useSeen(room: string, messages: ChatMessage[]): { label: string;
   if (!mineLast || readers.length === 0) return { label: "", messageId: "" };
   let label: string;
   if (isDevRoom(room)) label = "Nakita";
-  else if (isStaffRoom(room)) {
+  else if (isStaffRoom(room) || isHelpRoom(room)) {
     const names = readers.map((r) => r.name.split(" ")[0]).filter(Boolean);
     label = `Nakita ni ${names.slice(0, 3).join(", ")}${names.length > 3 ? ` +${names.length - 3}` : ""}`;
   } else label = `Nakita ng ${readers.length}`;

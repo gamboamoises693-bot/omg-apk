@@ -77,6 +77,7 @@ export default function LoginPage() {
         Wala pang account?{" "}
         <Link href="/register" className="font-bold text-brand underline">Mag-register dito</Link>
       </p>
+      <p className="mt-3 text-center text-sm text-gray-600">Hindi makapag-login o mag-register? Pumunta sa Barangay Hall, o kung nakapag-register ka na, mag-login at pindutin ang <b>Nahihirapan sa pag-setup?</b> sa Account para makipag-chat sa mga admin.</p>
       <SiteFooter className="mt-10" />
     </div>
   );

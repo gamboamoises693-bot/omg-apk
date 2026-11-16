@@ -61,6 +61,7 @@ export async function seed(selfieFile) {
     uid: S(nuid), email: S(NEWBIE.email), fullName: S("Maria Santos"), role: S("resident"), purok: S("Purok 2"),
     contact: S("09181234567"), birthday: S("1995-03-08"), createdAt: T(Date.now() - 2 * day),
   });
+  await put(`helpChats/${nuid}`, { uid: S(nuid), name: S("Maria Santos"), lastText: S("Hindi ako makapag-selfie po, ano ang gagawin?"), lastAt: T(Date.now() - 900e3), lastFrom: S("user") });
   const kuid = await account(KAPITAN.email, KAPITAN.password);
   await put(`users/${kuid}`, {
     uid: S(kuid), email: S(KAPITAN.email), fullName: S("Roberto Halimbawa"), role: S("admin"), position: S("Kapitan"), purok: S("Purok 1"),

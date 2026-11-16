@@ -18,7 +18,7 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
-import { Code2, Copy, Flag, Video, ImagePlus, MoreHorizontal, Pin, PinOff, Send, Trash2, VolumeX, X } from "lucide-react";
+import { Code2, Copy, Flag, LifeBuoy, Video, ImagePlus, MoreHorizontal, Pin, PinOff, Send, Trash2, VolumeX, X } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
@@ -43,6 +43,9 @@ import {
   devRoomOf,
   devRoomUid,
   isDevRoom,
+  isHelpRoom,
+  helpRoomOf,
+  helpRoomUid,
   isStaffRoom,
   cutoffTimestamp,
   dayLabel,
@@ -121,6 +124,15 @@ function RoomList() {
           </Link>
         )
       )}
+      {user && !isAdmin && (
+        <Link href={`/chat/?room=${encodeURIComponent(helpRoomOf(user.uid))}`} className="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 shadow-card active:bg-gray-50">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-white"><LifeBuoy className="h-5 w-5" aria-hidden /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">Tulong sa pag-setup ng account</span>
+            <span className="block text-xs text-gray-500">Pribado. Sasagot ang mga admin ng Barangay at ang Developer.</span>
+          </span>
+        </Link>
+      )}
       {staffRooms.length > 0 && (
         <>
           <p className="px-1 text-xs font-bold tracking-wide text-gray-600">PRIBADO · PARA SA STAFF LANG</p>
@@ -180,6 +192,7 @@ function Conversation({ room }: { room: string }) {
   // "Nakita ni ..." under my newest message (staff rooms, Developer chat and Purok rooms).
   const seen = useSeen(room, messages);
   // Who is writing to the Developer: the inbox line, or else the name on their own messages.
+  const helpPerson = isHelpRoom(room) ? messages.find((m) => m.authorId === helpRoomUid(room))?.authorName || "" : "";
   const devPerson = devWith || messages.find((m) => isDevRoom(room) && m.authorId === devRoomUid(room))?.authorName || "";
 
   useEffect(() => onSnapshot(doc(db, "chatRooms", room), (s) => setPin(s.exists() ? (s.data() as { pinText: string; pinBy: string }) : null), () => setPin(null)), [room]);
@@ -245,6 +258,18 @@ function Conversation({ room }: { room: string }) {
           batch.set(doc(db, "devChats", owner), { uid: owner, name: profile.fullName, lastText: preview, lastAt: serverTimestamp(), lastFrom: "user" });
         }
         await batch.commit();
+      } else if (isHelpRoom(room)) {
+        // Help with an account: the message and the admins' inbox line are written together.
+        const owner = helpRoomUid(room);
+        const preview = (body || "📷 Larawan").slice(0, 80);
+        const batch = writeBatch(db);
+        batch.set(doc(collection(db, "chatRooms", room, "messages")), message);
+        if (isAdmin && user.uid !== owner) {
+          batch.set(doc(db, "helpChats", owner), { uid: owner, lastText: preview, lastAt: serverTimestamp(), lastFrom: "staff" }, { merge: true });
+        } else {
+          batch.set(doc(db, "helpChats", owner), { uid: owner, name: profile.fullName, lastText: preview, lastAt: serverTimestamp(), lastFrom: "user" });
+        }
+        await batch.commit();
       } else {
         await addDoc(collection(db, "chatRooms", room, "messages"), message);
       }
@@ -285,8 +310,8 @@ function Conversation({ room }: { room: string }) {
   return (
     <div className="flex min-h-[calc(100dvh-13rem)] flex-col">
       <PageHeader
-        title={isDevRoom(room) && isSuperAdmin ? devPerson || "Residente" : roomTitle(room)}
-        subtitle={isDevRoom(room) ? "Pribado · kayo lang ng Developer ang nakakabasa" : isStaffRoom(room) ? "Pribado · staff lang" : "Verified na residente lang"}
+        title={isDevRoom(room) && isSuperAdmin ? devPerson || "Residente" : isHelpRoom(room) && isAdmin && helpRoomUid(room) !== user?.uid ? helpPerson || "Residente" : roomTitle(room)}
+        subtitle={isDevRoom(room) ? "Pribado · kayo lang ng Developer ang nakakabasa" : isHelpRoom(room) ? "Pribado · ikaw, ang mga admin ng Barangay at ang Developer ang nakakabasa" : isStaffRoom(room) ? "Pribado · staff lang" : "Verified na residente lang"}
       />
 
       {pin?.pinText && (
@@ -307,7 +332,7 @@ function Conversation({ room }: { room: string }) {
         ) : loadError ? (
           <ErrorText>{loadError}</ErrorText>
         ) : messages.length === 0 ? (
-          <p className="rounded-2xl bg-white p-6 text-center text-sm text-gray-600 shadow-card">{isDevRoom(room) && !isSuperAdmin ? "Kumusta! Isulat dito ang tanong o mensahe mo para sa Developer. Sasagot siya dito." : "Wala pang mensahe. Mauna ka na! 👋"}</p>
+          <p className="rounded-2xl bg-white p-6 text-center text-sm text-gray-600 shadow-card">{isDevRoom(room) && !isSuperAdmin ? "Kumusta! Isulat dito ang tanong o mensahe mo para sa Developer. Sasagot siya dito." : isHelpRoom(room) && !isAdmin ? "Kumusta! Isulat dito kung saan ka nahihirapan sa pag-setup ng account (pag-register, pag-login, selfie o profile). Sasagot ang mga admin ng Barangay o ang Developer." : "Wala pang mensahe. Mauna ka na! 👋"}</p>
         ) : (
           messages.map((m) => {
             const day = dayLabel(m.createdAt);
@@ -588,6 +613,8 @@ function ChatInner() {
   const content = room && !own ? <Conversation room={room} /> : <RoomList />;
   // The Developer's chat only needs a login (a business asking about an ad may not be verified yet).
   if (room && isDevRoom(room) && !own) return <LoginGate message="Mag-login muna para makausap ang Developer.">{content}</LoginGate>;
+  // Help with an account also needs a login only (the person may not be verified yet).
+  if (room && isHelpRoom(room)) return <LoginGate message="Mag-login muna para makahingi ng tulong.">{content}</LoginGate>;
   return <RequireVerified feature="sumali sa chat ng barangay">{content}</RequireVerified>;
 }
 

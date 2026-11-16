@@ -1,5 +1,6 @@
 "use client";
 
+import { HelpSetupLink } from "@/components/HelpSetupLink";
 import { EmailVerifyCard, needsEmailConfirm } from "@/components/EmailVerifyCard";
 import { verifiedSetAdd, verifiedSetRef } from "@/lib/verified";
 import { useEffect, useRef, useState } from "react";
@@ -167,6 +168,7 @@ export default function VerifyPage() {
       <PageHeader title="I-verify ang account" subtitle="Selfie para sa seguridad ng mga residente" />
       <LoginGate message="Mag-login muna para ma-verify ang account mo.">
         <SelfieStep />
+        <HelpSetupLink className="mt-3" />
       </LoginGate>
     </div>
   );
