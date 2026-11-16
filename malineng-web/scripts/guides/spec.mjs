@@ -418,7 +418,7 @@ export const GUIDES = [
       { before: [go("/admin/#verification")], ring: 'button:has-text("Naghihintay")',
         tl: "Sa Naghihintay makikita ang mga nag-selfie na hindi pa na-verify.", en: "Under Waiting you see residents who sent a selfie and are not verified yet." },
       { ring: 'button:has-text("Pedro Reyes")', after: [click('button:has-text("Pedro Reyes")')],
-        tl: "Pindutin ang pangalan para makita ang selfie at detalye.", en: "Tap the name to see the selfie and details." },
+        tl: "Pindutin ang pangalan para makita ang selfie at detalye. May button na Mag-chat sa ibaba kung kailangan mo siyang kausapin sa app.", en: "Tap the name to see the selfie and details. There is a Chat button below if you need to talk to them in the app." },
       { ring: 'button:has-text("I-verify")',
         tl: "Kung tugma ang mukha at detalye, pindutin ang I-verify. Magkakaroon na siya ng Barangay ID.", en: "If the face and details match, tap Verify. They then get a Barangay ID." },
       { ring: 'label:has-text("Dahilan ng pag-reject")',
