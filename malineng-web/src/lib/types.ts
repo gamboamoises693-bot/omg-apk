@@ -21,6 +21,8 @@ export interface UserProfile {
   suspended?: boolean;
   /** True when the person turned off "seen" marks in chat (they neither show nor see them). */
   hideSeen?: boolean;
+  /** Tiny square copy of the ID selfie (data URL, a few KB) for lists of members. */
+  faceThumb?: string;
   createdAt?: Timestamp;
 }
 

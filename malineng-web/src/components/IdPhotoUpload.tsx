@@ -5,6 +5,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { ImageUp } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { compressToDataUrl } from "@/lib/upload";
+import { makeFaceThumb } from "@/lib/faceThumb";
 import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
 import { Button, ErrorText } from "./ui";
@@ -27,6 +28,8 @@ export function IdPhotoUpload({ uid, name, onSaved }: { uid: string; name: strin
     try {
       const photo = await compressToDataUrl(file, 600, 0.82, 380_000);
       await updateDoc(doc(db, "verifications", uid), { selfie: photo });
+      // Keep the small face in the members list in step with the new ID photo (best effort).
+      makeFaceThumb(photo).then((faceThumb) => updateDoc(doc(db, "users", uid), { faceThumb })).catch(() => {});
       logActivity("Verification", `Pinalitan ang litrato sa Barangay ID ni ${name}`, uid);
       onSaved(photo);
       setDone(true);

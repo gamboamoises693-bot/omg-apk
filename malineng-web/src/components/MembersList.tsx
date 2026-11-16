@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { collection, getDocs, type Timestamp } from "firebase/firestore";
-import { RefreshCw, Search } from "lucide-react";
+import { collection, doc, getDoc, getDocs, updateDoc, type Timestamp } from "firebase/firestore";
+import { ImageUp, RefreshCw, Search } from "lucide-react";
+import { makeFaceThumb } from "@/lib/faceThumb";
 import { db } from "@/lib/firebase";
 import { useVerifiedSet } from "@/lib/useVerifiedSet";
 import { roleLabel } from "@/lib/activity";
@@ -108,6 +109,29 @@ export function MembersList({ initialFilter = "lahat" }: { initialFilter?: Filte
       .sort((a, b) => order[a.status] - order[b.status] || b.lastSeen - a.lastSeen || a.profile.fullName.localeCompare(b.profile.fullName));
   }, [members, filter, search]);
 
+  // Verified people whose small face is not made yet (they verified before this feature existed).
+  const missing = useMemo(() => members.filter((m) => m.verified && !m.staff && !m.profile.faceThumb), [members]);
+  const [making, setMaking] = useState(false);
+  /** Makes the small face for up to 20 people at a time (each one reads one selfie), then reloads the list. */
+  const makeFaces = async () => {
+    setMaking(true);
+    setError("");
+    try {
+      for (const m of missing.slice(0, 20)) {
+        const snap = await getDoc(doc(db, "verifications", m.id));
+        const selfie = snap.exists() ? (snap.data().selfie as string | undefined) : undefined;
+        if (!selfie) continue;
+        await updateDoc(doc(db, "users", m.id), { faceThumb: await makeFaceThumb(selfie) });
+      }
+      await load();
+    } catch (err) {
+      console.warn("[members] face copy failed:", err);
+      setError("May hindi nagawa. Subukan ulit.");
+    } finally {
+      setMaking(false);
+    }
+  };
+
   if (!raw && !error) return <Spinner />;
 
   return (
@@ -156,7 +180,7 @@ export function MembersList({ initialFilter = "lahat" }: { initialFilter?: Filte
                 <span className="relative shrink-0">
                   <Avatar
                     name={m.profile.fullName}
-                    photo={m.staff ? m.profile.photoURL : undefined}
+                    photo={(m.staff ? m.profile.photoURL : undefined) || m.profile.faceThumb}
                     size="h-9 w-9"
                     textClass="text-xs"
                     fallbackClass={m.staff ? "bg-brand text-gold" : "bg-brand-light text-brand"}
@@ -181,6 +205,12 @@ export function MembersList({ initialFilter = "lahat" }: { initialFilter?: Filte
             );
           })}
         </ul>
+      )}
+
+      {missing.length > 0 && (
+        <button type="button" onClick={makeFaces} disabled={making} className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand/30 bg-brand-light px-3 py-2.5 text-sm font-bold text-brand disabled:opacity-60">
+          <ImageUp className={`h-4 w-4 ${making ? "animate-pulse" : ""}`} aria-hidden /> {making ? "Ginagawa..." : `Gawan ng litrato ang ${missing.length} na na-verify na (20 bawat pindot)`}
+        </button>
       )}
 
       <div className="flex items-center justify-between">

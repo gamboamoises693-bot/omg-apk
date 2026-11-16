@@ -371,6 +371,9 @@ service cloud.firestore {
           && (!incoming().diff(existing()).affectedKeys().hasAny(['photoURL'])
               || (isStaff() && incoming().photoURL is string && incoming().photoURL.size() < 60000))
           && (!incoming().diff(existing()).affectedKeys().hasAny(['contact']) || contactOk(uid))
+          // The tiny face copy of the ID selfie (for lists of members) must stay tiny.
+          && (!incoming().diff(existing()).affectedKeys().hasAny(['faceThumb'])
+              || (incoming().faceThumb is string && incoming().faceThumb.size() < 20000 && incoming().faceThumb.matches('^data:image/jpeg;base64,.*')))
           && (isSuperAdmin() || identityDirect()))
         || identityApproved(uid)
         || (isSuperAdmin() && !(isSelf(uid) && incoming().role != 'superadmin'));
