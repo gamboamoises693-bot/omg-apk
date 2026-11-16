@@ -202,7 +202,7 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
   return (
     <div className="space-y-4">
       <div className="flex items-start gap-3">
-        <Avatar name={u.fullName} photo={u.role !== "resident" ? u.photoURL : undefined} size="h-14 w-14" textClass="text-lg" fallbackClass={u.role !== "resident" ? "bg-brand text-gold" : "bg-gray-300 text-white"} />
+        <Avatar name={u.fullName} photo={(u.role !== "resident" ? u.photoURL : undefined) || u.faceThumb} size="h-14 w-14" textClass="text-lg" fallbackClass={u.role !== "resident" ? "bg-brand text-gold" : "bg-gray-300 text-white"} />
         <div className="min-w-0 flex-1">
         <p className="text-lg font-bold">{u.fullName} <VerifiedBadge show={verified} /></p>
         <p className="text-sm text-gray-500">{u.purok || "Walang purok"} · {u.contact || "walang contact"}</p>
@@ -339,7 +339,7 @@ export function AdminUsers() {
           {list.map((u) => (
             <li key={u.id}>
               <button onClick={() => setOpenId(u.id)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left active:bg-gray-50">
-                <Avatar name={u.fullName} photo={isStaff(u) ? u.photoURL : undefined} size="h-9 w-9" textClass="text-xs" fallbackClass={`text-white ${isStaff(u) ? "bg-brand" : "bg-gray-400"}`} />
+                <Avatar name={u.fullName} photo={(isStaff(u) ? u.photoURL : undefined) || u.faceThumb} size="h-9 w-9" textClass="text-xs" fallbackClass={`text-white ${isStaff(u) ? "bg-brand" : "bg-gray-400"}`} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{u.fullName} <VerifiedBadge show={verified.has(u.id)} /></p>
                   <p className="truncate text-xs text-gray-500">{u.purok || "Walang purok"} · {timeAgo(u.createdAt)}</p>

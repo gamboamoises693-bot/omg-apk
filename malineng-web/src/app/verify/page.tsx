@@ -4,7 +4,8 @@ import { HelpSetupLink } from "@/components/HelpSetupLink";
 import { EmailVerifyCard, needsEmailConfirm } from "@/components/EmailVerifyCard";
 import { verifiedSetAdd, verifiedSetRef } from "@/lib/verified";
 import { useEffect, useRef, useState } from "react";
-import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
+import { doc, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { makeFaceThumb } from "@/lib/faceThumb";
 import { BadgeCheck, Camera, Clock, RotateCcw, XCircle } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -82,6 +83,8 @@ function SelfieStep() {
         status: "pending",
         submittedAt: serverTimestamp(),
       });
+      // A tiny copy of the face for lists of members (best effort: the verification itself is already saved).
+      makeFaceThumb(selfie).then((faceThumb) => updateDoc(doc(db, "users", user.uid), { faceThumb })).catch(() => {});
       logActivity("Verification", `Nagpadala ng selfie para sa verification (${profile.purok || "walang purok"})`, user.uid);
       if (isSuperAdmin) {
         // The Super Admin verifies their own account right away (the rules allow only the Super Admin to do this).
