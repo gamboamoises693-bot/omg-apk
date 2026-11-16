@@ -584,7 +584,7 @@ export const GUIDES = [
       { ring: 'button:has-text("Idagdag ang link")',
         tl: "Pindutin ang Idagdag ang link.", en: "Tap Add link." },
       { ring: 'button:has-text("Pumili ng video sa phone")',
-        tl: "O pumili ng video file sa phone mo (hanggang 1 minuto ang pinakamagandang haba). Pagkatapos, sa listahan sa ibaba, pindutin ang bilang ng views ("Sino?") para makita kung sino ang naka-login na nanood.", en: "Or pick a video file on your phone (about 1 minute is best). Then, in the list below, tap the views number ("Sino?" / Who?) to see which logged-in people watched." },
+        tl: "O pumili ng video file sa phone mo (hanggang 1 minuto ang pinakamagandang haba). Pagkatapos, sa listahan sa ibaba, pindutin ang Sino ang nanood para makita kung sino ang naka-login na nanood.", en: "Or pick a video file on your phone (about 1 minute is best). Then, in the list below, tap Who watched to see which logged-in people watched." },
     ],
   },
   {
