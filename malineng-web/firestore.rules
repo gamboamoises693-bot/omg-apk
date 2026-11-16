@@ -1494,6 +1494,19 @@ service cloud.firestore {
       }
     }
 
+    // Who watched a video: one small mark per logged-in person per video, written by them with the server time.
+    // Only the Super Admin (Developer) reads the list.
+    match /videos/{videoId}/viewers/{uid} {
+      allow read: if isSuperAdmin();
+      allow create, update: if isSelf(uid) && notSuspended()
+        && incoming().keys().hasOnly(['name', 'purok', 'at'])
+        && incoming().name == me().fullName
+        && incoming().purok == me().get('purok', '')
+        && incoming().at == request.time
+        && exists(/databases/$(database)/documents/videos/$(videoId));
+      allow delete: if isSuperAdmin() || isSelf(uid);
+    }
+
     // ---------- Comments under Home videos ----------
     match /videoComments/{commentId} {
       allow read: if true;
