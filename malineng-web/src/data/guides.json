@@ -499,16 +499,23 @@
           "h": 1170
         },
         {
+          "tl": "Nahihirapan sa pag-register, selfie o profile? Pindutin ito para makipag-chat sa mga admin ng Barangay at sa Developer. Pribado ito.",
+          "en": "Having trouble with registering, the selfie or your profile? Tap this to chat with the Barangay admins and the Developer. It is private.",
+          "img": "account-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
           "tl": "Piliin ang wika (TL o EN) at ang laki ng text (Aa) para mas madaling basahin.",
           "en": "Choose the language (TL or EN) and the text size (Aa) so it is easier to read.",
-          "img": "account-3.jpg",
+          "img": "account-4.jpg",
           "w": 585,
           "h": 1170
         },
         {
           "tl": "Pindutin ang Mag-logout kapag tapos ka na, lalo na sa hiniram na phone.",
           "en": "Tap Log out when you are done, especially on a borrowed phone.",
-          "img": "account-4.jpg",
+          "img": "account-5.jpg",
           "w": 585,
           "h": 1170
         }
@@ -1181,6 +1188,32 @@
           "tl": "Kung malabo o mali, piliin ang dahilan at pindutin ang I-reject. Makikita ito ng residente.",
           "en": "If it is blurry or wrong, pick the reason and tap Reject. The resident will see it.",
           "img": "admin-verification-4.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
+      "id": "admin-helpsetup",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano sagutin ang humihingi ng tulong sa setup",
+        "en": "How to answer someone who needs help with setup"
+      },
+      "steps": [
+        {
+          "tl": "Dito makikita ang mga residenteng nahihirapan sa pag-register, pag-login, selfie o profile. Ang pula na Naghihintay ay wala pang sumasagot.",
+          "en": "Here you see residents who have trouble registering, logging in, with the selfie or the profile. The red Waiting tag means nobody has answered yet.",
+          "img": "admin-helpsetup-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Isulat ang sagot at pindutin ang Ipadala. Sinumang admin o ang Developer ang pwedeng sumagot. Pribado ito sa kanila at sa residente.",
+          "en": "Write your answer and tap Send. Any admin or the Developer can answer. It is private between them and the resident.",
+          "img": "admin-helpsetup-2.jpg",
           "w": 585,
           "h": 1170
         }
