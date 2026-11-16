@@ -27,6 +27,7 @@ import { compressToDataUrl } from "@/lib/upload";
 import { friendlyError } from "@/lib/format";
 import { logActivity } from "@/lib/activity";
 import { typingLabel, useTyping } from "@/lib/useTyping";
+import { useSeen } from "@/lib/useSeen";
 import {
   MAX_TEXT,
   MESSAGE_LIMIT,
@@ -176,6 +177,8 @@ function Conversation({ room }: { room: string }) {
   );
   const { data, loading, error: loadError } = useCollection<ChatMessage>(q);
   const messages = useMemo(() => [...data].reverse(), [data]);
+  // "Nakita ni ..." under my newest message (staff rooms, Developer chat and Purok rooms).
+  const seen = useSeen(room, messages);
   // Who is writing to the Developer: the inbox line, or else the name on their own messages.
   const devPerson = devWith || messages.find((m) => isDevRoom(room) && m.authorId === devRoomUid(room))?.authorName || "";
 
@@ -359,6 +362,7 @@ function Conversation({ room }: { room: string }) {
                         </button>
                       </div>
                     </div>
+                    {seen.messageId === m.id && <p className="mt-0.5 text-right text-[0.68rem] font-semibold text-gray-500" role="status">{seen.label}</p>}
                   </div>
                 </div>
               </div>

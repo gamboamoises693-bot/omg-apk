@@ -19,6 +19,8 @@ export interface UserProfile {
   /** Admin-only profile photo (small data URL). */
   photoURL?: string;
   suspended?: boolean;
+  /** True when the person turned off "seen" marks in chat (they neither show nor see them). */
+  hideSeen?: boolean;
   createdAt?: Timestamp;
 }
 

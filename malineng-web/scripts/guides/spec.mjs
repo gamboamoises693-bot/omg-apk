@@ -87,7 +87,7 @@ export const GUIDES = [
       { ring: 'input[placeholder*="Mag-type"]',
         tl: "I-type ang mensahe mo. Magalang na usapan lang po.", en: "Type your message. Please keep it respectful." },
       { ring: 'button[aria-label="Ipadala"]', after: [go("/chat/")],
-        tl: "Pindutin ang Ipadala. Nabubura ang mga mensahe pagkatapos ng 7 araw.", en: "Tap Send. Messages are deleted after 7 days." },
+        tl: "Pindutin ang Ipadala. Sa Purok room, sa chat ng staff at sa Developer, makikita sa ilalim ng huling mensahe mo kung sino ang nakabasa (\"Nakita ni...\"). Pwede itong i-off sa Account. Nabubura ang mga mensahe pagkatapos ng 7 araw.", en: "Tap Send. In your Purok room, the staff chat and the Developer chat, you see under your last message who has read it (\"Seen by...\"). You can turn this off in Account. Messages are deleted after 7 days." },
       { ring: 'a:has-text("Kausapin ang Developer")',
         tl: "May tanong o problema sa app? Pindutin ito para sa pribadong chat sa Developer.", en: "Have a question or a problem with the app? Tap this for a private chat with the Developer." },
     ],

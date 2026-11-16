@@ -122,6 +122,30 @@ function ProfileForm() {
   );
 }
 
+/** Chat "Nakita" marks: on by default. Turning it off hides your marks and also hides other people's from you. */
+function SeenSetting() {
+  const { user, profile } = useAuth();
+  const toast = useToast();
+  if (!user || !profile) return null;
+  const on = profile.hideSeen !== true;
+  const toggle = async (next: boolean) => {
+    try {
+      await updateDoc(doc(db, "users", user.uid), { hideSeen: !next });
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    }
+  };
+  return (
+    <label className="mt-3 flex items-start gap-2 border-t border-gray-100 pt-3 text-sm">
+      <input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} className="mt-1" />
+      <span>
+        <b>Ipakita na nabasa ko ang mensahe</b>
+        <span className="block text-xs text-gray-500">Sa chat ng mga staff, sa Developer at sa Purok mo. Kapag in-off, hindi mo rin makikita kung sino ang nakabasa ng mensahe mo.</span>
+      </span>
+    </label>
+  );
+}
+
 /** Before → after for each field that was asked to change. */
 function ChangeDiff({ from, to }: { from: Identity; to: Identity }) {
   return (
@@ -480,6 +504,7 @@ export default function AccountPage() {
       <SectionTitle>Mga Notification</SectionTitle>
       <Card>
         <NotifySettings />
+        <SeenSetting />
       </Card>
 
       <SectionTitle>Wika / Language</SectionTitle>
