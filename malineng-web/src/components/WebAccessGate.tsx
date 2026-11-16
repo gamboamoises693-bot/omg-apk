@@ -1,10 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { Suspense, type ReactNode } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Lock } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { WEB_FEATURES, levelOf, useWebAccess } from "@/lib/webAccess";
+import { isDevRoom, isHelpRoom } from "@/lib/chat";
 import { LinkButton, Spinner } from "./ui";
 import { LoginGate } from "./LoginGate";
 import { RequireVerified } from "./RequireVerified";
@@ -30,6 +31,21 @@ export function ComingSoon({ label }: { label: string }) {
  */
 export function WebAccessGate({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
+  // The private help chat and the chat with the Developer only need a login (the person may not be verified yet);
+  // the chat page applies that login check itself.
+  if (pathname.split("/").filter(Boolean)[0] === "chat") return <Suspense fallback={<Spinner />}><ChatGate>{children}</ChatGate></Suspense>;
+  return <Gate pathname={pathname}>{children}</Gate>;
+}
+
+/** /chat: the help room and the Developer room skip the "verified" level; every other room follows Web Access. */
+function ChatGate({ children }: { children: ReactNode }) {
+  const room = useSearchParams().get("room") ?? "";
+  const { isStaff, loading } = useAuth();
+  if (!loading && !isStaff && (isHelpRoom(room) || isDevRoom(room))) return <>{children}</>;
+  return <Gate pathname="/chat">{children}</Gate>;
+}
+
+function Gate({ children, pathname }: { children: ReactNode; pathname: string }) {
   const { isStaff, loading: authLoading } = useAuth();
   const { access, loading } = useWebAccess();
 

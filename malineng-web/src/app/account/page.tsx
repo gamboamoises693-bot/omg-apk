@@ -20,6 +20,7 @@ import { TextSizeSetting } from "@/components/TextSizeSetting";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { InstallAppCard } from "@/components/InstallApp";
 import { NotifySettings } from "@/components/NotifySettings";
+import { HelpSetupLink } from "@/components/HelpSetupLink";
 import { useToast } from "@/components/Toast";
 import { FIELD_LABEL, changedFields, identityOf, useMyProfileChange, type Identity, type ProfileChange } from "@/lib/profileChange";
 import { PHONE_TAKEN_MESSAGE, claimPhoneInBatch, normalizePhone, phoneOwner, releasePhone } from "@/lib/phone";
@@ -454,6 +455,7 @@ function AccountContent() {
         </p>
       )}
       <VerificationCard />
+      <HelpSetupLink className="mb-3" />
 
       <div className="mb-2 grid grid-cols-2 gap-2">
         <LinkButton href="/appointment" variant="outline"><CalendarCheck className="h-5 w-5" /> Appointments</LinkButton>

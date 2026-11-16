@@ -247,6 +247,8 @@ service cloud.firestore {
     function canReadRoom(room) {
       // Direct chat with the Developer: only the person and the Developer (no verification needed, so a business can ask about an ad).
       return room.matches('^dev-.+$') ? (signedIn() && notSuspended() && (isSuperAdmin() || room == 'dev-' + request.auth.uid))
+        // Help with setting up an account: the person and the admins (no verification needed, since that is what they need help with).
+        : room.matches('^help-.+$') ? (signedIn() && notSuspended() && (isAdmin() || room == 'help-' + request.auth.uid))
         : room == 'staff-admin' ? (isStaff() && notSuspended())
         : room == 'staff-officials' ? (isAdmin() && notSuspended())
         : verifiedPoster() && (room == 'all' || room == me().get('purok', '') || isStaff());
@@ -1405,6 +1407,20 @@ service cloud.firestore {
               && incoming().lastFrom == 'user' && incoming().name == me().fullName)
             || (isSuperAdmin() && incoming().lastFrom == 'dev'));
       allow delete: if isSuperAdmin();
+    }
+
+    // Help inbox: one line per person who asked for help with setting up their account. The person writes their own line
+    // with each message ("user"); any admin answers ("staff").
+    match /helpChats/{uid} {
+      allow read: if isAdmin() || (signedIn() && isSelf(uid));
+      allow create, update: if incoming().keys().hasOnly(['uid', 'name', 'lastText', 'lastAt', 'lastFrom'])
+        && incoming().uid == uid
+        && incoming().lastText is string && incoming().lastText.size() <= 80
+        && incoming().lastAt == request.time
+        && ((isSelf(uid) && notSuspended() && chatOpen() && !chatMuted()
+              && incoming().lastFrom == 'user' && incoming().name == me().fullName)
+            || (isAdmin() && incoming().lastFrom == 'staff'));
+      allow delete: if isAdmin();
     }
 
     // Temporary mutes set by officers.

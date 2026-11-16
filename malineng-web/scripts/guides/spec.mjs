@@ -178,6 +178,8 @@ export const GUIDES = [
         tl: "Dito mo mababago ang pangalan, purok, contact number at birthday mo.", en: "Here you can change your name, purok, contact number and birthday." },
       { ring: 'button:has-text("Ipadala para sa approval")',
         tl: "Pagkatapos magpalit, pindutin ang Ipadala para sa approval. Ang Barangay ang mag-aaprub; hangga't hindi pa, ang lumang detalye ang ginagamit. Makikita mo rito kung naaprubahan o hindi.", en: "After you change something, tap Send for approval. The Barangay approves it; until then your old details stay. You will see here if it was approved or not." },
+      { before: [go("/account/")], ring: 'a:has-text("Nahihirapan sa pag-setup?")',
+        tl: "Nahihirapan sa pag-register, selfie o profile? Pindutin ito para makipag-chat sa mga admin ng Barangay at sa Developer. Pribado ito.", en: "Having trouble with registering, the selfie or your profile? Tap this to chat with the Barangay admins and the Developer. It is private." },
       { ring: 'h2:has-text("WIKA")',
         tl: "Piliin ang wika (TL o EN) at ang laki ng text (Aa) para mas madaling basahin.", en: "Choose the language (TL or EN) and the text size (Aa) so it is easier to read." },
       { ring: 'button:has-text("Mag-logout")',
@@ -421,6 +423,16 @@ export const GUIDES = [
         tl: "Kung tugma ang mukha at detalye, pindutin ang I-verify. Magkakaroon na siya ng Barangay ID.", en: "If the face and details match, tap Verify. They then get a Barangay ID." },
       { ring: 'label:has-text("Dahilan ng pag-reject")',
         tl: "Kung malabo o mali, piliin ang dahilan at pindutin ang I-reject. Makikita ito ng residente.", en: "If it is blurry or wrong, pick the reason and tap Reject. The resident will see it." },
+    ],
+  },
+  {
+    id: "admin-helpsetup", as: "kapitan", staff: true, routes: [], group: "Para sa admin",
+    title: { tl: "Paano sagutin ang humihingi ng tulong sa setup", en: "How to answer someone who needs help with setup" },
+    steps: [
+      { before: [go("/admin/#helpsetup")], ring: 'a:has-text("Maria Santos")', after: [click('a:has-text("Maria Santos")')],
+        tl: "Dito makikita ang mga residenteng nahihirapan sa pag-register, pag-login, selfie o profile. Ang pula na Naghihintay ay wala pang sumasagot.", en: "Here you see residents who have trouble registering, logging in, with the selfie or the profile. The red Waiting tag means nobody has answered yet." },
+      { ring: 'input[placeholder*="Mag-type"]',
+        tl: "Isulat ang sagot at pindutin ang Ipadala. Sinumang admin o ang Developer ang pwedeng sumagot. Pribado ito sa kanila at sa residente.", en: "Write your answer and tap Send. Any admin or the Developer can answer. It is private between them and the resident." },
     ],
   },
   {

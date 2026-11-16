@@ -5,7 +5,7 @@ import { collection, doc, limit, onSnapshot, orderBy, query, where, type Timesta
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { isFresh, notifyNew } from "@/lib/notifyPrefs";
-import { CHAT_READ_EVENT, ROOM_ALL, ROOM_STAFF_ADMIN, ROOM_STAFF_OFFICIALS, cutoffTimestamp, devRoomOf, getLastRead, isStaffRoom, parseCall, roomTitle, type DevChat } from "@/lib/chat";
+import { CHAT_READ_EVENT, ROOM_ALL, ROOM_STAFF_ADMIN, ROOM_STAFF_OFFICIALS, cutoffTimestamp, devRoomOf, getLastRead, helpRoomOf, isStaffRoom, parseCall, roomTitle, type DevChat, type HelpChat } from "@/lib/chat";
 
 /**
  * Number of chat rooms with a message the person has not opened yet (for the bottom-nav badge).
@@ -92,6 +92,31 @@ export function useChatUnread(): number {
     );
   }, [user, isSuperAdmin]);
 
+  // Help with the account: the person hears when an admin answers (admins use the Admin menu badge instead).
+  const [helpLine, setHelpLine] = useState<HelpChat | null>(null);
+  const helpSeen = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (!user || isStaff) {
+      setHelpLine(null);
+      return;
+    }
+    return onSnapshot(
+      doc(db, "helpChats", user.uid),
+      (snap) => {
+        const c = snap.exists() ? ({ id: snap.id, ...snap.data() } as HelpChat) : null;
+        setHelpLine(c);
+        const at = c?.lastAt?.toMillis() ?? 0;
+        const known = helpSeen.current;
+        helpSeen.current = at;
+        const viewing = window.location.pathname.startsWith("/chat") && document.visibilityState === "visible" && new URLSearchParams(window.location.search).get("room") === helpRoomOf(user.uid);
+        if (c && known !== undefined && at > known && c.lastFrom === "staff" && isFresh(at) && !viewing) {
+          notifyNew("chat", "💬 Tulong sa Setup", c.lastText.slice(0, 120), `chat:${helpRoomOf(user.uid)}`, `/chat/?room=${encodeURIComponent(helpRoomOf(user.uid))}`);
+        }
+      },
+      () => {},
+    );
+  }, [user, isStaff]);
+
   // Re-count when a room is opened (same tab) or read in another tab.
   useEffect(() => {
     const again = () => bump((n) => n + 1);
@@ -112,6 +137,6 @@ export function useChatUnread(): number {
     rooms.filter((r) => {
       const l = latest[r];
       return !!l && l.at > 0 && !l.mine && l.at > getLastRead(r);
-    }).length + devUnread
+    }).length + devUnread + (helpLine && helpLine.lastFrom === "staff" && (helpLine.lastAt?.toMillis() ?? 0) > getLastRead(helpRoomOf(helpLine.id)) ? 1 : 0)
   );
 }

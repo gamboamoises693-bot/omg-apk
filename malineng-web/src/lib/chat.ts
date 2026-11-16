@@ -34,6 +34,26 @@ export const devRoomOf = (uid: string): string => `${DEV_PREFIX}${uid}`;
 export const isDevRoom = (room: string): boolean => room.startsWith(DEV_PREFIX) && room.length > DEV_PREFIX.length;
 export const devRoomUid = (room: string): string => room.slice(DEV_PREFIX.length);
 
+/**
+ * Help with setting up an account: every person has one private room, "help-<uid>". Only that person and the admins
+ * (Kapitan, Secretary... and the Developer) can read it. It needs a login only, not verification.
+ */
+export const HELP_PREFIX = "help-";
+export const helpRoomOf = (uid: string): string => `${HELP_PREFIX}${uid}`;
+export const isHelpRoom = (room: string): boolean => room.startsWith(HELP_PREFIX) && room.length > HELP_PREFIX.length;
+export const helpRoomUid = (room: string): string => room.slice(HELP_PREFIX.length);
+
+/** One line per person who asked for help with their account (the admins' help inbox), kept in helpChats/{uid}. */
+export interface HelpChat {
+  id: string;
+  uid: string;
+  name: string;
+  lastText: string;
+  lastAt?: Timestamp;
+  /** Who wrote last: "user" (waiting for an answer) or "staff". */
+  lastFrom: "user" | "staff";
+}
+
 /** One line per person who wrote to the Developer (the Developer's inbox), kept in devChats/{uid}. */
 export interface DevChat {
   id: string;
@@ -72,6 +92,7 @@ export function callUrl(callRoom: string, displayName: string): string {
 
 export function roomTitle(room: string): string {
   if (isDevRoom(room)) return "Chat sa Developer";
+  if (isHelpRoom(room)) return "Tulong sa Setup";
   if (room === ROOM_STAFF_ADMIN) return "GC ng mga Admin";
   if (room === ROOM_STAFF_OFFICIALS) return "GC ng mga Opisyal";
   return room === ROOM_ALL ? "Buong Barangay" : room;
