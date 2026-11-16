@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import { ArrowUpToLine, Clapperboard, Eye, EyeOff, Pencil, Trash2, Upload } from "lucide-react";
+import { ArrowUpToLine, ChevronRight, Clapperboard, Eye, EyeOff, Pencil, Trash2, Upload, Users } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { logActivity } from "@/lib/activity";
@@ -30,21 +30,33 @@ function Viewers({ video }: { video: Video }) {
   const list = useMemo(() => [...data].sort((a, b) => tsToMillis(b.at) - tsToMillis(a.at)), [data]);
   if (loading) return <Spinner />;
   const guests = Math.max(0, (video.views ?? 0) - list.length);
+  const stat = (n: number, label: string) => (
+    <div className="rounded-xl bg-gray-50 px-2 py-2.5 text-center">
+      <p className="text-lg font-black leading-none text-brand-deep">{n.toLocaleString("en-PH")}</p>
+      <p className="mt-1 text-[0.65rem] font-bold uppercase tracking-wide text-gray-500">{label}</p>
+    </div>
+  );
   return (
-    <div className="space-y-2">
-      <p className="text-sm text-gray-600">{(video.views ?? 0).toLocaleString("en-PH")} views · {list.length} may pangalan · {guests} bisita o noong wala pang listahan</p>
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2">
+        {stat(video.views ?? 0, "Views")}
+        {stat(list.length, "May pangalan")}
+        {stat(guests, "Bisita")}
+      </div>
       {list.length === 0 ? (
         <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Wala pang naitalang pangalan. Ang mga susunod na manonood na naka-login ay lalabas dito.</p>
       ) : (
         <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-100">
           {list.map((v) => (
-            <li key={v.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-              <span className="min-w-0"><b className="block truncate">{v.name}</b><span className="text-xs text-gray-500">{v.purok || "Walang purok"}</span></span>
+            <li key={v.id} className="flex items-center gap-3 px-3 py-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-light text-xs font-black text-brand">{v.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</span>
+              <span className="min-w-0 flex-1"><b className="block truncate text-sm">{v.name}</b><span className="text-xs text-gray-500">{v.purok || "Walang purok"}</span></span>
               <span className="shrink-0 text-xs text-gray-500">{timeAgo(v.at)}</span>
             </li>
           ))}
         </ul>
       )}
+      <p className="text-xs text-gray-500">Ang Bisita ay mga nanood na hindi naka-login, o bago pa magkaroon ng listahan.</p>
     </div>
   );
 }
@@ -234,7 +246,8 @@ export function AdminVideos() {
       ) : (
         <div className="space-y-2">
           {videos.map((v, i) => (
-            <Card key={v.id} className={`flex items-center gap-3 !p-2.5 ${v.hidden ? "opacity-60" : ""}`}>
+            <Card key={v.id} className={`overflow-hidden !p-0 ${v.hidden ? "opacity-60" : ""}`}>
+              <div className="flex items-center gap-3 p-2.5">
               <span className="block h-14 w-24 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-brand to-brand-deep">
                 {v.kind === "upload" && v.thumb && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -252,7 +265,6 @@ export function AdminVideos() {
                   {v.ad && <span className="rounded bg-red-100 px-1.5 font-semibold text-red-700">Ad{v.sponsor ? ` · ${v.sponsor}` : ""}</span>}
                   {v.hidden && <span className="rounded bg-amber-100 px-1.5 font-semibold text-amber-800">Nakatago</span>}
                   {v.kind === "upload" && v.size ? <span>{(v.size / 1048576).toFixed(1)} MB</span> : null}
-                  <button type="button" onClick={() => setViewing(v)} aria-label={`Tingnan kung sino ang nanood ng ${v.title}`} className="flex items-center gap-0.5 rounded bg-brand-light px-1.5 font-bold text-brand active:opacity-70"><Eye className="h-3 w-3" aria-hidden /> {(v.views ?? 0).toLocaleString("en-PH")} · Sino?</button>
                 </p>
               </div>
               <div className="flex shrink-0 flex-col gap-1">
@@ -266,6 +278,14 @@ export function AdminVideos() {
                   <button type="button" onClick={() => startEdit(v)} aria-label="I-edit" className="rounded-lg bg-gray-100 p-2 text-gray-700 active:bg-gray-200"><Pencil className="h-4 w-4" /></button>
                   <button type="button" onClick={() => remove(v)} aria-label="Burahin" className="rounded-lg bg-red-50 p-2 text-red-600 active:bg-red-100"><Trash2 className="h-4 w-4" /></button>
                 </div>
+              </div>
+              </div>
+              {/* Footer: total views on the left, the list of who watched on the right. */}
+              <div className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50 px-3 py-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-500"><Eye className="h-3.5 w-3.5" aria-hidden /> {(v.views ?? 0).toLocaleString("en-PH")} views</span>
+                <button type="button" onClick={() => setViewing(v)} aria-label={`Tingnan kung sino ang nanood ng ${v.title}`} className="flex items-center gap-1 text-xs font-extrabold text-brand active:opacity-60">
+                  <Users className="h-3.5 w-3.5" aria-hidden /> Sino ang nanood <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+                </button>
               </div>
             </Card>
           ))}
