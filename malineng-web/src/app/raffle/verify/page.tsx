@@ -11,7 +11,7 @@ import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
 import { maskName } from "@/lib/raffle";
 import { roleLabel } from "@/lib/activity";
-import { BarangayIdCard, barangayIdNo } from "@/components/BarangayIdCard";
+import { BarangayIdCard } from "@/components/BarangayIdCard";
 import { LoginGate } from "@/components/LoginGate";
 import { Button, Input, PageHeader, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
@@ -111,14 +111,13 @@ function Verify() {
         if (!live) return;
         const ud = u.data();
         if (!ud) return setIdInfo(null);
-        const year = ud.createdAt?.toDate ? ud.createdAt.toDate().getFullYear() : new Date().getFullYear();
         setIdInfo({
           name: String(ud.fullName ?? ""),
           purok: String(ud.purok ?? ""),
           birthday: String(ud.birthday ?? ""),
           selfie: String(v.data()?.selfie ?? ""),
           verified: f.exists(),
-          idNo: barangayIdNo(winnerUid, year),
+          idNo: String(ud.idNo ?? "") || "Wala pang ID no.",
           roleText: ud.role && ud.role !== "resident" ? roleLabel(ud.role, ud.position).toUpperCase() : undefined,
         });
       })

@@ -2,11 +2,6 @@ import { formatDate } from "@/lib/format";
 import { BARANGAY_CITY } from "@/lib/constants";
 import { LogoMark } from "@/components/BarangayLogo";
 
-/** MLN-2026-3F9K2A: registration year + start of the uid (stable, unique enough to read aloud). */
-export function barangayIdNo(uid: string, year: number): string {
-  return `MLN-${year}-${uid.slice(0, 6).toUpperCase()}`;
-}
-
 /** The Barangay ID card: navy with gold accents. Used on the resident's own ID page and when an admin checks a raffle winner. */
 export function BarangayIdCard({
   idNo,

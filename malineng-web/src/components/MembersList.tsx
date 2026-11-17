@@ -5,6 +5,7 @@ import Link from "next/link";
 import { collection, doc, getDoc, getDocs, updateDoc, type Timestamp } from "firebase/firestore";
 import { ImageUp, RefreshCw, Search } from "lucide-react";
 import { makeFaceThumb } from "@/lib/faceThumb";
+import { assignIdNo } from "@/lib/idNo";
 import { ChatWithButton } from "./ChatWithButton";
 import { db } from "@/lib/firebase";
 import { useVerifiedSet } from "@/lib/useVerifiedSet";
@@ -134,6 +135,24 @@ export function MembersList({ initialFilter = "lahat" }: { initialFilter?: Filte
     }
   };
 
+  // Verified people (and staff) still without the new Barangay ID number MG-####-####. It is also made when they open their ID.
+  const noId = useMemo(() => members.filter((m) => (verified.has(m.id) || m.staff) && !m.profile.idNo), [members, verified]);
+  const [numbering, setNumbering] = useState(false);
+  /** Gives up to 20 people their ID number at a time, then reloads the list. */
+  const makeIdNumbers = async () => {
+    setNumbering(true);
+    setError("");
+    try {
+      for (const m of noId.slice(0, 20)) await assignIdNo(m.id);
+      await load();
+    } catch (err) {
+      console.warn("[members] id numbers failed:", err);
+      setError("May hindi nagawa. Subukan ulit.");
+    } finally {
+      setNumbering(false);
+    }
+  };
+
   if (!raw && !error) return <Spinner />;
 
   return (
@@ -208,6 +227,12 @@ export function MembersList({ initialFilter = "lahat" }: { initialFilter?: Filte
             );
           })}
         </ul>
+      )}
+
+      {noId.length > 0 && (
+        <button type="button" onClick={makeIdNumbers} disabled={numbering} className="flex w-full items-center justify-center gap-2 rounded-xl border border-gold/60 bg-gold-light px-3 py-2.5 text-sm font-bold text-yellow-900 disabled:opacity-60">
+          {numbering ? "Ginagawa..." : `Gawan ng ID number (MG-####-####) ang ${noId.length} (20 bawat pindot)`}
+        </button>
       )}
 
       {missing.length > 0 && (
