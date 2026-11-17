@@ -94,6 +94,9 @@ function PledgeCard({ d }: { d: Donation }) {
           <p className="text-sm text-gray-600">{d.kind} · <b>{d.what}</b>{d.amount ? ` · ${formatPeso(d.amount).replace(".00", "")}` : ""}</p>
           <p className="text-xs text-gray-500">☎ {d.contact} · {timeAgo(d.createdAt)}</p>
           {d.link && <p className="break-all text-xs"><a href={d.link} target="_blank" rel="noopener noreferrer nofollow" className="font-semibold text-brand underline">{d.link}</a></p>}
+          <p className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[0.7rem] font-extrabold ${d.handover === "pickup" ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-700"}`}>
+            {d.handover === "pickup" ? `Kukunin sa bahay: ${d.pickupAddress}` : "Dadalhin sa Barangay Hall"}
+          </p>
           {d.message && <p className="mt-1 text-sm text-gray-700">&ldquo;{d.message}&rdquo;</p>}
         </div>
         <Badge color={tone(d.status)}>{DONATION_STATUS_LABEL[d.status].split(",")[0]}</Badge>

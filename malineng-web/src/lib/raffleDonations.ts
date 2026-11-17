@@ -25,6 +25,10 @@ export interface Donation {
   logo?: string;
   /** Optional Facebook page or website of the donor's business. */
   link?: string;
+  /** How the donation reaches the Barangay: the donor brings it to the Barangay Hall, or the Barangay picks it up at their house. Older pledges have none (= Hall). */
+  handover?: "hall" | "pickup";
+  /** Where to pick it up (only when `handover` is "pickup"). */
+  pickupAddress?: string;
   status: DonationStatus;
   receiptNo?: string;
   receivedBy?: string;
@@ -69,7 +73,7 @@ export function newReceiptNo(): string {
   return `RAF-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("")}`;
 }
 
-export async function pledgeDonation(uid: string, d: { name: string; anon: boolean; kind: DonationKind; what: string; amount: number; contact: string; message: string; logo?: string; link?: string }): Promise<void> {
+export async function pledgeDonation(uid: string, d: { name: string; anon: boolean; kind: DonationKind; what: string; amount: number; contact: string; message: string; logo?: string; link?: string; handover?: "hall" | "pickup"; pickupAddress?: string }): Promise<void> {
   await setDoc(doc(collection(db, "raffleDonations")), {
     userId: uid,
     name: d.name.trim().slice(0, 120),
@@ -79,6 +83,8 @@ export async function pledgeDonation(uid: string, d: { name: string; anon: boole
     amount: Math.max(0, Math.round(d.amount) || 0),
     contact: d.contact.trim().slice(0, 30),
     message: d.message.trim().slice(0, 300),
+    handover: d.handover === "pickup" ? "pickup" : "hall",
+    ...(d.handover === "pickup" ? { pickupAddress: (d.pickupAddress ?? "").trim().slice(0, 200) } : {}),
     ...(d.logo && !d.anon ? { logo: d.logo } : {}),
     ...(d.link && !d.anon && normalizeLink(d.link) ? { link: normalizeLink(d.link) } : {}),
     status: "new",

@@ -257,7 +257,7 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
       ) : (
         <Link href="/login" className="block rounded-xl bg-brand py-2.5 text-center text-sm font-bold text-white">Mag-login para magdonate</Link>
       )}
-      <p className="text-center text-xs text-gray-500">Hindi dito kinukuha ang pera. Mangangako ka lang; ang Barangay ang tatawag at tatanggap sa Barangay Hall, at bibigyan ka ng resibo.</p>
+      <p className="text-center text-xs text-gray-500">Hindi dito kinukuha ang pera. Mangangako ka lang; ang Barangay ang tatawag. Pwedeng dalhin mo sa Barangay Hall o kunin nila sa bahay mo, at bibigyan ka ng resibo.</p>
 
       {full && user && <MyDonations uid={user.uid} />}
       <Modal open={donating} onClose={() => setDonating(false)} title="Magdonate o maging sponsor">
@@ -279,6 +279,8 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
   const [anon, setAnon] = useState(false);
   const [logo, setLogo] = useState("");
   const [link, setLink] = useState("");
+  const [handover, setHandover] = useState<"hall" | "pickup">("hall");
+  const [pickupAddress, setPickupAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -289,10 +291,11 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
     if (kind === "Pera" && value <= 0) return setError("Ilagay ang halaga.");
     if (kind !== "Pera" && !what.trim()) return setError("Isulat kung ano ang ibibigay.");
     if (contact.trim().length < 7) return setError("Ilagay ang numero na pwedeng tawagan.");
+    if (handover === "pickup" && pickupAddress.trim().length < 5) return setError("Ilagay ang address kung saan kukunin ang donasyon.");
     setBusy(true);
     setError("");
     try {
-      await pledgeDonation(uid, { name, anon, kind, what: kind === "Pera" ? `₱${value.toLocaleString("en-PH")}` : what, amount: value, contact, message, logo, link });
+      await pledgeDonation(uid, { name, anon, kind, what: kind === "Pera" ? `₱${value.toLocaleString("en-PH")}` : what, amount: value, contact, message, logo, link, handover, pickupAddress });
       toast("Salamat! Naipadala ang pangako mo. Makikipag-ugnayan ang Barangay.");
       onDone();
     } catch (err) {
@@ -320,7 +323,16 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
         <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} className="mt-1" />
         <span>Huwag ilagay ang pangalan ko sa listahan (Hindi nagpakilala). Ilalagay pa rin ang halaga.</span>
       </label>
-      <p className="rounded-xl bg-brand-light p-3 text-xs text-brand-deep"><b>Paano ibibigay:</b> tatawagan ka ng Barangay. Ihahatid ang pera o gamit sa <b>Barangay Hall</b> at bibigyan ka ng <b>resibo</b> na makikita mo rin dito sa app.</p>
+      <fieldset className="space-y-2 rounded-xl bg-brand-light p-3 text-sm text-brand-deep">
+        <legend className="px-1 text-xs font-extrabold uppercase tracking-wide">Paano ibibigay</legend>
+        {([["hall", "Dadalhin ko sa Barangay Hall"], ["pickup", "Pakikuha sa bahay namin"]] as const).map(([v, label]) => (
+          <label key={v} className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 font-bold ${handover === v ? "border-brand bg-white" : "border-transparent bg-white/60"}`}>
+            <input type="radio" name="handover" checked={handover === v} onChange={() => setHandover(v)} /> {label}
+          </label>
+        ))}
+        {handover === "pickup" && <Input label="Address kung saan kukunin" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)} maxLength={200} placeholder="hal. #12, Purok 3, tabi ng kapilya" />}
+        <p className="text-xs">Tatawagan ka ng Barangay para sa oras. Bibigyan ka ng <b>resibo</b> na makikita mo rin dito sa app.</p>
+      </fieldset>
       {error && <p className="rounded-xl bg-red-50 p-2.5 text-sm text-red-700">{error}</p>}
       <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" type="button" onClick={onDone}>Bumalik</Button>
