@@ -42,6 +42,7 @@ import {
   UserCog,
   LifeBuoy,
   UserPlus,
+  Printer,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAdminPending } from "@/context/AdminPendingContext";
@@ -63,6 +64,7 @@ import { AdminVerification } from "@/components/admin/AdminVerification";
 import { AdminProfileChanges } from "@/components/admin/AdminProfileChanges";
 import { AdminHelpInbox } from "@/components/admin/AdminHelpInbox";
 import { AdminHallRegister } from "@/components/admin/AdminHallRegister";
+import { AdminIdPrint } from "@/components/admin/AdminIdPrint";
 import { AdminHouseholds } from "@/components/admin/AdminHouseholds";
 import { AdminReport } from "@/components/admin/AdminReport";
 import { AdminUsers } from "@/components/admin/AdminUsers";
@@ -132,6 +134,7 @@ const GROUPS: Group[] = [
       { key: "households", label: "Households", icon: Users, Component: AdminHouseholds },
       { key: "sektor", label: "Senior / PWD / Solo", icon: HeartHandshake, Component: AdminSektor, borrowOnly: true },
       { key: "registrations", label: "Registrations", icon: ClipboardList, Component: AdminRegistrations },
+      { key: "idprint", label: "I-print ang mga ID", icon: Printer, Component: AdminIdPrint },
     ],
   },
   {

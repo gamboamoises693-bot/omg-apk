@@ -540,6 +540,18 @@ export const GUIDES = [
     ],
   },
   {
+    id: "admin-idprint", as: "kapitan", staff: true, routes: [], group: "Para sa admin",
+    title: { tl: "Paano mag-print ng maraming Barangay ID sa iisang papel", en: "How to print many Barangay IDs on one sheet" },
+    steps: [
+      { before: [go("/admin/#idprint")], ring: 'input[aria-label="Hanapin"]',
+        tl: "Hanapin ang residente (pangalan, purok o ID no.). Mga verified na may ID number lang ang nasa listahan.", en: "Find the resident (name, purok or ID no.). Only verified people who already have an ID number are listed." },
+      { ring: 'button:has-text("Piliin ang lahat ng nakikita")',
+        tl: "Lagyan ng check ang gusto mong i-print, o pindutin ang Piliin ang lahat ng nakikita. Hanggang 27 bawat print.", en: "Tick the people you want to print, or tap Select everything shown. Up to 27 per print." },
+      { ring: 'a:has-text("I-print ang")',
+        tl: "Piliin ang 9 sa isang A4 (maliit) o 4 sa isang A4 (malaki), tapos pindutin ang I-print. Sa print dialog: A4, Portrait, Scale 100%. Gupitin sa putol-putol na guhit.", en: "Choose 9 per A4 (small) or 4 per A4 (large), then tap Print. In the print dialog: A4, Portrait, Scale 100%. Cut along the dashed lines." },
+    ],
+  },
+  {
     id: "admin-signature", as: "dev", staff: true, routes: [], group: "Para sa admin",
     title: { tl: "Paano ilagay ang pirma ng Punong Barangay sa Barangay ID (Developer)", en: "How to put the Punong Barangay's signature on the Barangay ID (Developer)" },
     steps: [
