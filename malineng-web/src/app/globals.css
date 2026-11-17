@@ -225,3 +225,13 @@ textarea {
   body.cert-printing.cert-ivory-paper .cert-sheet,
   body.cert-printing.cert-ivory-paper .cert-nt { background: transparent !important; }
 }
+
+/* ---------- Many Barangay IDs on one A4 sheet (see app/barangay-id/print) ---------- */
+.id-sheets { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.id-page { display: grid; gap: 3mm; justify-content: center; align-content: start; background: #fff; padding: 6mm; border-radius: 6px; box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.4); max-width: 100%; overflow-x: auto; }
+.id-cell { position: relative; overflow: hidden; border: 1px dashed #9aa3b5; }
+@media print {
+  .id-sheets { gap: 0; display: block; }
+  .id-page { box-shadow: none; border-radius: 0; padding: 0; gap: 3mm; overflow: visible; break-after: page; break-inside: avoid; }
+  .id-page:last-child { break-after: auto; }
+}
