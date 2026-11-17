@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { collection, doc, getDoc, query, where } from "firebase/firestore";
@@ -41,12 +41,19 @@ function IdCard() {
     QRCode.toDataURL(`${window.location.origin}/id-check/?u=${user.uid}`, { margin: 1, width: 300, errorCorrectionLevel: "M" }).then(setQr, () => setQr(""));
   }, [user]);
 
+  // Only one number is made at a time: the profile can update while it is being made, and a second try would be refused
+  // (a number is set only once).
+  const making = useRef(false);
   useEffect(() => {
-    if (!user || !profile || profile.idNo || madeNo) return;
-    assignIdNo(user.uid).then(setMadeNo, () => setNoError("Hindi makagawa ng ID number. I-refresh ang page."));
+    if (!user || !profile || profile.idNo || madeNo || making.current) return;
+    making.current = true;
+    assignIdNo(user.uid).then(setMadeNo, () => {
+      making.current = false;
+      setNoError("Hindi makagawa ng ID number. I-refresh ang page.");
+    });
   }, [user, profile, madeNo]);
 
-  if (noError) return <p className="rounded-2xl bg-red-50 p-4 text-center text-sm text-red-700">{noError}</p>;
+  if (noError && !profile?.idNo && !madeNo) return <p className="rounded-2xl bg-red-50 p-4 text-center text-sm text-red-700">{noError}</p>;
   if (!user || !profile || selfie === null || flag === null) return <Spinner />;
 
   const idNo = profile.idNo || madeNo;
