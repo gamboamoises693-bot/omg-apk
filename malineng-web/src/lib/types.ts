@@ -21,6 +21,8 @@ export interface UserProfile {
   suspended?: boolean;
   /** True when the person turned off "seen" marks in chat (they neither show nor see them). */
   hideSeen?: boolean;
+  /** Barangay ID number (MG-####-####), assigned once. */
+  idNo?: string;
   /** Set when staff registered this person at the Barangay Hall (uid and name of the staff). */
   assistedBy?: string;
   assistedByName?: string;
@@ -85,6 +87,9 @@ export interface Household {
   purok: string;
   address: string;
   members: HouseholdMember[];
+  /** The spouse (or another head) who shares this household after a merge: uids and names, same order. */
+  coHeadIds?: string[];
+  coHeadNames?: string[];
   updatedAt?: Timestamp;
 }
 

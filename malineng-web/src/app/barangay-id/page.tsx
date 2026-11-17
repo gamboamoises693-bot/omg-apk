@@ -9,7 +9,8 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
 import { roleLabel } from "@/lib/activity";
-import { BarangayIdCard, barangayIdNo } from "@/components/BarangayIdCard";
+import { BarangayIdCard } from "@/components/BarangayIdCard";
+import { assignIdNo } from "@/lib/idNo";
 import { IdPhotoUpload } from "@/components/IdPhotoUpload";
 import { Button, PageHeader, Spinner } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
@@ -19,6 +20,9 @@ function IdCard() {
   const [selfie, setSelfie] = useState<string | null>(null);
   const [flag, setFlag] = useState<boolean | null>(null);
   const [qr, setQr] = useState("");
+  // First time opening the ID with the new number format: it is made once and kept for good.
+  const [madeNo, setMadeNo] = useState("");
+  const [noError, setNoError] = useState("");
 
   const sectorsQ = useMemo(() => (user ? query(collection(db, "sectorMembers"), where("userId", "==", user.uid)) : null), [user]);
   const { data: sectorDocs } = useCollection<{ id: string; sectors: string[] }>(sectorsQ);
@@ -35,10 +39,16 @@ function IdCard() {
     QRCode.toDataURL(`${window.location.origin}/id-check/?u=${user.uid}`, { margin: 1, width: 300, errorCorrectionLevel: "M" }).then(setQr, () => setQr(""));
   }, [user]);
 
+  useEffect(() => {
+    if (!user || !profile || profile.idNo || madeNo) return;
+    assignIdNo(user.uid).then(setMadeNo, () => setNoError("Hindi makagawa ng ID number. I-refresh ang page."));
+  }, [user, profile, madeNo]);
+
+  if (noError) return <p className="rounded-2xl bg-red-50 p-4 text-center text-sm text-red-700">{noError}</p>;
   if (!user || !profile || selfie === null || flag === null) return <Spinner />;
 
-  const year = profile.createdAt?.toDate().getFullYear() ?? new Date().getFullYear();
-  const idNo = barangayIdNo(user.uid, year);
+  const idNo = profile.idNo || madeNo;
+  if (!idNo) return <Spinner label="Ginagawa ang ID number mo..." />;
 
   return (
     <div>

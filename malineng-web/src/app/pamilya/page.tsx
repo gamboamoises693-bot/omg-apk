@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, updateDoc, where } from "firebase/firestore";
 import { Plus, Trash2, Users } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -25,15 +25,25 @@ function HouseholdForm() {
   const [purok, setPurok] = useState("");
   const [address, setAddress] = useState("");
   const [members, setMembers] = useState<HouseholdMember[]>([]);
+  // After a merge, the spouse is a co-head of the other account's household: they edit that shared document.
+  const [shared, setShared] = useState<{ id: string; headName: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user) return;
     getDoc(doc(db, "households", user.uid))
-      .then((snap) => {
-        if (snap.exists()) {
-          const d = snap.data();
+      .then(async (snap) => {
+        let d = snap.exists() ? snap.data() : null;
+        if (!d) {
+          // No household of my own: maybe I am the co-head of my spouse's household.
+          const q = await getDocs(query(collection(db, "households"), where("coHeadIds", "array-contains", user.uid), limit(1)));
+          if (!q.empty) {
+            d = q.docs[0].data();
+            setShared({ id: q.docs[0].id, headName: String(d.headName ?? "") });
+          }
+        }
+        if (d) {
           setPurok(d.purok ?? "");
           setAddress(d.address ?? "");
           setMembers((d.members as HouseholdMember[]) ?? []);
@@ -58,13 +68,18 @@ function HouseholdForm() {
     setBusy(true);
     setError("");
     try {
-      await setDoc(doc(db, "households", user.uid), {
-        headName: profile.fullName,
-        purok,
-        address: address.trim().slice(0, 200),
-        members: clean,
-        updatedAt: serverTimestamp(),
-      });
+      if (shared) {
+        // The shared household: only the details can change, never who the heads are.
+        await updateDoc(doc(db, "households", shared.id), { purok, address: address.trim().slice(0, 200), members: clean, updatedAt: serverTimestamp() });
+      } else {
+        await setDoc(doc(db, "households", user.uid), {
+          headName: profile.fullName,
+          purok,
+          address: address.trim().slice(0, 200),
+          members: clean,
+          updatedAt: serverTimestamp(),
+        });
+      }
       setMembers(clean);
       logActivity("Pamilya", `Nag-update ng household: ${clean.length + 1} katao (${purok})`, user.uid);
       toast("Na-save ang impormasyon ng pamilya.");
@@ -80,8 +95,8 @@ function HouseholdForm() {
       <Card className="space-y-3">
         <p className="text-sm text-gray-600">Para sa census at mas mabilis na ayuda. Admin ng Barangay lang ang makakakita nito.</p>
         <div className="rounded-xl bg-brand-light p-3 text-sm">
-          <p className="font-bold text-brand">Puno ng pamilya: {profile.fullName}</p>
-          <p className="text-gray-600">Ikaw (ang may-ari ng account)</p>
+          <p className="font-bold text-brand">Puno ng pamilya: {shared ? shared.headName : profile.fullName}</p>
+          <p className="text-gray-600">{shared ? `Kasamang puno ka (${profile.fullName}). Iisa na lang ang household ninyo, kaya hindi na kayo mabibilang nang doble.` : "Ikaw (ang may-ari ng account)"}</p>
         </div>
         <Select label="Purok" options={puroks} placeholder="-- Pumili --" value={purok} onChange={(e) => setPurok(e.target.value)} />
         <Input label="Address (optional)" placeholder="Hal. #12, tabi ng kapilya" value={address} onChange={(e) => setAddress(e.target.value)} maxLength={200} />

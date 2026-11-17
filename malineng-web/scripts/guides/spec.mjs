@@ -59,7 +59,7 @@ export const GUIDES = [
     title: { tl: "Ang Barangay ID mo", en: "Your Barangay ID" },
     steps: [
       { before: [go("/barangay-id/")], ring: "text=JUAN DELA CRUZ",
-        tl: "Lalabas dito ang Barangay ID mo kapag verified na ang account mo. May QR code ito na ini-scan ng Barangay.", en: "Your Barangay ID shows here once your account is verified. It has a QR code the Barangay can scan." },
+        tl: "Lalabas dito ang Barangay ID mo kapag verified na ang account mo, kasama ang ID number mo (MG-####-####). May QR code ito na ini-scan ng Barangay.", en: "Your Barangay ID shows here once your account is verified, with your ID number (MG-####-####). It has a QR code the Barangay can scan." },
       { ring: 'button:has-text("I-print")',
         tl: "Pindutin ang I-print o i-save bilang PDF para may kopya ka.", en: "Tap Print or save as PDF to keep a copy." },
     ],
@@ -343,7 +343,7 @@ export const GUIDES = [
       { ring: 'button:has-text("Magdagdag ng miyembro")',
         tl: "Pindutin ang Magdagdag ng miyembro para ilista ang bawat kasama sa bahay.", en: "Tap Add member to list each person in your household." },
       { ring: 'button:has-text("I-save")',
-        tl: "Pindutin ang I-save. Tinutulungan nito ang Barangay sa ayuda at serbisyo.", en: "Tap Save. This helps the Barangay with aid and services." },
+        tl: "Pindutin ang I-save. Tinutulungan nito ang Barangay sa ayuda at serbisyo. Kung ang asawa mo ay naglagay din ng household, pagsasamahin ito ng Barangay para isa na lang.", en: "Tap Save. This helps the Barangay with aid and services. If your spouse also made a household, the Barangay will merge them into one." },
     ],
   },
   {
@@ -646,7 +646,7 @@ export const GUIDES = [
       { before: [go("/admin/#households")], ring: 'button:has-text("Purok 1")',
         tl: "Piliin ang purok para makita ang mga household doon.", en: "Pick a purok to see the households there." },
       { ring: 'button:has-text("I-export")',
-        tl: "Pindutin ang I-export bilang CSV para sa census o ulat.", en: "Tap Export as CSV for the census or a report." },
+        tl: "Pindutin ang I-export bilang CSV para sa census o ulat. Kung may \"Posibleng doble\" sa itaas (hal. parehong nag-lista ang mag-asawa), pindutin ito, piliin ang household na pananatilihin at pindutin ang Pagsamahin.", en: "Tap Export as CSV for the census or a report. If \"Posibleng doble\" (possible duplicate) shows above, e.g. both spouses made a household, tap it, pick the household to keep and tap Merge." },
     ],
   },
   {

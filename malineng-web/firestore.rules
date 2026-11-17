@@ -386,6 +386,11 @@ service cloud.firestore {
       // Profile photo (photoURL) is for staff (admins and BHW) only.
       allow update: if (isSelf(uid)
           && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended', 'assistedBy', 'assistedByName'])
+          // The Barangay ID number can be set once, and only together with its claim in idNumbers.
+          && (!incoming().diff(existing()).affectedKeys().hasAny(['idNo'])
+              || (existing().get('idNo', '') == ''
+                  && incoming().idNo is string && incoming().idNo.matches('^MG-[0-9]{4}-[0-9]{4}$')
+                  && getAfter(/databases/$(database)/documents/idNumbers/$(incoming().idNo[3:7] + incoming().idNo[8:12])).data.uid == uid))
           && (!incoming().diff(existing()).affectedKeys().hasAny(['photoURL'])
               || (isStaff() && incoming().photoURL is string && incoming().photoURL.size() < 60000))
           && (!incoming().diff(existing()).affectedKeys().hasAny(['contact']) || contactOk(uid))
@@ -576,6 +581,19 @@ service cloud.firestore {
       allow delete: if isSelf(uid) || isSuperAdmin();
     }
 
+    // ---------- idNumbers (Barangay ID numbers MG-####-####: each number belongs to one person) ----------
+    match /idNumbers/{digits} {
+      // Admins look up whose number it is.
+      allow read: if isAdmin();
+      allow create: if digits.matches('^[0-9]{8}$')
+        && incoming().keys().hasOnly(['uid', 'createdAt'])
+        && incoming().createdAt == request.time
+        && (incoming().uid == request.auth.uid || isSuperAdmin())
+        && getAfter(/databases/$(database)/documents/users/$(incoming().uid)).data.get('idNo', '') == 'MG-' + digits[0:4] + '-' + digits[4:8];
+      allow update: if false;
+      allow delete: if isSuperAdmin();
+    }
+
     // ---------- hallRegistrations (Kapitan or Secretary registers a resident; the Developer gives the final approval) ----------
     match /hallRegistrations/{uid} {
       allow read: if isSuperAdmin() || isSelf(uid) || (isAdmin() && resource.data.registeredBy == request.auth.uid);
@@ -634,12 +652,33 @@ service cloud.firestore {
 
     // ---------- households (census; owner + admins) ----------
     match /households/{uid} {
-      allow read: if isSelf(uid) || isAdmin();
-      allow create, update: if isSelf(uid)
+      // A household can have a second head (the spouse): `coHeadIds` holds their uid. Both can read and edit it.
+      allow read: if isSelf(uid) || isAdmin() || (signedIn() && request.auth.uid in resource.data.get('coHeadIds', []));
+      allow create: if isSelf(uid)
         && notSuspended()
         && incoming().members is list && incoming().members.size() <= 20
-        && validPurok(incoming().purok);
-      allow delete: if isSelf(uid) || isSuperAdmin();
+        && validPurok(incoming().purok)
+        && !('coHeadIds' in incoming());
+      allow update: if
+        (isSelf(uid)
+          && notSuspended()
+          && incoming().members is list && incoming().members.size() <= 20
+          && validPurok(incoming().purok)
+          && incoming().get('coHeadIds', []) == existing().get('coHeadIds', [])
+          && incoming().get('coHeadNames', []) == existing().get('coHeadNames', []))
+        // The co-head edits the shared household but never who the heads are.
+        || (signedIn() && request.auth.uid in existing().get('coHeadIds', [])
+          && notSuspended()
+          && changedOnly(['purok', 'address', 'members', 'updatedAt'])
+          && incoming().members is list && incoming().members.size() <= 20
+          && validPurok(incoming().purok))
+        // Kapitan, Secretary or the Developer merges two households of the same family (Admin → Households → Posibleng doble).
+        || (canRegisterOthers()
+          && changedOnly(['members', 'updatedAt', 'coHeadIds', 'coHeadNames'])
+          && incoming().members is list && incoming().members.size() <= 20
+          && incoming().coHeadIds is list && incoming().coHeadIds.size() <= 3
+          && incoming().coHeadNames is list && incoming().coHeadNames.size() <= 3);
+      allow delete: if isSelf(uid) || canRegisterOthers();
     }
 
     // ---------- posts (Community Board) ----------
