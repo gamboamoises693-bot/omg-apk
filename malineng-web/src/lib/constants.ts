@@ -50,6 +50,10 @@ export const LISTING_DURATION_DAYS = 30;
 // "BHW" = Barangay Health Worker: manages the Botika only (no other admin powers).
 export const ADMIN_POSITIONS = ["Kapitan", "Secretary", "Treasurer", "Kagawad", "SK Chairman", "BHW Head", "BHW", "Iba pa"] as const;
 
+/** Shown on the Barangay ID. Stored as these exact words (the database rules accept only them, or empty). */
+export const SEX_OPTIONS = ["Lalaki", "Babae"] as const;
+export const CIVIL_STATUS_OPTIONS = ["Single", "Kasal", "Biyudo/Biyuda", "Hiwalay", "Live-in"] as const;
+
 export const REJECT_REASONS = [
   "Malabo o madilim ang litrato",
   "Hindi kita ang buong mukha",

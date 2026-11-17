@@ -10,6 +10,7 @@ import { usePuroks } from "@/lib/useSettings";
 import { logActivity } from "@/lib/activity";
 import { friendlyError, timeAgo, tsToMillis } from "@/lib/format";
 import { useCollection } from "@/lib/useCollection";
+import { CIVIL_STATUS_OPTIONS, SEX_OPTIONS } from "@/lib/constants";
 import { HALL_REJECT_REASONS, type HallRegistration } from "@/lib/hallRegistration";
 import { compressToDataUrl } from "@/lib/upload";
 import { makeFaceThumb } from "@/lib/faceThumb";
@@ -35,6 +36,8 @@ function HallRegisterForm() {
   const [fullName, setFullName] = useState("");
   const [purok, setPurok] = useState("");
   const [birthday, setBirthday] = useState("");
+  const [sex, setSex] = useState("");
+  const [civilStatus, setCivilStatus] = useState("");
   const [contact, setContact] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState(tempPassword);
@@ -72,7 +75,7 @@ function HallRegisterForm() {
   };
 
   const reset = () => {
-    setFullName(""); setPurok(""); setBirthday(""); setContact(""); setEmail(""); setPassword(tempPassword()); setIdSeen(true); setSelfie(""); setDone(null); setError(""); setRequestId("");
+    setFullName(""); setPurok(""); setBirthday(""); setSex(""); setCivilStatus(""); setContact(""); setEmail(""); setPassword(tempPassword()); setIdSeen(true); setSelfie(""); setDone(null); setError(""); setRequestId("");
   };
 
   const submit = async (e: FormEvent) => {
@@ -101,6 +104,8 @@ function HallRegisterForm() {
         purok,
         contact: phone,
         birthday,
+        sex,
+        civilStatus,
         email: realEmail,
         role: "resident",
         createdAt: serverTimestamp(),
@@ -168,6 +173,10 @@ function HallRegisterForm() {
         <div className="grid grid-cols-2 gap-2">
           <Select label="Purok" options={puroks} placeholder="-- Pumili --" value={purok} onChange={(e) => setPurok(e.target.value)} required />
           <Input label="Birthday" type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Select label="Kasarian" options={SEX_OPTIONS} placeholder="-- Pumili --" value={sex} onChange={(e) => setSex(e.target.value)} />
+          <Select label="Civil status" options={CIVIL_STATUS_OPTIONS} placeholder="-- Pumili --" value={civilStatus} onChange={(e) => setCivilStatus(e.target.value)} />
         </div>
         <Input label="Contact number (login niya ito)" type="tel" inputMode="tel" value={contact} onChange={(e) => setContact(e.target.value)} required hint="Isang numero = isang account" />
         <Input label="Pansamantalang password" value={password} onChange={(e) => setPassword(e.target.value)} hint="Ibigay sa kanya. Mapapalitan niya ito sa Account." required />

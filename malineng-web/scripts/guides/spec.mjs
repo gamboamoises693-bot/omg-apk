@@ -59,7 +59,7 @@ export const GUIDES = [
     title: { tl: "Ang Barangay ID mo", en: "Your Barangay ID" },
     steps: [
       { before: [go("/barangay-id/")], ring: "text=JUAN DELA CRUZ",
-        tl: "Lalabas dito ang Barangay ID mo kapag verified na ang account mo, kasama ang ID number mo (MG-####-####). May QR code ito na ini-scan ng Barangay.", en: "Your Barangay ID shows here once your account is verified, with your ID number (MG-####-####). It has a QR code the Barangay can scan." },
+        tl: "Lalabas dito ang Barangay ID mo kapag verified na ang account mo, kasama ang ID number mo (MG-####-####), ang kasarian at civil status mo, at ang pirma ng Punong Barangay. Lagyan ng sarili mong pirma ang blangkong linya pagkatapos i-print. May QR code ito na ini-scan ng Barangay.", en: "Your Barangay ID shows here once your account is verified, with your ID number (MG-####-####), your sex and civil status, and the Punong Barangay's signature. Sign the blank line yourself after printing. It has a QR code the Barangay can scan." },
       { ring: 'button:has-text("I-print")',
         tl: "Pindutin ang I-print o i-save bilang PDF para may kopya ka.", en: "Tap Print or save as PDF to keep a copy." },
     ],
@@ -175,7 +175,7 @@ export const GUIDES = [
     title: { tl: "Ang Account mo", en: "Your Account" },
     steps: [
       { before: [go("/account/")], ring: 'h2:has-text("PROFILE KO")',
-        tl: "Dito mo mababago ang pangalan, purok, contact number at birthday mo.", en: "Here you can change your name, purok, contact number and birthday." },
+        tl: "Dito mo mababago ang pangalan, purok, contact number, birthday, kasarian at civil status mo.", en: "Here you can change your name, purok, contact number, birthday, sex and civil status." },
       { ring: 'button:has-text("Ipadala para sa approval")',
         tl: "Pagkatapos magpalit, pindutin ang Ipadala para sa approval. Ang Barangay ang mag-aaprub; hangga't hindi pa, ang lumang detalye ang ginagamit. Makikita mo rito kung naaprubahan o hindi.", en: "After you change something, tap Send for approval. The Barangay approves it; until then your old details stay. You will see here if it was approved or not." },
       { before: [go("/account/")], ring: 'a:has-text("Nahihirapan sa pag-setup?")',
@@ -537,6 +537,16 @@ export const GUIDES = [
         tl: "Maglagay ng alert (hal. bagyo) at i-on ang heat index.", en: "Put up an alert (for example a typhoon) and turn on the heat index." },
       { ring: 'button:has-text("Ambulansya")',
         tl: "Ilagay ang numero ng ambulansya, ang listahan ng driver at ang bayad.", en: "Enter the ambulance number, the list of drivers and the fee." },
+    ],
+  },
+  {
+    id: "admin-signature", as: "dev", staff: true, routes: [], group: "Para sa admin",
+    title: { tl: "Paano ilagay ang pirma ng Punong Barangay sa Barangay ID (Developer)", en: "How to put the Punong Barangay's signature on the Barangay ID (Developer)" },
+    steps: [
+      { before: [go("/admin/#settings")], ring: 'p:has-text("Pirma ng Punong Barangay")',
+        tl: "Sa Settings, hanapin ang Pirma ng Punong Barangay. Dito inilalagay ang pirma na lalabas sa lahat ng Barangay ID.", en: "In Settings, find the Punong Barangay's signature. This is the signature printed on every Barangay ID." },
+      { ring: 'button:has-text("Palitan ang pirma")',
+        tl: "Pindutin ang Mag-upload ng pirma (o Palitan). Pumirma sa puting papel gamit ang itim o asul na ballpen at kunan ng malinaw na litrato. Ang puting papel ay awtomatikong magiging transparent.", en: "Tap Upload signature (or Replace). Sign on white paper with a black or blue pen and take a clear photo. The white paper becomes transparent by itself." },
     ],
   },
   {

@@ -1,5 +1,6 @@
 "use client";
 
+import { CIVIL_STATUS_OPTIONS, SEX_OPTIONS } from "@/lib/constants";
 import { AuthHero } from "@/components/AuthHero";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -21,7 +22,7 @@ export default function RegisterPage() {
   const toast = useToast();
   const { user, loading: authLoading } = useAuth();
   const puroks = usePuroks();
-  const [form, setForm] = useState({ fullName: "", purok: "", contact: "", email: "", password: "", birthday: "" });
+  const [form, setForm] = useState({ fullName: "", purok: "", contact: "", email: "", password: "", birthday: "", sex: "", civilStatus: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -53,6 +54,8 @@ export default function RegisterPage() {
           purok: form.purok,
           contact,
           birthday: form.birthday,
+          sex: form.sex,
+          civilStatus: form.civilStatus,
         });
       } catch (profileErr) {
         // Number already used: undo the login we just made so this email can register again.
@@ -78,6 +81,10 @@ export default function RegisterPage() {
           <Select label="Purok" required options={puroks} placeholder="-- Pumili ng Purok --" value={form.purok} onChange={update("purok")} />
           <Input label="Contact Number" type="tel" inputMode="tel" required placeholder="09171234567" value={form.contact} onChange={update("contact")} />
           <Input label="Birthday" type="date" required value={form.birthday} onChange={update("birthday")} />
+          <div className="grid grid-cols-2 gap-2">
+            <Select label="Kasarian" options={SEX_OPTIONS} placeholder="-- Pumili --" value={form.sex} onChange={update("sex")} />
+            <Select label="Civil status" options={CIVIL_STATUS_OPTIONS} placeholder="-- Pumili --" value={form.civilStatus} onChange={update("civilStatus")} />
+          </div>
           <Input label="Email" type="email" required autoComplete="email" value={form.email} onChange={update("email")} />
           <Input label="Password" type="password" required autoComplete="new-password" hint="Hindi bababa sa 8 characters" value={form.password} onChange={update("password")} />
           <ErrorText>{error}</ErrorText>
