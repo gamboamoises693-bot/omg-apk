@@ -83,7 +83,7 @@ export default function BotikaManagePage() {
   const { canBotika, loading, user } = useAuth();
   if (loading) return <Spinner />;
   if (!user || !canBotika) {
-    return <p className="rounded-2xl bg-red-50 p-5 text-center font-semibold text-red-700">Para sa BHW, Kapitan at Super Admin lang ang page na ito.</p>;
+    return <p className="rounded-2xl bg-red-50 p-5 text-center font-semibold text-red-700">Para sa BHW, Kapitan, Secretary at Super Admin lang ang page na ito.</p>;
   }
   return <BotikaManage />;
 }

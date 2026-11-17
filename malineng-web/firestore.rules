@@ -43,9 +43,9 @@ service cloud.firestore {
       return isStaff() && !(me().get('position', '') in ['BHW', 'BHW Head']);
     }
 
-    // Botika (medicine inventory): BHW, BHW Head, Kapitan and the Super Admin.
+    // Botika (medicine inventory): BHW, BHW Head, Kapitan, Secretary and the Super Admin.
     function isBotika() {
-      return isSuperAdmin() || (isStaff() && me().get('position', '') in ['BHW', 'BHW Head', 'Kapitan']);
+      return isSuperAdmin() || (isStaff() && me().get('position', '') in ['BHW', 'BHW Head', 'Kapitan', 'Secretary']);
     }
 
     // Hiraman (borrowing barangay equipment): Kapitan, Secretary and the Super Admin approve.
