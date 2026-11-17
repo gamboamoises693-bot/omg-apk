@@ -111,7 +111,8 @@ export function MembersList({ initialFilter = "lahat" }: { initialFilter?: Filte
   }, [members, filter, search]);
 
   // Verified people whose small face is not made yet (they verified before this feature existed).
-  const missing = useMemo(() => members.filter((m) => m.verified && !m.staff && !m.profile.faceThumb), [members]);
+  // Only people who really have an ID selfie (they are in the verified set); staff with their own profile photo do not need it.
+  const missing = useMemo(() => members.filter((m) => verified.has(m.id) && !m.profile.faceThumb && !(m.staff && m.profile.photoURL)), [members, verified]);
   const [making, setMaking] = useState(false);
   /** Makes the small face for up to 20 people at a time (each one reads one selfie), then reloads the list. */
   const makeFaces = async () => {
