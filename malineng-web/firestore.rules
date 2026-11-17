@@ -1424,11 +1424,28 @@ service cloud.firestore {
           && (incoming().photo == '' || chatPhotosOpen())
           && (incoming().text.size() > 0 || incoming().photo.size() > 0)
           && incoming().createdAt == request.time;
+        // Anyone who can read the room may add, change or remove THEIR OWN reaction (and nothing else) on a message.
+        allow update: if canReadRoom(room) && chatOpen() && !chatMuted()
+          && incoming().diff(existing()).affectedKeys().hasOnly(['reactions'])
+          && incoming().reactions is map
+          && incoming().reactions.diff(existing().get('reactions', {})).affectedKeys().hasOnly([request.auth.uid])
+          && (!(request.auth.uid in incoming().reactions)
+              || incoming().reactions[request.auth.uid] in ['👍', '❤️', '😂', '😮', '😢', '🙏']);
         // Officers remove anything; the writer may remove their own message for 5 minutes.
         // Other officers cannot touch a private chat with the Developer.
         allow delete: if (isOfficer() && (!room.matches('^dev-.+$') || isSuperAdmin()))
           || (signedIn() && existing().authorId == request.auth.uid && request.time < existing().createdAt + duration.value(5, 'm'));
       }
+    }
+
+    // Small faces for the chat: each person publishes a tiny copy (48 px) of their own face; everyone logged in can read them.
+    match /chatAvatars/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isSelf(uid)
+        && incoming().keys().hasOnly(['thumb'])
+        && incoming().thumb is string && incoming().thumb.size() < 6000
+        && incoming().thumb.matches('^data:image/jpeg;base64,.*');
+      allow delete: if isSelf(uid) || isSuperAdmin();
     }
 
     // "Nagta-type..." marks: one tiny document per person per room, written at most every few

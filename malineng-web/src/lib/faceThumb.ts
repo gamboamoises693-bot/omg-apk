@@ -4,7 +4,7 @@
  */
 const SIZE = 96;
 
-export async function makeFaceThumb(dataUrl: string): Promise<string> {
+export async function makeFaceThumb(dataUrl: string, size = SIZE, quality = 0.7): Promise<string> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
@@ -16,12 +16,12 @@ export async function makeFaceThumb(dataUrl: string): Promise<string> {
   const sx = (img.width - side) / 2;
   const sy = img.height > img.width ? (img.height - side) * 0.25 : 0;
   const canvas = document.createElement("canvas");
-  canvas.width = SIZE;
-  canvas.height = SIZE;
+  canvas.width = size;
+  canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Hindi suportado ng browser ang pag-compress ng larawan.");
   ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(0, 0, SIZE, SIZE);
-  ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
-  return canvas.toDataURL("image/jpeg", 0.7);
+  ctx.fillRect(0, 0, size, size);
+  ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+  return canvas.toDataURL("image/jpeg", quality);
 }

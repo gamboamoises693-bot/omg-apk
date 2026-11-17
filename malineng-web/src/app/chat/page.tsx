@@ -7,6 +7,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   limit,
@@ -16,6 +17,7 @@ import {
   serverTimestamp,
   setDoc,
   Timestamp,
+  updateDoc,
   where,
   writeBatch,
 } from "firebase/firestore";
@@ -29,6 +31,8 @@ import { friendlyError } from "@/lib/format";
 import { logActivity } from "@/lib/activity";
 import { typingLabel, useTyping } from "@/lib/useTyping";
 import { useSeen } from "@/lib/useSeen";
+import { useChatAvatars, usePublishOwnAvatar } from "@/lib/useChatAvatars";
+import { CHAT_REACTIONS } from "@/lib/chat";
 import {
   MAX_TEXT,
   MESSAGE_LIMIT,
@@ -192,6 +196,20 @@ function Conversation({ room }: { room: string }) {
   const messages = useMemo(() => [...data].reverse(), [data]);
   // "Nakita ni ..." under my newest message (staff rooms, Developer chat and Purok rooms).
   const seen = useSeen(room, messages);
+  // Small faces of the people writing here, and my own face for them.
+  usePublishOwnAvatar();
+  const faces = useChatAvatars(useMemo(() => [...new Set(messages.map((m) => m.authorId))], [messages]));
+
+  /** One reaction per person per message: tapping the same emoji again removes it. */
+  async function react(m: ChatMessage, emoji: string) {
+    if (!user) return;
+    const had = m.reactions?.[user.uid] === emoji;
+    try {
+      await updateDoc(doc(db, "chatRooms", room, "messages", m.id), { [`reactions.${user.uid}`]: had ? deleteField() : emoji });
+    } catch (err) {
+      setError(friendlyError(err));
+    }
+  }
   // Who is writing to the Developer: the inbox line, or else the name on their own messages.
   // An admin opening someone's private chat sees that person's name, even before the first message.
   const [helpWith, setHelpWith] = useState("");
@@ -351,7 +369,7 @@ function Conversation({ room }: { room: string }) {
               <div key={m.id}>
                 {showDay && <p className="mx-auto my-1 w-fit rounded-full bg-gray-200 px-3 py-0.5 text-[0.7rem] text-gray-600">{day}</p>}
                 <div className={`flex items-end gap-2 ${me ? "justify-end" : ""}`}>
-                  {!me && <Avatar name={m.authorName} size="h-8 w-8" textClass="text-xs" />}
+                  {!me && <Avatar name={m.authorName} photo={faces[m.authorId] || undefined} size="h-8 w-8" textClass="text-xs" />}
                   <div className={`max-w-[80%] ${me ? "items-end" : ""}`}>
                     {!me && (
                       <p className="mb-0.5 ml-1 text-[0.7rem] font-bold text-gray-600">
@@ -395,6 +413,19 @@ function Conversation({ room }: { room: string }) {
                         </button>
                       </div>
                     </div>
+                    {m.reactions && Object.keys(m.reactions).length > 0 && (
+                      <div className={`mt-1 flex flex-wrap gap-1 ${me ? "justify-end" : ""}`}>
+                        {CHAT_REACTIONS.filter((e) => Object.values(m.reactions ?? {}).includes(e)).map((e) => {
+                          const n = Object.values(m.reactions ?? {}).filter((x) => x === e).length;
+                          const mineHere = !!user && m.reactions?.[user.uid] === e;
+                          return (
+                            <button key={e} type="button" onClick={() => react(m, e)} aria-label={`${e} ${n}`} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold shadow-sm ${mineHere ? "bg-brand text-white" : "bg-white text-gray-700"}`}>
+                              <span>{e}</span> {n}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                     {seen.messageId === m.id && <p className="mt-0.5 text-right text-[0.68rem] font-semibold text-gray-500" role="status">{seen.label}</p>}
                   </div>
                 </div>
@@ -489,6 +520,21 @@ function Conversation({ room }: { room: string }) {
             <p className="rounded-xl bg-gray-50 px-3 py-2 text-sm text-gray-700">
               <b>{picked.authorName}:</b> {picked.text || "📷 Larawan"}
             </p>
+            {!notice && mode === "menu" && (
+              <div className="flex justify-between gap-1 rounded-xl bg-gray-50 p-1.5" role="group" aria-label="Mag-react">
+                {CHAT_REACTIONS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => { void react(picked, e); closeSheet(); }}
+                    aria-label={`Mag-react ng ${e}`}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full text-xl active:scale-90 ${picked.reactions?.[user?.uid ?? ""] === e ? "bg-brand-light ring-2 ring-brand" : ""}`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            )}
             {notice ? (
               <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{notice}</p>
             ) : mode === "report" ? (

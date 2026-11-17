@@ -10,7 +10,12 @@ export interface ChatMessage {
   /** "Kapitan", "Secretary", "Super Admin"... or "" for residents. Enforced by firestore.rules. */
   authorRole: string;
   createdAt?: Timestamp;
+  /** Who reacted: uid → emoji (one reaction per person). */
+  reactions?: Record<string, string>;
 }
+
+/** The reactions a person can give to a chat message (the database rules accept only these). */
+export const CHAT_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"] as const;
 
 export interface ChatSettings {
   enabled: boolean;
