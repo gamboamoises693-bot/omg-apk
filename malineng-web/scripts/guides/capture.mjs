@@ -81,7 +81,7 @@ async function pageFor(who) {
     const acc = who === "newbie" ? NEWBIE : who === "kapitan" ? KAPITAN : who === "dev" ? DEV : RESIDENT;
     await page.goto(`${BASE}/login/`);
     await page.waitForTimeout(800);
-    await page.fill("input[type=email]", acc.email);
+    await page.fill("input[autocomplete=username]", acc.email);
     await page.fill("input[type=password]", acc.password);
     await page.click("button[type=submit]");
     await page.waitForTimeout(2500);
