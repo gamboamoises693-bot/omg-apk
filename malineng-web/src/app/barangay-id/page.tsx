@@ -11,6 +11,7 @@ import { useCollection } from "@/lib/useCollection";
 import { roleLabel } from "@/lib/activity";
 import { BarangayIdCard } from "@/components/BarangayIdCard";
 import { assignIdNo } from "@/lib/idNo";
+import { useCaptainSignature } from "@/lib/signature";
 import { IdPhotoUpload } from "@/components/IdPhotoUpload";
 import { Button, PageHeader, Spinner } from "@/components/ui";
 import { RequireVerified } from "@/components/RequireVerified";
@@ -20,6 +21,7 @@ function IdCard() {
   const [selfie, setSelfie] = useState<string | null>(null);
   const [flag, setFlag] = useState<boolean | null>(null);
   const [qr, setQr] = useState("");
+  const captain = useCaptainSignature();
   // First time opening the ID with the new number format: it is made once and kept for good.
   const [madeNo, setMadeNo] = useState("");
   const [noError, setNoError] = useState("");
@@ -64,11 +66,21 @@ function IdCard() {
         </p>
       )}
 
+      {(!profile.sex || !profile.civilStatus) && (
+        <p className="no-print mb-3 rounded-2xl bg-gold-light p-3 text-sm text-yellow-900">
+          Kulang ang <b>Kasarian</b> o <b>Civil status</b> sa ID mo. <Link href="/account" className="font-bold underline">Kumpletuhin sa Account →</Link>
+        </p>
+      )}
+
       <BarangayIdCard
         idNo={idNo}
         name={profile.fullName}
         purok={profile.purok}
         birthday={profile.birthday}
+        sex={profile.sex}
+        civilStatus={profile.civilStatus}
+        signature={captain.image}
+        captainName={captain.name}
         selfie={selfie}
         verified={flag}
         roleText={profile.role !== "resident" ? roleLabel(profile.role, profile.position).toUpperCase() : undefined}

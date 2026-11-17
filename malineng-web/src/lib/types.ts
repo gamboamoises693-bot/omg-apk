@@ -23,6 +23,9 @@ export interface UserProfile {
   hideSeen?: boolean;
   /** Barangay ID number (MG-####-####), assigned once. */
   idNo?: string;
+  /** "Lalaki" or "Babae", and Civil status: shown on the Barangay ID (see constants.ts). */
+  sex?: string;
+  civilStatus?: string;
   /** Set when staff registered this person at the Barangay Hall (uid and name of the staff). */
   assistedBy?: string;
   assistedByName?: string;

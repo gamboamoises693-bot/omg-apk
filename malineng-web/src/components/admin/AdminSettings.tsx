@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { doc, setDoc } from "firebase/firestore";
+import { deleteDoc, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import {
   Ambulance,
   ArrowDown,
@@ -27,7 +27,8 @@ import { ALERT_TYPES } from "@/lib/constants";
 import { friendlyError, todayISO } from "@/lib/format";
 import { logActivity } from "@/lib/activity";
 import type { Settings } from "@/lib/types";
-import { Button, Card, Input, Select, Spinner, Textarea } from "@/components/ui";
+import { Button, Card, ErrorText, Input, Select, Spinner, Textarea } from "@/components/ui";
+import { signatureFromFile, useCaptainSignature } from "@/lib/signature";
 import { LogoButton, LogoMark } from "@/components/BarangayLogo";
 import { useToast } from "@/components/Toast";
 import { useAuth } from "@/context/AuthContext";
@@ -359,6 +360,64 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/* ---------- Pirma ng Punong Barangay (Developer lang) ---------- */
+export function SignatureCard() {
+  const { image, name } = useCaptainSignature();
+  const toast = useToast();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const pick = async (file?: File) => {
+    if (!file) return;
+    setBusy(true);
+    setError("");
+    try {
+      const png = await signatureFromFile(file);
+      await setDoc(doc(db, "settings", "signature"), { image: png, updatedAt: serverTimestamp() });
+      logActivity("Settings", "Nag-upload ng pirma ng Punong Barangay para sa Barangay ID");
+      toast("Na-save ang pirma. Lalabas na ito sa mga Barangay ID.");
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setBusy(false);
+      if (input.current) input.current.value = "";
+    }
+  };
+
+  const remove = async () => {
+    if (!window.confirm("Tanggalin ang pirma sa mga Barangay ID?")) return;
+    try {
+      await deleteDoc(doc(db, "settings", "signature"));
+      logActivity("Settings", "Tinanggal ang pirma ng Punong Barangay sa Barangay ID");
+    } catch (err) {
+      setError(friendlyError(err));
+    }
+  };
+
+  return (
+    <Card className="space-y-3">
+      <div>
+        <p className="font-extrabold">Pirma ng Punong Barangay</p>
+        <p className="text-sm text-gray-600">Awtomatikong lalabas sa lahat ng Barangay ID, sa ibabaw ng pangalan ng Punong Barangay{name ? ` (${name})` : ""}.</p>
+      </div>
+      <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-[#FBF6E6] p-2">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt="Pirma ng Punong Barangay" className="max-h-full max-w-full object-contain" />
+        ) : (
+          <p className="text-sm text-gray-500">Wala pang pirma.</p>
+        )}
+      </div>
+      <input ref={input} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
+      <Button full loading={busy} onClick={() => input.current?.click()}>{image ? "Palitan ang pirma" : "Mag-upload ng pirma"}</Button>
+      {image && <Button full variant="outline" onClick={remove}>Tanggalin ang pirma</Button>}
+      <ErrorText>{error}</ErrorText>
+      <p className="text-xs text-gray-500">Pumirma sa puting papel gamit ang itim o asul na ballpen at kunan ng malinaw na litrato (o i-scan). Ang puting papel ay awtomatikong gagawing transparent.</p>
+    </Card>
+  );
+}
+
 /* ---------- Tema ng Pasko (Developer lang) ---------- */
 export function XmasThemeCard() {
   const theme = useTheme();
@@ -488,6 +547,7 @@ export function AdminSettings() {
         </button>
       </Group>
 
+      {isSuperAdmin && <SignatureCard />}
       {isSuperAdmin && <XmasThemeCard />}
 
       <Group title="Kaligtasan">

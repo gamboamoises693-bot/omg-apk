@@ -315,19 +315,24 @@ service cloud.firestore {
       return (!a.hasAny(['fullName']) || existing().get('fullName', '') == '')
         && (!a.hasAny(['purok']) || existing().get('purok', '') == '')
         && (!a.hasAny(['contact']) || existing().get('contact', '') == '')
-        && (!a.hasAny(['birthday']) || existing().get('birthday', '') == '');
+        && (!a.hasAny(['birthday']) || existing().get('birthday', '') == '')
+        && (!a.hasAny(['sex']) || existing().get('sex', '') == '')
+        && (!a.hasAny(['civilStatus']) || existing().get('civilStatus', '') == '');
     }
 
     // An admin applies a change the resident asked for, exactly as requested, after approving it in the same batch.
     function identityApproved(uid) {
       let c = getAfter(/databases/$(database)/documents/profileChanges/$(uid)).data;
       return isAdmin()
-        && changedOnly(['fullName', 'purok', 'contact', 'birthday'])
+        && changedOnly(['fullName', 'purok', 'contact', 'birthday', 'sex', 'civilStatus'])
         && c.status == 'approved'
         && incoming().fullName == c.requested.fullName
         && incoming().purok == c.requested.purok
         && incoming().contact == c.requested.contact
         && incoming().birthday == c.requested.birthday
+        // Requests made before Kasarian and Civil status existed do not carry them.
+        && incoming().get('sex', '') == c.requested.get('sex', '')
+        && incoming().get('civilStatus', '') == c.requested.get('civilStatus', '')
         && contactOk(uid);
     }
 
@@ -360,7 +365,8 @@ service cloud.firestore {
       allow read: if isSelf(uid) || isAdmin() || isBotika();
       allow create: if isSelf(uid)
         && incoming().role == 'resident'
-        && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'createdAt'])
+        && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'createdAt', 'sex', 'civilStatus'])
+        && validSex(incoming().get('sex', '')) && validCivilStatus(incoming().get('civilStatus', ''))
         && isNonEmptyString(incoming().fullName, 120)
         && contactOk(uid)
         // The Super Admin can also create accounts for officials (Kapitan, Secretary, BHW...).
@@ -373,7 +379,8 @@ service cloud.firestore {
         // Registered at the Barangay Hall by the Kapitan, Secretary or Developer (see canRegisterOthers).
         || (canRegisterOthers()
           && incoming().role == 'resident'
-          && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'createdAt', 'assistedBy', 'assistedByName', 'faceThumb'])
+          && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'createdAt', 'assistedBy', 'assistedByName', 'faceThumb', 'sex', 'civilStatus'])
+          && validSex(incoming().get('sex', '')) && validCivilStatus(incoming().get('civilStatus', ''))
           && incoming().uid == uid
           && incoming().assistedBy == request.auth.uid
           && incoming().assistedByName is string && incoming().assistedByName.size() <= 120
@@ -386,6 +393,7 @@ service cloud.firestore {
       // Profile photo (photoURL) is for staff (admins and BHW) only.
       allow update: if (isSelf(uid)
           && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended', 'assistedBy', 'assistedByName'])
+          && validSex(incoming().get('sex', '')) && validCivilStatus(incoming().get('civilStatus', ''))
           // The Barangay ID number can be set once, and only together with its claim in idNumbers.
           && (!incoming().diff(existing()).affectedKeys().hasAny(['idNo'])
               || (existing().get('idNo', '') == ''
@@ -403,23 +411,35 @@ service cloud.firestore {
       allow delete: if isSelf(uid) || isSuperAdmin();
     }
 
-    // ---------- profileChanges (a resident asks to change name, purok, contact or birthday) ----------
+    // ---------- profileChanges (a resident asks to change name, purok, contact, birthday, sex or civil status) ----------
+    function validSex(v) {
+      return v in ['', 'Lalaki', 'Babae'];
+    }
+
+    function validCivilStatus(v) {
+      return v in ['', 'Single', 'Kasal', 'Biyudo/Biyuda', 'Hiwalay', 'Live-in'];
+    }
+
     function validIdentity(r) {
-      return r.keys().hasOnly(['fullName', 'purok', 'contact', 'birthday'])
+      return r.keys().hasOnly(['fullName', 'purok', 'contact', 'birthday', 'sex', 'civilStatus'])
         && isNonEmptyString(r.fullName, 120)
         && validPurok(r.purok)
         && r.contact is string && r.contact.matches('^09[0-9]{9}$')
-        && r.birthday is string && r.birthday.size() <= 10;
+        && r.birthday is string && r.birthday.size() <= 10
+        && validSex(r.get('sex', ''))
+        && validCivilStatus(r.get('civilStatus', ''));
     }
 
     // The "current" values must really be what the profile holds now, so an admin sees the true before/after.
     function currentIsProfile(c, uid) {
       let u = get(/databases/$(database)/documents/users/$(uid)).data;
-      return c.keys().hasOnly(['fullName', 'purok', 'contact', 'birthday'])
+      return c.keys().hasOnly(['fullName', 'purok', 'contact', 'birthday', 'sex', 'civilStatus'])
         && c.fullName == u.get('fullName', '')
         && c.purok == u.get('purok', '')
         && c.contact == u.get('contact', '')
-        && c.birthday == u.get('birthday', '');
+        && c.birthday == u.get('birthday', '')
+        && c.get('sex', '') == u.get('sex', '')
+        && c.get('civilStatus', '') == u.get('civilStatus', '');
     }
 
     match /profileChanges/{uid} {
@@ -1450,7 +1470,7 @@ service cloud.firestore {
     // ---------- settings (settings/main; settings/webAccess is Super Admin only) ----------
     match /settings/{docId} {
       allow read: if true;
-      allow write: if docId in ['webAccess', 'chat', 'approvals', 'raffle', 'theme'] ? isSuperAdmin() : isAdmin();
+      allow write: if docId in ['webAccess', 'chat', 'approvals', 'raffle', 'theme', 'signature'] ? isSuperAdmin() : isAdmin();
     }
 
     // ---------- Chat ng Barangay (verified residents) ----------

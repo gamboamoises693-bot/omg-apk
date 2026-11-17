@@ -57,6 +57,8 @@ export async function ensureUserDoc(user: User, extra?: Partial<UserProfile>): P
     purok: extra?.purok ?? "",
     contact,
     birthday: extra?.birthday ?? "",
+    ...(extra?.sex ? { sex: extra.sex } : {}),
+    ...(extra?.civilStatus ? { civilStatus: extra.civilStatus } : {}),
     email: user.email ?? "",
     role: "resident",
     createdAt: serverTimestamp(),

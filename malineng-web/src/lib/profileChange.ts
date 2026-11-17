@@ -7,7 +7,7 @@ import { db } from "./firebase";
  * profileChanges/{uid} holds ONE request per resident (so there can be only one pending at a time).
  * The first time a field is filled in (it was empty) it is saved directly; see firestore.rules.
  */
-export const IDENTITY_FIELDS = ["fullName", "purok", "contact", "birthday"] as const;
+export const IDENTITY_FIELDS = ["fullName", "purok", "contact", "birthday", "sex", "civilStatus"] as const;
 export type IdentityField = (typeof IDENTITY_FIELDS)[number];
 export type Identity = Record<IdentityField, string>;
 
@@ -16,6 +16,8 @@ export const FIELD_LABEL: Record<IdentityField, string> = {
   purok: "Purok",
   contact: "Contact",
   birthday: "Birthday",
+  sex: "Kasarian",
+  civilStatus: "Civil status",
 };
 
 export const PROFILE_REJECT_REASONS = [
@@ -45,6 +47,8 @@ export function identityOf(p: Partial<Record<IdentityField, string>> | null | un
     purok: p?.purok ?? "",
     contact: p?.contact ?? "",
     birthday: p?.birthday ?? "",
+    sex: p?.sex ?? "",
+    civilStatus: p?.civilStatus ?? "",
   };
 }
 

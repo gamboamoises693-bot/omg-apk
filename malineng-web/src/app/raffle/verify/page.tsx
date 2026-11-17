@@ -12,6 +12,7 @@ import { friendlyError } from "@/lib/format";
 import { maskName } from "@/lib/raffle";
 import { roleLabel } from "@/lib/activity";
 import { BarangayIdCard } from "@/components/BarangayIdCard";
+import { useCaptainSignature } from "@/lib/signature";
 import { LoginGate } from "@/components/LoginGate";
 import { Button, Input, PageHeader, Spinner } from "@/components/ui";
 import { useToast } from "@/components/Toast";
@@ -37,6 +38,8 @@ interface IdInfo {
   name: string;
   purok: string;
   birthday: string;
+  sex: string;
+  civilStatus: string;
   selfie: string;
   verified: boolean;
   idNo: string;
@@ -58,6 +61,7 @@ function Verify() {
   const code = (params.get("c") ?? "").toUpperCase();
   const [result, setResult] = useState<Result>({ kind: "none" });
   const [idInfo, setIdInfo] = useState<IdInfo | null | undefined>(undefined);
+  const captain = useCaptainSignature();
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [manualRound, setManualRound] = useState("");
@@ -118,6 +122,8 @@ function Verify() {
           selfie: String(v.data()?.selfie ?? ""),
           verified: f.exists(),
           idNo: String(ud.idNo ?? "") || "Wala pang ID no.",
+          sex: String(ud.sex ?? ""),
+          civilStatus: String(ud.civilStatus ?? ""),
           roleText: ud.role && ud.role !== "resident" ? roleLabel(ud.role, ud.position).toUpperCase() : undefined,
         });
       })
@@ -270,7 +276,7 @@ function Verify() {
             {idInfo && (
               <div className="space-y-1.5">
                 <p className="text-xs font-bold uppercase tracking-wide text-green-900">Barangay ID ng nanalo (mula sa system)</p>
-                <BarangayIdCard idNo={idInfo.idNo} name={idInfo.name} purok={idInfo.purok} birthday={idInfo.birthday} selfie={idInfo.selfie} verified={idInfo.verified} roleText={idInfo.roleText} />
+                <BarangayIdCard idNo={idInfo.idNo} name={idInfo.name} purok={idInfo.purok} birthday={idInfo.birthday} sex={idInfo.sex} civilStatus={idInfo.civilStatus} selfie={idInfo.selfie} verified={idInfo.verified} roleText={idInfo.roleText} signature={captain.image} captainName={captain.name} />
                 {!idInfo.verified && <p className="rounded-lg bg-yellow-50 p-2 text-xs font-semibold text-yellow-900">Hindi na verified ang account na ito ngayon. Mag-ingat at hingin ang valid ID.</p>}
                 {!idInfo.selfie && <p className="rounded-lg bg-yellow-50 p-2 text-xs font-semibold text-yellow-900">Walang litrato sa system. Hingin ang valid ID para makumpirma.</p>}
               </div>

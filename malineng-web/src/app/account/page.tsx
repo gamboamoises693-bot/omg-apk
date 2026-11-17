@@ -6,6 +6,7 @@ import { collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, setDoc,
 import { BadgeCheck, Ban, Camera, CalendarCheck, IdCard, Pill, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
 import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, updatePassword } from "firebase/auth";
 import { isContactEmail } from "@/lib/phoneLogin";
+import { CIVIL_STATUS_OPTIONS, SEX_OPTIONS } from "@/lib/constants";
 import { db, googleProvider } from "@/lib/firebase";
 import { logActivity, roleLabel } from "@/lib/activity";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
@@ -39,7 +40,7 @@ function ProfileForm() {
   const puroks = usePuroks();
   const toast = useToast();
   const change = useMyProfileChange(user?.uid);
-  const [form, setForm] = useState<Identity>({ fullName: "", purok: "", contact: "", birthday: "" });
+  const [form, setForm] = useState<Identity>(identityOf(null));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -59,7 +60,7 @@ function ProfileForm() {
     if (!form.fullName.trim() || !form.purok || !form.contact.trim()) return setError("Kailangan ang pangalan, purok at contact.");
     const contact = normalizePhone(form.contact);
     if (!contact) return setError("Mali ang contact number. Halimbawa: 09171234567");
-    const next: Identity = { fullName: form.fullName.trim().slice(0, 120), purok: form.purok, contact, birthday: form.birthday };
+    const next: Identity = { fullName: form.fullName.trim().slice(0, 120), purok: form.purok, contact, birthday: form.birthday, sex: form.sex, civilStatus: form.civilStatus };
     const old = identityOf(profile);
     const diff = changedFields(old, next);
     if (diff.length === 0) return setError("Wala kang binago.");
@@ -115,6 +116,11 @@ function ProfileForm() {
           <Select label="Purok" options={puroks} placeholder="-- Pumili --" value={form.purok} onChange={update("purok")} required />
           <Input label="Contact Number" type="tel" inputMode="tel" value={form.contact} onChange={update("contact")} required hint="Isang numero = isang account" />
           <Input label="Birthday" type="date" value={form.birthday} onChange={update("birthday")} />
+          <div className="grid grid-cols-2 gap-2">
+            <Select label="Kasarian" options={SEX_OPTIONS} placeholder="-- Pumili --" value={form.sex} onChange={update("sex")} />
+            <Select label="Civil status" options={CIVIL_STATUS_OPTIONS} placeholder="-- Pumili --" value={form.civilStatus} onChange={update("civilStatus")} />
+          </div>
+          <p className="-mt-2 text-xs text-gray-500">Lalabas ang Kasarian at Civil status sa Barangay ID mo.</p>
         </fieldset>
         {complete && !isSuperAdmin && !pending && <p className="text-xs text-gray-500">Ang pagbabago sa detalye ay kailangan ng approval ng Barangay. Hangga&apos;t hindi pa naaaprubahan, ang lumang detalye ang ginagamit.</p>}
         <ErrorText>{error}</ErrorText>
