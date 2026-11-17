@@ -21,6 +21,9 @@ export interface UserProfile {
   suspended?: boolean;
   /** True when the person turned off "seen" marks in chat (they neither show nor see them). */
   hideSeen?: boolean;
+  /** Set when staff registered this person at the Barangay Hall (uid and name of the staff). */
+  assistedBy?: string;
+  assistedByName?: string;
   /** Tiny square copy of the ID selfie (data URL, a few KB) for lists of members. */
   faceThumb?: string;
   createdAt?: Timestamp;

@@ -41,6 +41,7 @@ import {
   type LucideIcon,
   UserCog,
   LifeBuoy,
+  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAdminPending } from "@/context/AdminPendingContext";
@@ -61,6 +62,7 @@ import { AdminAmbulance } from "@/components/admin/AdminAmbulance";
 import { AdminVerification } from "@/components/admin/AdminVerification";
 import { AdminProfileChanges } from "@/components/admin/AdminProfileChanges";
 import { AdminHelpInbox } from "@/components/admin/AdminHelpInbox";
+import { AdminHallRegister } from "@/components/admin/AdminHallRegister";
 import { AdminHouseholds } from "@/components/admin/AdminHouseholds";
 import { AdminReport } from "@/components/admin/AdminReport";
 import { AdminUsers } from "@/components/admin/AdminUsers";
@@ -112,6 +114,7 @@ const GROUPS: Group[] = [
       { key: "verification", label: "Verification", icon: BadgeCheck, Component: AdminVerification },
       { key: "profilechange", label: "Pagbabago sa Profile", icon: UserCog, Component: AdminProfileChanges },
       { key: "helpsetup", label: "Tulong sa Setup", icon: LifeBuoy, Component: AdminHelpInbox },
+      { key: "hallregister", label: "Rehistro sa Hall", icon: UserPlus, Component: AdminHallRegister },
       { key: "ambulansya", label: "Ambulansya", icon: Ambulance, Component: AdminAmbulance },
       { key: "appointments", label: "Appointments", icon: CalendarCheck, Component: AdminAppointments },
       { key: "hiraman", label: "Hiraman", icon: Package, Component: AdminHiraman, borrowOnly: true, approver: true },

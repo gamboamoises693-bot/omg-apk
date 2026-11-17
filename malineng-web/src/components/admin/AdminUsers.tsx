@@ -225,7 +225,7 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
           {u.suspended && <Badge color="red">Suspended</Badge>}
           <Badge color={verified ? "blue" : "gold"}>{verified ? "✓ Verified" : "Hindi verified"}</Badge>
         </div>
-        <p className="mt-1 text-xs text-gray-400">Nag-register {timeAgo(u.createdAt)}</p>
+        <p className="mt-1 text-xs text-gray-400">Nag-register {timeAgo(u.createdAt)}{u.assistedByName ? ` · Inirehistro ng ${u.assistedByName} sa Hall` : ""}</p>
         </div>
       </div>
 

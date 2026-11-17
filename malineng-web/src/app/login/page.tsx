@@ -13,6 +13,7 @@ import { Button, Card, ErrorText, Input } from "@/components/ui";
 import { GoogleButton } from "@/components/GoogleButton";
 import { useToast } from "@/components/Toast";
 import { nextFromLocation } from "@/lib/nextPath";
+import { loginIdFor } from "@/lib/phoneLogin";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      await signInWithEmailAndPassword(auth, loginIdFor(email), password);
       toast("Welcome back!");
       router.replace(nextFromLocation() || "/");
     } catch (err) {
@@ -46,6 +47,11 @@ export default function LoginPage() {
   const handleReset = async () => {
     if (!email.trim()) {
       setError("Ilagay muna ang email mo sa itaas.");
+      return;
+    }
+    // A contact-number account has no mailbox, so there is nothing to send to.
+    if (!email.includes("@")) {
+      setError("Walang email ang account na ito. Pumunta sa Barangay Hall para mapalitan ang password.");
       return;
     }
     try {
@@ -61,7 +67,7 @@ export default function LoginPage() {
       <AuthHero title="Mag-login" subtitle="Para makapag-post, makapagbenta at makapag-book ng appointment." />
       <Card className="relative -mt-10">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input label="Email o contact number" type="text" inputMode="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} hint="Walang email? Ilagay ang contact number na ginamit sa Barangay Hall." />
           <Input label="Password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           <ErrorText>{error}</ErrorText>
           <Button type="submit" full loading={loading}>Mag-login</Button>

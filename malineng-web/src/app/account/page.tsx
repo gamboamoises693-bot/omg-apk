@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { collection, deleteDoc, doc, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { BadgeCheck, Ban, Camera, CalendarCheck, IdCard, Pill, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
-import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup } from "firebase/auth";
+import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, updatePassword } from "firebase/auth";
+import { isContactEmail } from "@/lib/phoneLogin";
 import { db, googleProvider } from "@/lib/firebase";
 import { logActivity, roleLabel } from "@/lib/activity";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
@@ -119,6 +120,56 @@ function ProfileForm() {
         <ErrorText>{error}</ErrorText>
         {!pending && <Button type="submit" full loading={saving}>{complete && !isSuperAdmin ? "Ipadala para sa approval" : "I-save ang Profile"}</Button>}
       </form>
+    </Card>
+  );
+}
+
+/** Change the password (email or contact-number accounts). Firebase wants the current password first. */
+function ChangePassword() {
+  const { user } = useAuth();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  if (!user || !user.providerData.some((p) => p.providerId === "password")) return null;
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    if (next.length < 8) return setError("Dapat 8 characters pataas ang bagong password.");
+    setBusy(true);
+    setError("");
+    try {
+      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? "", current));
+      await updatePassword(user, next);
+      logActivity("Account", "Nagpalit ng password", user.uid);
+      toast("Napalitan na ang password mo.");
+      setOpen(false);
+      setCurrent("");
+      setNext("");
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="mt-4">
+      {!open ? (
+        <Button variant="outline" full onClick={() => setOpen(true)}>Palitan ang password</Button>
+      ) : (
+        <form onSubmit={save} className="space-y-3">
+          <Input label="Kasalukuyang password" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required />
+          <Input label="Bagong password" type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" hint="8 characters pataas" required />
+          <ErrorText>{error}</ErrorText>
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Kanselahin</Button>
+            <Button type="submit" loading={busy}>I-save</Button>
+          </div>
+        </form>
+      )}
     </Card>
   );
 }
@@ -443,7 +494,7 @@ function AccountContent() {
         )}
         <div className="min-w-0">
           <p className="truncate text-lg font-bold">{profile.fullName} <VerifiedBadge show={isVerified && !isStaff} className="text-white" /></p>
-          <p className="truncate text-white/80">{user?.email}</p>
+          <p className="truncate text-white/80">{isContactEmail(user?.email) ? profile.contact : user?.email}</p>
           <p className="text-gold">{profile.purok || "Wala pang purok"} · {roleLabel(profile.role, profile.position)}</p>
         </div>
       </Card>
@@ -486,6 +537,7 @@ function AccountContent() {
       >
         <LogOut className="h-5 w-5" /> Mag-logout
       </Button>
+      <ChangePassword />
       <DeleteAccount />
     </>
   );

@@ -92,6 +92,9 @@ export default function RegisterPage() {
         May account na?{" "}
         <Link href="/login" className="font-bold text-brand underline">Mag-login dito</Link>
       </p>
+      <p className="mt-3 rounded-2xl bg-gold-light p-3 text-center text-sm text-gray-800">
+        <b>Hindi marunong mag-register?</b> Pumunta sa Barangay Hall dala ang ID at contact number. Ang staff ang magre-register para sa iyo, at makakasali ka rin.
+      </p>
     </div>
   );
 }

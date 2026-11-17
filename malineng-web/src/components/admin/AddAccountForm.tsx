@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { deleteApp, initializeApp } from "firebase/app";
-import { createUserWithEmailAndPassword, inMemoryPersistence, initializeAuth, sendPasswordResetEmail, signOut } from "firebase/auth";
+import { connectAuthEmulator, createUserWithEmailAndPassword, inMemoryPersistence, initializeAuth, sendPasswordResetEmail, signOut } from "firebase/auth";
 import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { Copy, Eye, EyeOff } from "lucide-react";
 import { firebaseConfig } from "@/config/firebase.config";
@@ -18,7 +18,7 @@ import { Button, ErrorText, Input, Select, SelectOther } from "@/components/ui";
 import { useToast } from "@/components/Toast";
 
 /** Readable temporary password, e.g. "Malineng-4827-kx". */
-function tempPassword(): string {
+export function tempPassword(): string {
   const n = crypto.getRandomValues(new Uint32Array(2));
   const letters = "abcdefghjkmnpqrstuvwxyz";
   return `Malineng-${1000 + (n[0] % 9000)}-${letters[n[1] % letters.length]}${letters[(n[1] >> 8) % letters.length]}`;
@@ -29,10 +29,12 @@ function tempPassword(): string {
  * out and sign in as the new user. A temporary, separate Firebase app with in-memory
  * auth creates the account without touching the Super Admin's session.
  */
-async function createAuthUser(email: string, password: string): Promise<string> {
+export async function createAuthUser(email: string, password: string): Promise<string> {
   const secondary = initializeApp(firebaseConfig, `create-${Date.now()}`);
   try {
     const secondaryAuth = initializeAuth(secondary, { persistence: inMemoryPersistence });
+    // Local test builds talk to the Auth emulator, never to the real project.
+    if (process.env.NEXT_PUBLIC_USE_EMULATORS === "1") connectAuthEmulator(secondaryAuth, "http://127.0.0.1:9099", { disableWarnings: true });
     const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
     await signOut(secondaryAuth);
     return cred.user.uid;
