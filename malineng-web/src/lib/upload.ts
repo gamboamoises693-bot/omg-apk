@@ -59,6 +59,56 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
+/** How a picture is placed in the square: "auto" decides by its shape, "fill" crops to the square, "fit" shows all of it. */
+export type SquareMode = "auto" | "fill" | "fit";
+
+/**
+ * A square JPEG that looks good in a round badge or a tile.
+ * - "fill": the picture covers the whole square (cropped in the middle; for a portrait photo the crop leans toward the top, where the face is).
+ * - "fit": the whole picture is shown on a white square (a wide logo is not cut).
+ * - "auto": photos (tall, or about square) fill the square; wide pictures (logos) fit.
+ */
+export async function compressToSquare(file: File, size = 200, mode: SquareMode = "auto", quality = 0.85, maxChars = 45_000): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("Larawan lang ang pwedeng i-upload.");
+  if (file.size > MAX_FILE_BYTES) throw new Error("Masyadong malaki ang larawan (max 10MB).");
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error("Hindi mabasa ang larawan."));
+      i.src = url;
+    });
+    const ratio = img.width / img.height;
+    const fill = mode === "fill" || (mode === "auto" && ratio <= 1.25);
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Hindi suportado ng browser ang pag-compress ng larawan.");
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, size, size);
+    ctx.imageSmoothingQuality = "high";
+    if (fill) {
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      const sy = img.height > img.width ? (img.height - side) * 0.25 : (img.height - side) / 2;
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+    } else {
+      const scale = Math.min(size / img.width, size / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+    }
+    let out = canvas.toDataURL("image/jpeg", quality);
+    if (out.length > maxChars) out = canvas.toDataURL("image/jpeg", 0.6);
+    if (out.length > maxChars) throw new Error("Masyadong malaki pa rin ang larawan. Pumili ng iba.");
+    return out;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /** Compress an image to a small JPEG data URL (stored directly in Firestore). */
 export async function compressToDataUrl(file: File, maxSize = 600, quality = 0.7, maxChars = 380_000, square = false): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("Larawan lang ang pwedeng i-upload.");
