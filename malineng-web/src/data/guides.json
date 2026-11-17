@@ -108,8 +108,8 @@
       },
       "steps": [
         {
-          "tl": "Piliin ang serbisyo, halimbawa Barangay Clearance.",
-          "en": "Choose the service, for example Barangay Clearance.",
+          "tl": "Piliin ang serbisyo, halimbawa Barangay Clearance. Wala ka pang account? Piliin ang Rehistro sa Malineng Portal (kahit hindi naka-login) para mag-iskedyul ng pagpunta sa Barangay Hall; ang staff ang magre-register sa iyo at magbibigay ng Barangay ID.",
+          "en": "Choose the service, for example Barangay Clearance. No account yet? Choose Registration in the Malineng Portal (even when not logged in) to book a visit to the Barangay Hall; the staff registers you and gives you the Barangay ID.",
           "img": "appointment-1.jpg",
           "w": 585,
           "h": 1170
@@ -1350,8 +1350,8 @@
       },
       "steps": [
         {
-          "tl": "Sa Bago makikita ang mga bagong appointment na hindi pa naaasikaso.",
-          "en": "Under New you see appointments that have not been handled yet.",
+          "tl": "Sa Bago makikita ang mga bagong appointment na hindi pa naaasikaso. Sa itaas, ang \"Rehistro sa Malineng Portal: walang account\" ay mga taong humihingi ng rehistro; pindutin ang Irehistro ngayon at pre-filled na ang form.",
+          "en": "Under New you see appointments that have not been handled yet. At the top, \"Registration in the Malineng Portal: no account\" lists people asking to be registered; tap Register now and the form is already filled in.",
           "img": "admin-appointments-1.jpg",
           "w": 585,
           "h": 1170

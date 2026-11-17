@@ -45,7 +45,7 @@ export const GUIDES = [
     title: { tl: "Paano mag-book ng appointment", en: "How to book an appointment" },
     steps: [
       { before: [go("/appointment/")], ring: 'label:has-text("Serbisyo")',
-        tl: "Piliin ang serbisyo, halimbawa Barangay Clearance.", en: "Choose the service, for example Barangay Clearance." },
+        tl: "Piliin ang serbisyo, halimbawa Barangay Clearance. Wala ka pang account? Piliin ang Rehistro sa Malineng Portal (kahit hindi naka-login) para mag-iskedyul ng pagpunta sa Barangay Hall; ang staff ang magre-register sa iyo at magbibigay ng Barangay ID.", en: "Choose the service, for example Barangay Clearance. No account yet? Choose Registration in the Malineng Portal (even when not logged in) to book a visit to the Barangay Hall; the staff registers you and gives you the Barangay ID." },
       { ring: 'label:has-text("Petsa ng Pagkuha")',
         tl: "Pumili ng petsa ng pagkuha. Lunes hanggang Biyernes lang.", en: "Pick the date you will pick it up. Monday to Friday only." },
       { ring: 'button:has-text("I-book ang Appointment")',
@@ -482,7 +482,7 @@ export const GUIDES = [
     title: { tl: "Paano asikasuhin ang mga appointment", en: "How to handle appointments" },
     steps: [
       { before: [go("/admin/#appointments")], ring: 'button:has-text("Bago")',
-        tl: "Sa Bago makikita ang mga bagong appointment na hindi pa naaasikaso.", en: "Under New you see appointments that have not been handled yet." },
+        tl: "Sa Bago makikita ang mga bagong appointment na hindi pa naaasikaso. Sa itaas, ang \"Rehistro sa Malineng Portal: walang account\" ay mga taong humihingi ng rehistro; pindutin ang Irehistro ngayon at pre-filled na ang form.", en: "Under New you see appointments that have not been handled yet. At the top, \"Registration in the Malineng Portal: no account\" lists people asking to be registered; tap Register now and the form is already filled in." },
       { ring: "select",
         tl: "Palitan ang status habang umuusad: Natanggap, Nasa Kagawad, hanggang Ready.", en: "Change the status as it moves on: Received, With the Kagawad, up to Ready." },
       { ring: 'a[href^="tel"]',

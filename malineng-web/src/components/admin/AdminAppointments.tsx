@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { addDoc, collection, deleteDoc, doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
-import { FileText, Phone, Printer, Trash2 } from "lucide-react";
+import { FileText, Phone, Printer, Trash2, UserPlus } from "lucide-react";
+import { setHallPrefill } from "@/lib/hallPrefill";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/lib/useSettings";
 import { logActivity } from "@/lib/activity";
@@ -66,6 +67,63 @@ function IssueDocument({ a, onClose }: { a: Appointment; onClose: () => void }) 
   );
 }
 
+interface PortalRequest {
+  id: string; // = mobile number
+  fullName: string;
+  contact: string;
+  purok: string;
+  date: string;
+  notes: string;
+  createdAt?: import("firebase/firestore").Timestamp;
+}
+
+/** People WITHOUT an account who asked (no login) for a visit to be registered in the Malineng Portal. */
+function PortalRequests() {
+  const { isSuperAdmin, isAdmin, profile } = useAuth();
+  const toast = useToast();
+  const { data, loading } = useCollection<PortalRequest>(useMemo(() => collection(db, "portalRequests"), []));
+  const list = useMemo(() => [...data].sort((a, b) => a.date.localeCompare(b.date)), [data]);
+  // Same people the rules allow to register others (Kapitan, Secretary, Developer).
+  const canRegister = isSuperAdmin || (isAdmin && ["Kapitan", "Secretary"].includes(profile?.position ?? ""));
+  if (loading || list.length === 0) return null;
+
+  const register = (r: PortalRequest) => {
+    setHallPrefill({ fullName: r.fullName, contact: r.contact, purok: r.purok, requestId: r.id });
+    window.location.hash = "hallregister";
+  };
+  const done = async (r: PortalRequest) => {
+    if (!window.confirm(`Tanggalin ang request ni ${r.fullName}?`)) return;
+    try {
+      await deleteDoc(doc(db, "portalRequests", r.id));
+      logActivity("Appointments", `Tinanggal ang request sa rehistro: ${r.fullName}`, r.id);
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    }
+  };
+
+  return (
+    <section className="mb-4 space-y-2">
+      <h3 className="flex items-center gap-2 text-sm font-extrabold"><UserPlus className="h-4 w-4" aria-hidden /> Rehistro sa Malineng Portal: walang account ({list.length})</h3>
+      {list.map((r) => (
+        <Card key={r.id} className="space-y-2 ring-1 ring-gold/50">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="break-words font-bold">{r.fullName}</p>
+              <p className="text-sm text-gray-600">{r.purok} · pupunta sa {formatDate(r.date)}</p>
+              {r.notes && <p className="text-xs text-gray-500">{r.notes}</p>}
+            </div>
+            <a href={telHref(r.contact)} className="flex shrink-0 items-center gap-1 rounded-full bg-brand-light px-3 py-1.5 text-xs font-bold text-brand"><Phone className="h-3.5 w-3.5" aria-hidden /> {r.contact}</a>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {canRegister ? <Button onClick={() => register(r)}>Irehistro ngayon</Button> : <p className="self-center text-xs text-gray-500">Kapitan o Secretary ang magre-register.</p>}
+            <Button variant="outline" onClick={() => done(r)}>Tanggalin</Button>
+          </div>
+        </Card>
+      ))}
+    </section>
+  );
+}
+
 export function AdminAppointments() {
   const toast = useToast();
   const [filter, setFilter] = useState<AppointmentStatus | "lahat">("natanggap");
@@ -100,6 +158,7 @@ export function AdminAppointments() {
 
   return (
     <div>
+      <PortalRequests />
       <FilterTabs
         label="Status ng appointment"
         value={filter}

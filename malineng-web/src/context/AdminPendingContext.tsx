@@ -27,6 +27,7 @@ export const PENDING_TAB = {
   profileChange: "profilechange",
   helpSetup: "helpsetup",
   hallRegistration: "hallregister",
+  portalRequest: "appointments",
 } as const;
 
 export type PendingKind = keyof typeof PENDING_TAB;
@@ -76,6 +77,9 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
   // Residents registered at the Barangay Hall by the Kapitan or Secretary, waiting for the Developer's final approval.
   const hallQ = useMemo(() => (isSuperAdmin ? query(collection(db, "hallRegistrations"), where("status", "==", "pending")) : null), [isSuperAdmin]);
   const halls = useCollection<{ id: string; fullName: string; registeredByName: string }>(hallQ);
+  // People without an account who asked for a visit to be registered (no login needed).
+  const portalQ = useMemo(() => (isAdmin ? query(collection(db, "portalRequests"), where("status", "==", "natanggap")) : null), [isAdmin]);
+  const portals = useCollection<{ id: string; fullName: string; date: string }>(portalQ);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 60_000);
@@ -126,6 +130,7 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       ...changes.data.map((c) => ({ key: `profileChange:${c.id}`, kind: "profileChange" as const, emergency: false, title: "👤 Pagbabago sa profile", body: `${c.current.fullName} ay humihingi ng pagbabago` })),
       ...helps.data.map((h) => ({ key: `helpSetup:${h.id}`, kind: "helpSetup" as const, emergency: false, title: "🛟 Tulong sa setup ng account", body: `${h.name}: ${h.lastText}` })),
       ...halls.data.map((h) => ({ key: `hallRegistration:${h.id}`, kind: "hallRegistration" as const, emergency: false, title: "📝 Rehistro sa Hall: final approval", body: `${h.fullName} · inirehistro ni ${h.registeredByName}` })),
+      ...portals.data.map((p) => ({ key: `portalRequest:${p.id}`, kind: "portalRequest" as const, emergency: false, title: "📝 Rehistro sa Portal (walang account)", body: `${p.fullName} · pupunta sa ${p.date}` })),
       ...borrow.data
         .filter((r) => r.status === "pending")
         .map((r) => ({ key: `borrow:${r.id}`, kind: "borrow" as const, emergency: false, title: "📦 Bagong request sa Hiraman", body: `${r.userName}: ${linesText(r.items)}` })),
@@ -142,9 +147,9 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       items,
       total: items.length,
       byTab,
-      loading: halls.loading || helps.loading || changes.loading || pledges.loading || openings.loading || blotters.loading || places.loading || borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
+      loading: portals.loading || halls.loading || helps.loading || changes.loading || pledges.loading || openings.loading || blotters.loading || places.loading || borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
     };
-  }, [isAdmin, amb, listings, posts, jobs, ver, appts, places, openings, borrow, blotters, pledges, changes, helps, halls, now]);
+  }, [isAdmin, amb, listings, posts, jobs, ver, appts, places, openings, borrow, blotters, pledges, changes, helps, halls, portals, now]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

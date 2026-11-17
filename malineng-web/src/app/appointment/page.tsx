@@ -7,7 +7,8 @@ import { CalendarCheck, CheckCircle2, Trash2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
-import { APPOINTMENT_SERVICES } from "@/lib/constants";
+import { APPOINTMENT_SERVICES, REGISTRATION_SERVICE } from "@/lib/constants";
+import { PortalRequestForm } from "@/components/PortalRequestForm";
 import { formatDate, friendlyError, sortNewest, todayISO } from "@/lib/format";
 import type { Appointment } from "@/lib/types";
 import { Button, Card, EmptyState, ErrorText, Input, PageHeader, SectionTitle, Select, Spinner, Textarea, SelectOther } from "@/components/ui";
@@ -17,14 +18,15 @@ import { logActivity } from "@/lib/activity";
 import { useToast } from "@/components/Toast";
 import { StatusTracker } from "@/components/StatusTracker";
 
-function BookForm() {
+/** `registrationOnly`: for people who are not verified yet; they can only ask for a visit to be registered and get their Barangay ID. */
+function BookForm({ registrationOnly = false }: { registrationOnly?: boolean }) {
   const { user, profile } = useAuth();
   const params = useSearchParams();
   const toast = useToast();
   const presetService = params.get("service") ?? "";
   const [form, setForm] = useState({
     fullName: "",
-    service: (APPOINTMENT_SERVICES as readonly string[]).includes(presetService) ? presetService : "",
+    service: registrationOnly ? REGISTRATION_SERVICE : (APPOINTMENT_SERVICES as readonly string[]).includes(presetService) ? presetService : "",
     date: "",
     contact: "",
     notes: "",
@@ -83,7 +85,12 @@ function BookForm() {
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Buong Pangalan" required value={form.fullName} onChange={update("fullName")} />
-        <SelectOther label="Serbisyo" required options={APPOINTMENT_SERVICES} placeholder="-- Pumili ng serbisyo --" value={form.service} onChange={(v) => update("service")({ target: { value: v } })} />
+        {registrationOnly ? (
+          <p className="rounded-xl bg-gold-light p-3 text-sm text-gray-800"><b>{REGISTRATION_SERVICE}</b><br />Hindi pa verified ang account mo. Pumunta sa Barangay Hall dala ang valid ID; ang staff ang magve-verify at magbibigay ng Barangay ID.</p>
+        ) : (
+          <SelectOther label="Serbisyo" required options={APPOINTMENT_SERVICES} placeholder="-- Pumili ng serbisyo --" value={form.service} onChange={(v) => update("service")({ target: { value: v } })} />
+        )}
+        {form.service === REGISTRATION_SERVICE && !registrationOnly && <p className="rounded-xl bg-gold-light p-3 text-xs text-gray-800">Dalhin ang valid ID at ang contact number. Ang staff ang magre-register sa Malineng Portal at magbibigay ng Barangay ID.</p>}
         <Input label="Petsa ng Pagkuha" type="date" required min={todayISO()} value={form.date} onChange={update("date")} hint="Lunes hanggang Biyernes lang" />
         <Input label="Contact Number" type="tel" required value={form.contact} onChange={update("contact")} />
         <Textarea label={form.service === "Blotter" ? "Ano ang irereport? (Detalye)" : "Purpose / Paalala (optional)"} value={form.notes} onChange={update("notes")} maxLength={1000} />
@@ -144,18 +151,46 @@ function MyAppointments() {
   );
 }
 
+function AppointmentBody() {
+  const { user, isVerified, isSuspended, loading } = useAuth();
+  if (loading) return <Spinner />;
+  // No account yet: ask for a visit to be registered (no login needed), and still offer the login below.
+  if (!user) {
+    return (
+      <div className="space-y-4">
+        <PortalRequestForm />
+        <LoginGate message="May account ka na? Mag-login para makapag-book ng appointment.">{null}</LoginGate>
+      </div>
+    );
+  }
+  // Logged in but not verified yet: only the registration visit can be booked.
+  if (!isVerified && !isSuspended) {
+    return (
+      <>
+        <Suspense fallback={<Spinner />}>
+          <BookForm registrationOnly />
+        </Suspense>
+        <MyAppointments />
+      </>
+    );
+  }
+  return (
+    <LoginGate message="Mag-login para makapag-book ng appointment.">
+      <RequireVerified feature="makapag-book ng appointment">
+        <Suspense fallback={<Spinner />}>
+          <BookForm />
+        </Suspense>
+      </RequireVerified>
+      <MyAppointments />
+    </LoginGate>
+  );
+}
+
 export default function AppointmentPage() {
   return (
     <div>
       <PageHeader title="Appointment" subtitle="Mag-book online, kunin sa Barangay Hall. Wala nang mahabang pila." />
-      <LoginGate message="Mag-login para makapag-book ng appointment.">
-        <RequireVerified feature="makapag-book ng appointment">
-          <Suspense fallback={<Spinner />}>
-            <BookForm />
-          </Suspense>
-        </RequireVerified>
-        <MyAppointments />
-      </LoginGate>
+      <AppointmentBody />
     </div>
   );
 }
