@@ -20,7 +20,9 @@ export const JOB_CATEGORIES = [
 export const SKILL_TYPES = ["Mananahi", "Electrician", "Tubero", "Karpintero", "Tutor", "Rider", "Iba pa"] as const;
 export type SkillType = (typeof SKILL_TYPES)[number];
 
-export const APPOINTMENT_SERVICES = ["Barangay Clearance", "Indigency", "Cedula", "Blotter", "Iba pa"] as const;
+/** Book a visit to be registered in the Malineng Portal (account) and get the Barangay ID. Open to people who are not verified yet. */
+export const REGISTRATION_SERVICE = "Rehistro sa Malineng Portal";
+export const APPOINTMENT_SERVICES = [REGISTRATION_SERVICE, "Barangay Clearance", "Indigency", "Cedula", "Blotter", "Iba pa"] as const;
 export type AppointmentService = (typeof APPOINTMENT_SERVICES)[number];
 
 export const APPOINTMENT_STATUSES = ["natanggap", "nasa_kagawad", "ready"] as const;

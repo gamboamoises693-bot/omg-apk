@@ -1087,7 +1087,8 @@ service cloud.firestore {
     // ---------- appointments ----------
     match /appointments/{apptId} {
       allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
-      allow create: if verifiedPoster()
+      // Booking a visit to be registered in the portal is open to anyone logged in, even before they are verified.
+      allow create: if (verifiedPoster() || (signedIn() && notSuspended() && incoming()['service'] == 'Rehistro sa Malineng Portal'))
         && incoming().userId == request.auth.uid
         && incoming().status == 'natanggap'
         // A listed service, or the one the resident wrote when choosing "Iba pa".
@@ -1099,6 +1100,23 @@ service cloud.firestore {
         || isSuperAdmin();
       allow delete: if isAdmin()
         || (signedIn() && existing().userId == request.auth.uid && existing().status == 'natanggap');
+    }
+
+    // ---------- portalRequests (someone WITHOUT an account asks for a visit to be registered; no login needed) ----------
+    // The document id is the mobile number, so one number can send only one request at a time (a repeat is refused).
+    match /portalRequests/{phone} {
+      allow read: if isAdmin();
+      allow create: if phone.matches('^09[0-9]{9}$')
+        && incoming().keys().hasOnly(['fullName', 'contact', 'purok', 'date', 'notes', 'status', 'createdAt'])
+        && incoming().contact == phone
+        && isNonEmptyString(incoming().fullName, 120)
+        && validPurok(incoming().purok)
+        && incoming().date is string && incoming().date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && incoming().notes is string && incoming().notes.size() <= 300
+        && incoming().status == 'natanggap'
+        && incoming().createdAt == request.time;
+      allow update: if isAdmin() && changedOnly(['status']);
+      allow delete: if isAdmin();
     }
 
     // ---------- registrations (Magparehistro: Ayuda/Clean-up/Fiesta/Event) ----------

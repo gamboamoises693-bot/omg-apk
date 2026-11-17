@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState, type FormEvent } from "react";
-import { collection, doc, query, serverTimestamp, where, writeBatch } from "firebase/firestore";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { takeHallPrefill } from "@/lib/hallPrefill";
+import { collection, deleteDoc, doc, query, serverTimestamp, where, writeBatch } from "firebase/firestore";
 import { Camera, Copy, UserPlus } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -43,6 +44,16 @@ function HallRegisterForm() {
   const [error, setError] = useState("");
   const [done, setDone] = useState<Done | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  // Opened from "Irehistro ngayon" on a portal request: the details are already filled in.
+  const [requestId, setRequestId] = useState("");
+  useEffect(() => {
+    const p = takeHallPrefill();
+    if (!p) return;
+    setFullName(p.fullName);
+    setContact(p.contact);
+    setPurok(p.purok);
+    setRequestId(p.requestId ?? "");
+  }, []);
 
   // Same people the database rules allow (firestore.rules: canRegisterOthers).
   const allowed = isSuperAdmin || (isAdmin && ["Kapitan", "Secretary"].includes(profile?.position ?? ""));
@@ -61,7 +72,7 @@ function HallRegisterForm() {
   };
 
   const reset = () => {
-    setFullName(""); setPurok(""); setBirthday(""); setContact(""); setEmail(""); setPassword(tempPassword()); setIdSeen(true); setSelfie(""); setDone(null); setError("");
+    setFullName(""); setPurok(""); setBirthday(""); setContact(""); setEmail(""); setPassword(tempPassword()); setIdSeen(true); setSelfie(""); setDone(null); setError(""); setRequestId("");
   };
 
   const submit = async (e: FormEvent) => {
@@ -115,6 +126,8 @@ function HallRegisterForm() {
         }
       }
       await batch.commit();
+      // The visit that was asked for is done: remove the request (best effort).
+      if (requestId) deleteDoc(doc(db, "portalRequests", requestId)).catch(() => undefined);
       logActivity("Account", isSuperAdmin ? `Nag-register sa Hall: ${name} (${purok})${idSeen ? ", na-verify may ID" : ""}` : `Nag-register sa Hall: ${name} (${purok}), hinihintay ang final approval ng Developer`, uid);
       refreshPublicStatsQuietly();
       toast("Nairehistro na ang residente.");
