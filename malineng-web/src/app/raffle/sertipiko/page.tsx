@@ -198,18 +198,23 @@ function Sample() {
 
   return (
     <div className="space-y-3">
+      {/* View only: the sample is marked "HALIMBAWA" and cannot be printed or saved from here. */}
+      <p className="hidden rounded-2xl bg-white p-6 text-center text-lg font-bold print:block">Halimbawa lang ito at hindi pwedeng i-print. Ang totoong Certificate of Appreciation ay ibibigay sa donor kapag natanggap na ang donasyon.</p>
+      <div className="space-y-3 print:hidden" onContextMenu={(e) => e.preventDefault()}>
       <p className="rounded-2xl bg-gold-light p-3 text-sm text-yellow-900"><b>HALIMBAWA LANG ito</b> ng Certificate of Appreciation na matatanggap ng donor kapag natanggap na ng Barangay ang donasyon. Ang pangalan, donasyon at petsa ay papalitan ng sa iyo.</p>
       <div className="grid grid-cols-2 gap-2" role="group" aria-label="Kulay ng sertipiko">
         {([["ivory", "Ivory (executive)"], ["navy", "Navy blue"]] as const).map(([v, label]) => (
           <button key={v} type="button" aria-pressed={theme === v} onClick={() => setTheme(v)} className={`rounded-xl px-2 py-2.5 text-sm font-bold ${theme === v ? "bg-brand text-white" : "bg-surface text-gray-700"}`}>{label}</button>
         ))}
       </div>
-      <div ref={wrap} className="cert-stage w-full overflow-hidden rounded shadow-float" style={{ height: CERT_H * scale }}>
-        <div className="cert-scale" style={{ width: CERT_W, height: CERT_H, transform: `scale(${scale})`, transformOrigin: "0 0" }}>
+      <div ref={wrap} className="cert-stage w-full select-none overflow-hidden rounded shadow-float" style={{ height: CERT_H * scale }}>
+        <div className="cert-scale" style={{ width: CERT_W, height: CERT_H, transform: `scale(${scale})`, transformOrigin: "0 0", position: "relative" }}>
           <DonorCertificate c={data} theme={theme} />
+          <div className="cert-sample-mark" aria-hidden><span>HALIMBAWA</span></div>
         </div>
       </div>
       <Link href="/raffle/" className="block rounded-xl bg-brand py-2.5 text-center text-sm font-bold text-white">Bumalik sa Raffle</Link>
+      </div>
     </div>
   );
 }

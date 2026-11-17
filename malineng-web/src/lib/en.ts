@@ -424,6 +424,7 @@ export const EN: Record<string, string> = {
   "Certificate of Appreciation": "Certificate of Appreciation",
   "(tingnan ang halimbawa).": "(see a sample).",
   "HALIMBAWA LANG ito": "THIS IS ONLY A SAMPLE",
+  "Halimbawa lang ito at hindi pwedeng i-print. Ang totoong Certificate of Appreciation ay ibibigay sa donor kapag natanggap na ang donasyon.": "This is only a sample and cannot be printed. The real Certificate of Appreciation is given to the donor once the donation is received.",
   "Paano ibibigay": "How to give",
   "Dadalhin ko sa Barangay Hall": "I will bring it to the Barangay Hall",
   "Pakikuha sa bahay namin": "Please pick it up at our home",

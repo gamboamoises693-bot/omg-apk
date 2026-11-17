@@ -235,3 +235,7 @@ textarea {
   .id-page { box-shadow: none; border-radius: 0; padding: 0; gap: 3mm; overflow: visible; break-after: page; break-inside: avoid; }
   .id-page:last-child { break-after: auto; }
 }
+
+/* The sample certificate: a big "HALIMBAWA" stamp across it, so it can never pass for a real one. */
+.cert-sample-mark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.cert-sample-mark span { transform: rotate(-22deg); font: 800 104px Inter, Arial, sans-serif; letter-spacing: 0.12em; color: rgba(179, 32, 43, 0.2); border: 10px solid rgba(179, 32, 43, 0.2); border-radius: 26px; padding: 0 44px; }
