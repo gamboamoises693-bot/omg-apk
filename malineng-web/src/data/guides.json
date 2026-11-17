@@ -1512,6 +1512,32 @@
       ]
     },
     {
+      "id": "admin-signature",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano ilagay ang pirma ng Punong Barangay sa Barangay ID (Developer)",
+        "en": "How to put the Punong Barangay's signature on the Barangay ID (Developer)"
+      },
+      "steps": [
+        {
+          "tl": "Sa Settings, hanapin ang Pirma ng Punong Barangay. Dito inilalagay ang pirma na lalabas sa lahat ng Barangay ID.",
+          "en": "In Settings, find the Punong Barangay's signature. This is the signature printed on every Barangay ID.",
+          "img": "admin-signature-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Mag-upload ng pirma (o Palitan). Pumirma sa puting papel gamit ang itim o asul na ballpen at kunan ng malinaw na litrato. Ang puting papel ay awtomatikong magiging transparent.",
+          "en": "Tap Upload signature (or Replace). Sign on white paper with a black or blue pen and take a clear photo. The white paper becomes transparent by itself.",
+          "img": "admin-signature-2.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
       "id": "admin-users",
       "routes": [],
       "staff": true,
