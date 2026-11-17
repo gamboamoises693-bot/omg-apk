@@ -99,7 +99,7 @@ export const GUIDES = [
       { before: [go("/raffle/")], ring: "text=Ang entry code mo",
         tl: "Kapag verified ang account mo, may entry code ka na sa raffle. Wala ka nang ibang gagawin.", en: "Once your account is verified you get a raffle entry code. There is nothing else to do." },
       { ring: 'button:has-text("Magdonate")',
-        tl: "Gusto mong magbigay? Pindutin ang Magdonate o maging sponsor. Tatawagan ka ng Barangay.", en: "Want to give? Tap Donate or become a sponsor. The Barangay will call you." },
+        tl: "Gusto mong magbigay? Pindutin ang Magdonate o maging sponsor. Piliin kung dadalhin mo sa Barangay Hall o pakikuha sa bahay ninyo. Tatawagan ka ng Barangay.", en: "Want to give? Tap Donate or become a sponsor. Choose whether you bring it to the Barangay Hall or have it picked up at your home. The Barangay will call you." },
       { ring: 'h2:has-text("Paano ito gumagana")',
         tl: "Basahin dito ang buong paliwanag ng raffle.", en: "Read the full explanation of the raffle here." },
     ],

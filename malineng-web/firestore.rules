@@ -1064,7 +1064,10 @@ service cloud.firestore {
     match /raffleDonations/{id} {
       allow read: if (signedIn() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if signedIn() && notSuspended()
-        && incoming().keys().hasOnly(['userId', 'name', 'anon', 'kind', 'what', 'amount', 'contact', 'message', 'logo', 'link', 'status', 'createdAt'])
+        && incoming().keys().hasOnly(['userId', 'name', 'anon', 'kind', 'what', 'amount', 'contact', 'message', 'logo', 'link', 'handover', 'pickupAddress', 'status', 'createdAt'])
+        && incoming().get('handover', 'hall') in ['hall', 'pickup']
+        && incoming().get('pickupAddress', '') is string && incoming().get('pickupAddress', '').size() <= 200
+        && (incoming().get('handover', 'hall') != 'pickup' || incoming().get('pickupAddress', '').size() >= 5)
         && incoming().get('link', '') is string && incoming().get('link', '').size() <= 300
         && (incoming().get('link', '') == '' || incoming().get('link', '').matches('^https?://[^ ]+[.][^ ]+$'))
         && incoming().get('logo', '') is string && incoming().get('logo', '').size() < 60000
