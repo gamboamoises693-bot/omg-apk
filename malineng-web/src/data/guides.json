@@ -1194,6 +1194,46 @@
       ]
     },
     {
+      "id": "admin-hallregister",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano mag-register ng residente sa Hall",
+        "en": "How to register a resident at the Hall"
+      },
+      "steps": [
+        {
+          "tl": "Para sa residenteng hindi marunong mag-register. Isulat ang pangalan, purok, birthday at contact number niya.",
+          "en": "For residents who cannot register on their own. Write their name, purok, birthday and contact number.",
+          "img": "admin-hallregister-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Ang contact number ang login niya. Maglagay ng pansamantalang password na ibibigay mo sa kanya. Walang email? Okay lang.",
+          "en": "Their contact number is the login. Set a temporary password to give them. No email? That is fine.",
+          "img": "admin-hallregister-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Lagyan ng check kapag nakita mo ang ID niya. Ma-ve-verify agad siya at magkakaroon ng Barangay ID. Pwede mo siyang kunan ng selfie para sa litrato.",
+          "en": "Tick this when you saw their ID. They are verified at once and get a Barangay ID. You can take a selfie for the photo.",
+          "img": "admin-hallregister-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Irehistro. Kopyahin ang login at password at ibigay sa kanya. Sa Account, mapapalitan niya ang password.",
+          "en": "Tap Register. Copy the login and password and give them to the resident. In Account they can change the password.",
+          "img": "admin-hallregister-4.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
       "id": "admin-helpsetup",
       "routes": [],
       "staff": true,
