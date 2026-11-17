@@ -58,7 +58,11 @@ export function BarangayIdCard({
       {/* Gold edge */}
       <div className="h-[7px] bg-gradient-to-r from-[#9A7B12] via-[#D9B648] to-[#9A7B12]" />
 
-      <div className="p-5">
+      {/* The barangay seal as a faint watermark, like the certificate. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/seal-barangay.webp" alt="" aria-hidden className="pointer-events-none absolute left-1/2 top-[52%] h-[19rem] w-[19rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.07]" />
+
+      <div className="relative p-5">
         <div className="flex items-center gap-3">
           <LogoMark size="h-11 w-11" textClass="text-base" />
           <div className="min-w-0 leading-tight">
