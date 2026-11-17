@@ -257,7 +257,7 @@ export function RaffleSponsors({ full = false }: { full?: boolean }) {
       ) : (
         <Link href="/login" className="block rounded-xl bg-brand py-2.5 text-center text-sm font-bold text-white">Mag-login para magdonate</Link>
       )}
-      <p className="text-center text-xs text-gray-500">Hindi dito kinukuha ang pera. Mangangako ka lang; ang Barangay ang tatawag. Pwedeng dalhin mo sa Barangay Hall o kunin nila sa bahay mo, at bibigyan ka ng resibo at <b>Certificate of Appreciation</b>.</p>
+      <p className="text-center text-xs text-gray-500">Hindi dito kinukuha ang pera. Mangangako ka lang; ang Barangay ang tatawag. Pwedeng dalhin mo sa Barangay Hall o kunin nila sa bahay mo, at bibigyan ka ng resibo at <Link href="/raffle/sertipiko/?sample=1" className="font-extrabold text-brand underline">Certificate of Appreciation</Link> (tingnan ang halimbawa).</p>
 
       {full && user && <MyDonations uid={user.uid} />}
       <Modal open={donating} onClose={() => setDonating(false)} title="Magdonate o maging sponsor">
@@ -331,7 +331,7 @@ function DonateForm({ uid, onDone }: { uid: string; onDone: () => void }) {
           </label>
         ))}
         {handover === "pickup" && <Input label="Address kung saan kukunin" value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)} maxLength={200} placeholder="hal. #12, Purok 3, tabi ng kapilya" />}
-        <p className="text-xs">Tatawagan ka ng Barangay para sa oras. Bibigyan ka ng <b>resibo</b> at <b>Certificate of Appreciation</b> na makikita mo rin dito sa app.</p>
+        <p className="text-xs">Tatawagan ka ng Barangay para sa oras. Bibigyan ka ng <b>resibo</b> at <Link href="/raffle/sertipiko/?sample=1" className="font-extrabold text-brand underline">Certificate of Appreciation</Link> na makikita mo rin dito sa app.</p>
       </fieldset>
       {error && <p className="rounded-xl bg-red-50 p-2.5 text-sm text-red-700">{error}</p>}
       <div className="grid grid-cols-2 gap-2">

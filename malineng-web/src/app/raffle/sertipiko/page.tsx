@@ -169,9 +169,55 @@ function Certificate({ id }: { id: string }) {
   );
 }
 
+/** What a donor receives: a sample with Omega Purified Ice, open to everyone (no login). Shown from "Certificate of Appreciation" on the sponsor list. */
+function Sample() {
+  const { settings } = useSettings();
+  const [theme, setTheme] = useState<CertificateTheme>("ivory");
+  const wrap = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.3);
+  useCertificateFonts();
+
+  useLayoutEffect(() => {
+    const fit = () => wrap.current && setScale(wrap.current.clientWidth / CERT_W);
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
+
+  const nameOf = (re: RegExp) => settings.officials.find((o) => re.test(o.position))?.name?.toUpperCase() ?? "";
+  const data: CertificateData = {
+    donorName: "Omega Purified Ice",
+    what: "Media Noche Package",
+    amount: 1500,
+    dateText: new Date().toLocaleDateString("fil-PH", { year: "numeric", month: "long", day: "numeric" }),
+    receiptNo: "RAF-SAMPLE-0001",
+    punongName: nameOf(/punong/i),
+    secretaryName: nameOf(/secretary|kalihim/i),
+    verifyUrl: `${typeof window === "undefined" ? "" : window.location.origin}/raffle/`,
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="rounded-2xl bg-gold-light p-3 text-sm text-yellow-900"><b>HALIMBAWA LANG ito</b> ng Certificate of Appreciation na matatanggap ng donor kapag natanggap na ng Barangay ang donasyon. Ang pangalan, donasyon at petsa ay papalitan ng sa iyo.</p>
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Kulay ng sertipiko">
+        {([["ivory", "Ivory (executive)"], ["navy", "Navy blue"]] as const).map(([v, label]) => (
+          <button key={v} type="button" aria-pressed={theme === v} onClick={() => setTheme(v)} className={`rounded-xl px-2 py-2.5 text-sm font-bold ${theme === v ? "bg-brand text-white" : "bg-surface text-gray-700"}`}>{label}</button>
+        ))}
+      </div>
+      <div ref={wrap} className="cert-stage w-full overflow-hidden rounded shadow-float" style={{ height: CERT_H * scale }}>
+        <div className="cert-scale" style={{ width: CERT_W, height: CERT_H, transform: `scale(${scale})`, transformOrigin: "0 0" }}>
+          <DonorCertificate c={data} theme={theme} />
+        </div>
+      </div>
+      <Link href="/raffle/" className="block rounded-xl bg-brand py-2.5 text-center text-sm font-bold text-white">Bumalik sa Raffle</Link>
+    </div>
+  );
+}
+
 function Inner() {
   const p = useSearchParams();
   const id = p.get("id") ?? "";
+  if (p.get("sample") === "1") return <Sample />;
   if (p.get("v") === "1") return <Verify id={id} />;
   return (
     <LoginGate message="Mag-login para makita ang sertipiko mo.">

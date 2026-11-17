@@ -422,6 +422,8 @@ export const EN: Record<string, string> = {
   "Paalala ng Barangay:": "Barangay's note:",
   "Hindi dito kinukuha ang pera. Mangangako ka lang; ang Barangay ang tatawag. Pwedeng dalhin mo sa Barangay Hall o kunin nila sa bahay mo, at bibigyan ka ng resibo at": "Money is not taken here. You only make a pledge; the Barangay will call you. You can bring it to the Barangay Hall or they can pick it up at your home, and you will be given a receipt and a",
   "Certificate of Appreciation": "Certificate of Appreciation",
+  "(tingnan ang halimbawa).": "(see a sample).",
+  "HALIMBAWA LANG ito": "THIS IS ONLY A SAMPLE",
   "Paano ibibigay": "How to give",
   "Dadalhin ko sa Barangay Hall": "I will bring it to the Barangay Hall",
   "Pakikuha sa bahay namin": "Please pick it up at our home",
