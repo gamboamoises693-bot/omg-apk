@@ -236,7 +236,13 @@ service cloud.firestore {
     // Email/password accounts must confirm their email before posting or sending a selfie.
     // Google accounts are already confirmed; staff are exempt (accounts made by the Super Admin).
     function emailOk() {
-      return request.auth.token.email_verified == true || isStaff();
+      // Accounts made at the Barangay Hall have no real mailbox: the staff who registered them checked the ID in person.
+      return request.auth.token.email_verified == true || isStaff() || (hasProfile() && me().get('assistedBy', '') != '');
+    }
+
+    // Kapitan, Secretary and the Developer register residents who cannot do it themselves (at the Barangay Hall).
+    function canRegisterOthers() {
+      return isSuperAdmin() || (isAdmin() && me().get('position', '') in ['Kapitan', 'Secretary']);
     }
 
     // Chat rooms: "all" (whole barangay), the exact Purok name, and two private staff rooms.
@@ -333,7 +339,8 @@ service cloud.firestore {
       allow create: if phone.matches('^09[0-9]{9}$')
         && incoming().keys().hasOnly(['uid', 'createdAt'])
         && (incoming().uid == request.auth.uid || isSuperAdmin()
-          || (isAdmin() && getAfter(/databases/$(database)/documents/profileChanges/$(incoming().uid)).data.status == 'approved'))
+          || (isAdmin() && getAfter(/databases/$(database)/documents/profileChanges/$(incoming().uid)).data.status == 'approved')
+          || (canRegisterOthers() && getAfter(/databases/$(database)/documents/users/$(incoming().uid)).data.get('assistedBy', '') == request.auth.uid))
         && getAfter(/databases/$(database)/documents/users/$(incoming().uid)).data.contact == phone;
       allow update: if false;
       // An admin releases the old number once an approved change moved the resident to a new one.
@@ -362,12 +369,23 @@ service cloud.firestore {
           && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'position', 'createdAt', 'createdBy'])
           && incoming().uid == uid
           && isNonEmptyString(incoming().fullName, 120)
+          && contactOk(uid))
+        // Registered at the Barangay Hall by the Kapitan, Secretary or Developer (see canRegisterOthers).
+        || (canRegisterOthers()
+          && incoming().role == 'resident'
+          && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'createdAt', 'assistedBy', 'assistedByName', 'faceThumb'])
+          && incoming().uid == uid
+          && incoming().assistedBy == request.auth.uid
+          && incoming().assistedByName is string && incoming().assistedByName.size() <= 120
+          && isNonEmptyString(incoming().fullName, 120)
+          && incoming().createdAt == request.time
+          && (!('faceThumb' in incoming()) || (incoming().faceThumb is string && incoming().faceThumb.size() < 20000))
           && contactOk(uid));
       // A user edits their own profile but never role, position or suspension.
       // Only the Super Admin manages roles, and cannot demote themself (avoids lock-out).
       // Profile photo (photoURL) is for staff (admins and BHW) only.
       allow update: if (isSelf(uid)
-          && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended'])
+          && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended', 'assistedBy', 'assistedByName'])
           && (!incoming().diff(existing()).affectedKeys().hasAny(['photoURL'])
               || (isStaff() && incoming().photoURL is string && incoming().photoURL.size() < 60000))
           && (!incoming().diff(existing()).affectedKeys().hasAny(['contact']) || contactOk(uid))
@@ -527,6 +545,14 @@ service cloud.firestore {
         && incoming().status == 'pending'
         && incoming().selfie is string && incoming().selfie.size() < 400000
         && incoming().submittedAt == request.time;
+      // At the Barangay Hall the staff verifies the person face to face and may take the selfie for the ID.
+      allow create: if canRegisterOthers()
+        && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'birthday', 'contact', 'email', 'selfie', 'status', 'submittedAt', 'reviewedBy', 'reviewedByName', 'reviewedAt', 'reason'])
+        && incoming().uid == uid
+        && incoming().status == 'verified'
+        && incoming().reviewedBy == request.auth.uid
+        && incoming().selfie is string && incoming().selfie.size() < 400000
+        && getAfter(/databases/$(database)/documents/users/$(uid)).data.get('assistedBy', '') == request.auth.uid;
       // The Super Admin can replace the photo that is printed on a Barangay ID (e.g. a dark or blurry selfie).
       allow update: if isSuperAdmin() && changedOnly(['selfie'])
         && incoming().selfie is string && incoming().selfie.size() > 0 && incoming().selfie.size() < 400000;

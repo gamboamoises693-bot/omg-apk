@@ -1,5 +1,6 @@
 "use client";
 
+import { isContactEmail } from "@/lib/phoneLogin";
 import { useState } from "react";
 import { sendEmailVerification } from "firebase/auth";
 import { MailCheck } from "lucide-react";
@@ -8,8 +9,9 @@ import { friendlyError } from "@/lib/format";
 import { Button, ErrorText } from "./ui";
 
 /** True for email-and-password accounts whose email is not confirmed yet (Google accounts are always confirmed). */
-export function needsEmailConfirm(user: { emailVerified: boolean; providerData: { providerId: string }[] } | null): boolean {
-  return !!user && !user.emailVerified && user.providerData.some((p) => p.providerId === "password");
+export function needsEmailConfirm(user: { emailVerified: boolean; email?: string | null; providerData: { providerId: string }[] } | null): boolean {
+  // An account made at the Barangay Hall with a mobile number has no real mailbox to confirm.
+  return !!user && !user.emailVerified && !isContactEmail(user.email) && user.providerData.some((p) => p.providerId === "password");
 }
 
 /**
