@@ -75,13 +75,16 @@ export function DonationNotifier() {
         {d.status === "accepted" && (
           <>
             <p className="text-base font-extrabold">Natanggap na ng Barangay ang pangako mo. Salamat!</p>
-            <p className="text-sm text-gray-700">Tatawagan ka ng Barangay sa <b>{d.contact}</b>. Dalhin ang <b>{d.what}</b> sa <b>Barangay Hall</b> at bibigyan ka ng resibo.</p>
+            <p className="text-sm text-gray-700">
+              Tatawagan ka ng Barangay sa <b>{d.contact}</b>.{" "}
+              {d.handover === "pickup" ? <>Kukunin nila ang <b>{d.what}</b> sa <b>{d.pickupAddress}</b></> : <>Dalhin ang <b>{d.what}</b> sa <b>Barangay Hall</b></>} at bibigyan ka ng resibo at <b>Certificate of Appreciation</b>.
+            </p>
           </>
         )}
         {d.status === "received" && (
           <>
             <p className="text-base font-extrabold">Natanggap na ng Barangay ang donasyon mo: {d.what}</p>
-            <p className="text-sm text-gray-700">Maraming salamat sa pagtulong! Ang resibo mo ay <b>{d.receiptNo}</b>, at makikita mo ito sa Raffle → Mga donasyon ko.</p>
+            <p className="text-sm text-gray-700">Maraming salamat sa pagtulong! Ang resibo mo ay <b>{d.receiptNo}</b>. Bibigyan ka rin ng <b>Certificate of Appreciation</b>. Makikita mo ang dalawa sa Raffle → Mga donasyon ko.</p>
           </>
         )}
         {d.status === "declined" && <p className="text-sm text-gray-700">Salamat sa pangako mo ({d.what}). Hindi ito natanggap ngayon. Makipag-ugnayan sa Barangay Hall kung may tanong ka.</p>}
