@@ -26,6 +26,7 @@ export const PENDING_TAB = {
   pledge: "rafflepledge",
   profileChange: "profilechange",
   helpSetup: "helpsetup",
+  hallRegistration: "hallregister",
 } as const;
 
 export type PendingKind = keyof typeof PENDING_TAB;
@@ -53,7 +54,7 @@ const Ctx = createContext<Value>(EMPTY);
  * Used by the shield badge, the admin tab badges and the phone alerts.
  */
 export function AdminPendingProvider({ children }: { children: ReactNode }) {
-  const { isAdmin, canBorrowAdmin } = useAuth();
+  const { isAdmin, canBorrowAdmin, isSuperAdmin } = useAuth();
   // Hiraman: only the approvers listen. Waiting requests + borrowed items past their return time.
   const borrowQ = useMemo(
     () => (isAdmin ? query(collection(db, "borrowRequests"), where("status", "in", ["pending", "approved", "borrowed"])) : null),
@@ -72,6 +73,9 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
   // People asking for help with setting up their account, still waiting for an answer.
   const helpQ = useMemo(() => (isAdmin ? query(collection(db, "helpChats"), where("lastFrom", "==", "user")) : null), [isAdmin]);
   const helps = useCollection<{ id: string; name: string; lastText: string }>(helpQ);
+  // Residents registered at the Barangay Hall by the Kapitan or Secretary, waiting for the Developer's final approval.
+  const hallQ = useMemo(() => (isSuperAdmin ? query(collection(db, "hallRegistrations"), where("status", "==", "pending")) : null), [isSuperAdmin]);
+  const halls = useCollection<{ id: string; fullName: string; registeredByName: string }>(hallQ);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 60_000);
@@ -121,6 +125,7 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       ...pledges.data.map((d) => ({ key: `pledge:${d.id}`, kind: "pledge" as const, emergency: false, title: "🎁 Bagong pangako ng donasyon", body: `${d.anon ? "Hindi nagpakilala" : d.name}: ${d.what}` })),
       ...changes.data.map((c) => ({ key: `profileChange:${c.id}`, kind: "profileChange" as const, emergency: false, title: "👤 Pagbabago sa profile", body: `${c.current.fullName} ay humihingi ng pagbabago` })),
       ...helps.data.map((h) => ({ key: `helpSetup:${h.id}`, kind: "helpSetup" as const, emergency: false, title: "🛟 Tulong sa setup ng account", body: `${h.name}: ${h.lastText}` })),
+      ...halls.data.map((h) => ({ key: `hallRegistration:${h.id}`, kind: "hallRegistration" as const, emergency: false, title: "📝 Rehistro sa Hall: final approval", body: `${h.fullName} · inirehistro ni ${h.registeredByName}` })),
       ...borrow.data
         .filter((r) => r.status === "pending")
         .map((r) => ({ key: `borrow:${r.id}`, kind: "borrow" as const, emergency: false, title: "📦 Bagong request sa Hiraman", body: `${r.userName}: ${linesText(r.items)}` })),
@@ -137,9 +142,9 @@ export function AdminPendingProvider({ children }: { children: ReactNode }) {
       items,
       total: items.length,
       byTab,
-      loading: helps.loading || changes.loading || pledges.loading || openings.loading || blotters.loading || places.loading || borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
+      loading: halls.loading || helps.loading || changes.loading || pledges.loading || openings.loading || blotters.loading || places.loading || borrow.loading || amb.loading || listings.loading || posts.loading || jobs.loading || ver.loading || appts.loading,
     };
-  }, [isAdmin, amb, listings, posts, jobs, ver, appts, places, openings, borrow, blotters, pledges, changes, helps, now]);
+  }, [isAdmin, amb, listings, posts, jobs, ver, appts, places, openings, borrow, blotters, pledges, changes, helps, halls, now]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

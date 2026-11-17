@@ -434,9 +434,9 @@ export const GUIDES = [
       { ring: 'label:has-text("Pansamantalang password")',
         tl: "Ang contact number ang login niya. Maglagay ng pansamantalang password na ibibigay mo sa kanya. Walang email? Okay lang.", en: "Their contact number is the login. Set a temporary password to give them. No email? That is fine." },
       { ring: 'label:has-text("Nakita ko ang ID niya")',
-        tl: "Lagyan ng check kapag nakita mo ang ID niya. Ma-ve-verify agad siya at magkakaroon ng Barangay ID. Pwede mo siyang kunan ng selfie para sa litrato.", en: "Tick this when you saw their ID. They are verified at once and get a Barangay ID. You can take a selfie for the photo." },
+        tl: "Lagyan ng check kapag nakita mo ang ID niya. Pwede mo siyang kunan ng selfie para sa litrato sa Barangay ID. Ang Developer ang magbibigay ng final review at approval; pagkatapos nito siya magiging verified.", en: "Tick this when you saw their ID. You can take a selfie for the Barangay ID photo. The Developer gives the final review and approval; the resident is verified after that." },
       { ring: 'button:has-text("Irehistro")',
-        tl: "Pindutin ang Irehistro. Kopyahin ang login at password at ibigay sa kanya. Sa Account, mapapalitan niya ang password.", en: "Tap Register. Copy the login and password and give them to the resident. In Account they can change the password." },
+        tl: "Pindutin ang Irehistro. Kopyahin ang login at password at ibigay sa kanya. Hihintayin niya ang final approval ng Developer. Sa Account, mapapalitan niya ang password.", en: "Tap Register. Copy the login and password and give them to the resident. They wait for the Developer's final approval. In Account they can change the password." },
     ],
   },
   {

@@ -552,7 +552,11 @@ service cloud.firestore {
         && incoming().status == 'verified'
         && incoming().reviewedBy == request.auth.uid
         && incoming().selfie is string && incoming().selfie.size() < 400000
-        && getAfter(/databases/$(database)/documents/users/$(uid)).data.get('assistedBy', '') == request.auth.uid;
+        && (
+          // The Developer's own registration needs no second approval.
+          (isSuperAdmin() && getAfter(/databases/$(database)/documents/users/$(uid)).data.get('assistedBy', '') == request.auth.uid)
+          // A registration by the Kapitan or Secretary is verified only after the Developer approved it (final approval).
+          || (isSuperAdmin() && getAfter(/databases/$(database)/documents/hallRegistrations/$(uid)).data.status == 'approved'));
       // The Super Admin can replace the photo that is printed on a Barangay ID (e.g. a dark or blurry selfie).
       allow update: if isSuperAdmin() && changedOnly(['selfie'])
         && incoming().selfie is string && incoming().selfie.size() > 0 && incoming().selfie.size() < 400000;
@@ -572,6 +576,27 @@ service cloud.firestore {
       allow delete: if isSelf(uid) || isSuperAdmin();
     }
 
+    // ---------- hallRegistrations (Kapitan or Secretary registers a resident; the Developer gives the final approval) ----------
+    match /hallRegistrations/{uid} {
+      allow read: if isSuperAdmin() || isSelf(uid) || (isAdmin() && resource.data.registeredBy == request.auth.uid);
+      // Written together with the new account. Only "pending": nothing is verified before the Developer approves.
+      allow create: if canRegisterOthers() && !isSuperAdmin()
+        && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'birthday', 'contact', 'email', 'idSeen', 'selfie', 'registeredBy', 'registeredByName', 'status', 'createdAt'])
+        && incoming().uid == uid
+        && incoming().registeredBy == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().idSeen is bool
+        && incoming().selfie is string && incoming().selfie.size() < 400000
+        && incoming().createdAt == request.time
+        && getAfter(/databases/$(database)/documents/users/$(uid)).data.get('assistedBy', '') == request.auth.uid;
+      // Final approval or rejection by the Developer.
+      allow update: if isSuperAdmin()
+        && existing().status == 'pending'
+        && changedOnly(['status', 'reason', 'reviewedBy', 'reviewedByName', 'reviewedAt'])
+        && incoming().status in ['approved', 'rejected'];
+      allow delete: if isSuperAdmin();
+    }
+
     // ---------- verifiedUsers (public flag: doc exists = verified; for badges) ----------
     match /verifiedUsers/{uid} {
       // One person by id (ID check, own status): public. The whole list is for admins only, so
@@ -579,7 +604,11 @@ service cloud.firestore {
       allow get: if true;
       allow list: if isAdmin();
       // An admin verifies other people; only the Super Admin may verify their own account.
-      allow create, update: if isAdmin() && (request.auth.uid != uid || isSuperAdmin());
+      // A resident registered at the Hall by the Kapitan or Secretary waits for the Developer's final approval.
+      allow create, update: if isAdmin() && (request.auth.uid != uid || isSuperAdmin())
+        && (isSuperAdmin()
+          || !(existsAfter(/databases/$(database)/documents/hallRegistrations/$(uid))
+              && getAfter(/databases/$(database)/documents/hallRegistrations/$(uid)).data.status == 'pending'));
       allow delete: if isAdmin() || isSelf(uid);
     }
 

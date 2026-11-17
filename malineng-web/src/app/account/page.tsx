@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { collection, deleteDoc, doc, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
+import { collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from "firebase/firestore";
 import { BadgeCheck, Ban, Camera, CalendarCheck, IdCard, Pill, Clock, LogOut, ShieldCheck, Store, Trash2, UserRound, Briefcase, Users, XCircle } from "lucide-react";
 import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, updatePassword } from "firebase/auth";
 import { isContactEmail } from "@/lib/phoneLogin";
@@ -344,6 +344,22 @@ function MyJobs() {
 }
 
 /** Selfie verification status card. */
+/** For a resident registered at the Barangay Hall by the Kapitan or Secretary: where the Developer's final approval stands. */
+function HallStatusBanner() {
+  const { user, isVerified } = useAuth();
+  const [reg, setReg] = useState<{ status: string; reason?: string } | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    return onSnapshot(doc(db, "hallRegistrations", user.uid), (s) => setReg(s.exists() ? (s.data() as { status: string; reason?: string }) : null), () => setReg(null));
+  }, [user]);
+  if (!reg || isVerified || reg.status === "approved") return null;
+  return reg.status === "pending" ? (
+    <p className="mb-3 rounded-2xl bg-gold-light p-3 text-sm text-yellow-900"><b>⏳ Hinihintay ang final approval ng Developer.</b> Nairehistro ka na sa Barangay Hall. Kapag naaprubahan, magiging verified ang account mo.</p>
+  ) : (
+    <p className="mb-3 rounded-2xl bg-red-50 p-3 text-sm text-red-800"><b>Hindi naaprubahan ang rehistro mo.</b> {reg.reason} </p>
+  );
+}
+
 function VerificationCard() {
   const { isStaff, isVerified, verification } = useAuth();
   if (isStaff) return null;
@@ -505,6 +521,7 @@ function AccountContent() {
           <span><b>Naka-suspend ang account mo.</b> Hindi ka muna makakapag-post o makakapag-book. Bukas pa rin sa iyo ang Emergency. Makipag-ugnayan sa Barangay Hall.</span>
         </p>
       )}
+      <HallStatusBanner />
       <VerificationCard />
       <HelpSetupLink className="mb-3" />
 
