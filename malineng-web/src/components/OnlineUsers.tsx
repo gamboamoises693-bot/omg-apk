@@ -83,7 +83,7 @@ export function OnlineUsers({ totalDevices }: { totalDevices: number | null }) {
             return (
               <li key={r.uid} className="flex items-center gap-3 px-3 py-2.5">
                 <span className="relative">
-                  <Avatar name={name} photo={r.profile && r.profile.role !== "resident" ? r.profile.photoURL : undefined} size="h-9 w-9" textClass="text-xs" fallbackClass="bg-brand-light text-brand" />
+                  <Avatar name={name} photo={(r.profile && r.profile.role !== "resident" ? r.profile.photoURL : undefined) || r.profile?.faceThumb} size="h-9 w-9" textClass="text-xs" fallbackClass="bg-brand-light text-brand" />
                   <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">

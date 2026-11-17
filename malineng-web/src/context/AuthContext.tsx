@@ -16,7 +16,7 @@ interface AuthContextValue {
   isAdmin: boolean;
   /** Any staff account: admins, Super Admin and BHW. */
   isStaff: boolean;
-  /** Can manage the Botika: BHW, BHW Head, Kapitan or Super Admin. */
+  /** Can manage the Botika: BHW, BHW Head, Kapitan, Secretary or Super Admin. */
   canBotika: boolean;
   /** Approves Hiraman (borrowing) requests: Kapitan, Secretary or Super Admin. */
   canBorrowAdmin: boolean;
@@ -168,7 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       isAdmin,
       isStaff,
-      canBotika: isSuperAdmin || isBhw || (isAdmin && profile?.position === "Kapitan"),
+      canBotika: isSuperAdmin || isBhw || (isAdmin && (profile?.position === "Kapitan" || profile?.position === "Secretary")),
       canBorrowAdmin: isSuperAdmin || (isAdmin && (profile?.position === "Kapitan" || profile?.position === "Secretary")),
       isOfficer: isSuperAdmin || (isAdmin && (profile?.position === "Kapitan" || profile?.position === "Secretary")),
       canLiga: isSuperAdmin || (isAdmin && ["Kapitan", "Secretary", "SK Chairman"].includes(profile?.position ?? "")),
