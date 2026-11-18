@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
-import { maskName } from "@/lib/raffle";
+import { maskName, normalizeEntryCode } from "@/lib/raffle";
 import { roleLabel } from "@/lib/activity";
 import { BarangayIdCard } from "@/components/BarangayIdCard";
 import { useCaptainSignature } from "@/lib/signature";
@@ -58,7 +58,7 @@ function Verify() {
   const { user, profile, isAdmin } = useAuth();
   const toast = useToast();
   const round = Number(params.get("r") ?? "0");
-  const code = (params.get("c") ?? "").toUpperCase();
+  const code = normalizeEntryCode(params.get("c") ?? "");
   const [result, setResult] = useState<Result>({ kind: "none" });
   const [idInfo, setIdInfo] = useState<IdInfo | null | undefined>(undefined);
   const captain = useCaptainSignature();
@@ -311,13 +311,13 @@ function Verify() {
         className="space-y-2 rounded-2xl bg-white p-3 shadow-card"
         onSubmit={(e) => {
           e.preventDefault();
-          if (manualRound && manualCode.trim()) go(manualRound, manualCode.trim());
+          if (manualRound && manualCode.trim()) go(manualRound, normalizeEntryCode(manualCode));
         }}
       >
         <p className="flex items-center gap-1.5 text-sm font-bold"><ScanLine className="h-4 w-4" aria-hidden /> O i-type ang code</p>
         <div className="grid grid-cols-3 gap-2">
           <Input label="Round" type="number" inputMode="numeric" min={1} value={manualRound} onChange={(e) => setManualRound(e.target.value)} />
-          <div className="col-span-2"><Input label="Entry code" value={manualCode} onChange={(e) => setManualCode(e.target.value.toUpperCase())} maxLength={8} /></div>
+          <div className="col-span-2"><Input label="Entry code" value={manualCode} onChange={(e) => setManualCode(e.target.value.toUpperCase())} maxLength={11} placeholder="MG-XXXXXXXX" /></div>
         </div>
         <Button type="submit" variant="outline" full>I-check</Button>
       </form>

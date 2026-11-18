@@ -191,12 +191,20 @@ export function useNow(intervalMs = 1000): number {
   return now;
 }
 
-/** 8 characters without look-alikes (no 0/O, 1/I). */
+/** Raffle entry code: "MG-" and 8 characters without look-alikes (no 0/O, 1/I), e.g. MG-CR4K4SW4. */
+export const CODE_RE = /^MG-[A-Z0-9]{8}$/;
+
 export function newCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = new Uint8Array(8);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+  return `MG-${Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("")}`;
+}
+
+/** What someone typed or scanned -> the code as stored: upper case, with the MG- start added when only the 8 characters were given. */
+export function normalizeEntryCode(input: string): string {
+  const c = input.toUpperCase().replace(/\s+/g, "");
+  return /^[A-Z0-9]{8}$/.test(c) ? `MG-${c}` : c;
 }
 
 /** "Rosa Mendoza Cruz" -> "Rosa C." (first name and last initial). */
