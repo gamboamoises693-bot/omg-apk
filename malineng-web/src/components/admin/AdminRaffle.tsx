@@ -9,6 +9,7 @@ import { logActivity } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
 import { verifiedSetRef } from "@/lib/verified";
 import {
+  CODE_RE,
   DEFAULT_RESERVES,
   DEFAULT_START_ISO,
   MAX_RESERVES,
@@ -194,6 +195,47 @@ export function AdminRaffle() {
       out.push({ uid, fullName: String(data.fullName ?? "").slice(0, 120) || "Residente", purok: String(data.purok ?? "").slice(0, 40) });
     }
     return out;
+  };
+
+  /** Gives every entry whose code is not in the MG-######## form a new code. Only before the draw (the rules also check this). */
+  const [oldCodes, setOldCodes] = useState<number | null>(null);
+  const renewCodes = async () => {
+    if (locked) return toast("Nasimulan na ang bunutan. Hindi na mababago ang mga code.", "error");
+    setBusy("codes");
+    try {
+      const snap = await getDocs(collection(db, "raffleEntries"));
+      const used = new Set(snap.docs.map((d) => String(d.data().code ?? "")));
+      const old = snap.docs.filter((d) => !CODE_RE.test(String(d.data().code ?? "")));
+      if (old.length === 0) {
+        setOldCodes(0);
+        toast("Lahat ng code ay MG-######## na.");
+        return;
+      }
+      if (!confirm(`Gawing bagong code (MG-########) ang ${old.length} entry? Mapapalitan ang code na nakikita nila sa Home.`)) return;
+      let batch = writeBatch(db);
+      let inBatch = 0;
+      for (const d of old) {
+        let code = newCode();
+        while (used.has(code)) code = newCode();
+        used.add(code);
+        batch.update(d.ref, { code });
+        inBatch++;
+        if (inBatch >= 400) {
+          await batch.commit();
+          batch = writeBatch(db);
+          inBatch = 0;
+        }
+      }
+      if (inBatch > 0) await batch.commit();
+      logActivity("Raffle", `Pinalitan ang code ng ${old.length} entry (MG-########)`);
+      setOldCodes(0);
+      toast(`Napalitan ang ${old.length} code.`);
+      refresh();
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy("");
+    }
   };
 
   /** Shows how many verified residents have no entry yet, before anything is added. */
@@ -441,6 +483,10 @@ export function AdminRaffle() {
           <span className="text-xs text-gray-500">Status</span>
         </div>
       </div>
+      <Button variant="outline" full loading={busy === "codes"} disabled={locked} onClick={renewCodes}>
+        Gawing MG-######## ang mga code ng may entry na
+      </Button>
+      {oldCodes === 0 && <p className="text-xs font-semibold text-emerald-700">Lahat ng code ay nasa bagong anyo na.</p>}
       <Button variant="outline" full loading={busy === "count"} onClick={countMissing}>
         Ilan ang verified na wala pang entry?
       </Button>

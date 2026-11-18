@@ -968,7 +968,7 @@ service cloud.firestore {
     function raffleEntryShape(uid) {
       return incoming().keys().hasOnly(['uid', 'code', 'name', 'purok', 'createdAt'])
         && incoming().uid == uid
-        && incoming().code is string && incoming().code.matches('^[A-Z0-9]{8}$')
+        && incoming().code is string && incoming().code.matches('^MG-[A-Z0-9]{8}$')
         && incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 120
         && incoming().purok is string && incoming().purok.size() <= 40
         && incoming().createdAt == request.time;
@@ -1002,7 +1002,9 @@ service cloud.firestore {
           && incoming().purok == me().get('purok', ''))
         // The Developer adds verified people who never opened the app, before the draw.
         || (isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublicRounds/1) && raffleEntryShape(uid));
-      allow update: if false;
+      // The Developer can give every entry a new code (MG-########) as long as no draw has started.
+      allow update: if isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublicRounds/1)
+        && changedOnly(['code']) && incoming().code is string && incoming().code.matches('^MG-[A-Z0-9]{8}$');
       allow delete: if isSuperAdmin();
     }
 
