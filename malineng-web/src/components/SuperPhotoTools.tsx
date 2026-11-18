@@ -25,7 +25,7 @@ export function SuperPhotoTools({ collectionName, id, hasPhoto, what, tab }: { c
   const save = async (photoURL: string) => {
     setBusy(true);
     try {
-      await updateDoc(doc(db, collectionName, id), { photoURL });
+      await updateDoc(doc(db, collectionName, id), collectionName === "posts" ? { photoURL, photos: [] } : { photoURL });
       if (collectionName === "listings") await deleteDoc(doc(db, "listingPhotos", id)).catch(() => undefined);
       logActivity(tab, `${photoURL ? "Pinalitan" : "Inalis"} ang litrato ng ${what}`, id);
       toast(photoURL ? "Napalitan ang litrato." : "Inalis ang litrato.");

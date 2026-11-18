@@ -1,9 +1,10 @@
 "use client";
 
+import { postPhotos } from "@/lib/postPhotos";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { addDoc, collection, deleteDoc, doc, getCountFromServer, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
-import { Check, Link2, MessageCircle, MoreHorizontal, Send, Share2, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Link2, MessageCircle, MoreHorizontal, Send, Share2, Trash2, X } from "lucide-react";
 import { QUICK_EMOJIS } from "@/lib/reactions";
 import { LikeButton, ReactionCounts, ReactionSummary, reactionPatch, useReactions } from "./ReactionBar";
 import { db } from "@/lib/firebase";
@@ -143,6 +144,78 @@ function Comments({ postId, onCount }: { postId: string; onCount: (n: number) =>
   );
 }
 
+/** The photos of a post, laid out like Facebook: 1 wide, 2 side by side, 3 with one big, 4 in a 2 × 2 grid. */
+function PostPhotoGrid({ photos, onOpen }: { photos: string[]; onOpen: (index: number) => void }) {
+  if (photos.length === 0) return null;
+  if (photos.length === 1) {
+    return (
+      <button type="button" onClick={() => onOpen(0)} className="mt-3 block w-full" aria-label="Palakihin ang larawan">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={photos[0]} alt="Larawan ng post" loading="lazy" className="max-h-[480px] w-full object-cover" />
+      </button>
+    );
+  }
+  const n = photos.length;
+  return (
+    <div className={`mt-3 grid grid-cols-2 gap-0.5 ${n === 2 ? "h-60" : "h-72 grid-rows-2"}`}>
+      {photos.map((src, i) => (
+        <button key={i} type="button" onClick={() => onOpen(i)} className={`relative block overflow-hidden bg-gray-100 ${n === 3 && i === 0 ? "row-span-2" : ""}`} aria-label={`Palakihin ang larawan ${i + 1} sa ${n}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt={`Larawan ${i + 1} ng post`} loading="lazy" className="h-full w-full object-cover" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Full-screen viewer: swipe or tap the arrows to move between the photos. */
+function PhotoViewer({ photos, start, onClose }: { photos: string[]; start: number; onClose: () => void }) {
+  const [i, setI] = useState(Math.min(start, photos.length - 1));
+  const touch = useRef(0);
+  const go = (d: number) => setI((x) => (x + d + photos.length) % photos.length);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") go(-1);
+      if (e.key === "ArrowRight") go(1);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-2"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Mga larawan"
+      onClick={onClose}
+      onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => {
+        const dx = e.changedTouches[0].clientX - touch.current;
+        if (photos.length > 1 && Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={photos[i]} alt={`Larawan ${i + 1} ng post`} className="max-h-full max-w-full object-contain" />
+      <button type="button" aria-label="Isara" className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] rounded-full bg-white/20 p-2 text-white" onClick={onClose}>
+        <X className="h-6 w-6" />
+      </button>
+      {photos.length > 1 && (
+        <>
+          <button type="button" aria-label="Nakaraang larawan" className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2 text-white" onClick={(e) => { e.stopPropagation(); go(-1); }}>
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button type="button" aria-label="Susunod na larawan" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2 text-white" onClick={(e) => { e.stopPropagation(); go(1); }}>
+            <ChevronRight className="h-6 w-6" />
+          </button>
+          <span className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-sm font-bold text-white">{i + 1} / {photos.length}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: boolean }) {
   const { user, isAdmin } = useAuth();
   const toast = useToast();
@@ -150,7 +223,9 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [zoom, setZoom] = useState(false);
+  // Which photo is open full screen (null = none).
+  const [zoom, setZoom] = useState<number | null>(null);
+  const photos = postPhotos(post);
   const [commentCount, setCommentCount] = useState<number | null>(null);
   const verified = useVerifiedSet();
   const r = useReactions({
@@ -269,14 +344,9 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
         )}
       </div>
 
-      {post.photoURL && (
-        <button type="button" onClick={() => setZoom(true)} className="mt-3 block w-full" aria-label="Palakihin ang larawan">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={post.photoURL} alt="Larawan ng post" loading="lazy" className="max-h-[480px] w-full object-cover" />
-        </button>
-      )}
+      <PostPhotoGrid photos={photos} onOpen={setZoom} />
 
-      <SuperPhotoTools collectionName="posts" id={post.id} hasPhoto={!!post.photoURL} what={`post ni ${post.authorName}`} tab="Board" />
+      <SuperPhotoTools collectionName="posts" id={post.id} hasPhoto={photos.length > 0} what={`post ni ${post.authorName}`} tab="Board" />
 
       {adminMode ? (
         <div className="p-4">
@@ -310,15 +380,7 @@ export function PostCard({ post, adminMode = false }: { post: Post; adminMode?: 
 
       <ReactionSummary r={r} />
 
-      {zoom && post.photoURL && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-2" role="dialog" aria-modal="true" aria-label="Larawan" onClick={() => setZoom(false)}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={post.photoURL} alt="Larawan ng post" className="max-h-full max-w-full object-contain" />
-          <button type="button" aria-label="Isara" className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] rounded-full bg-white/20 p-2 text-white" onClick={() => setZoom(false)}>
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-      )}
+      {zoom !== null && photos.length > 0 && <PhotoViewer photos={photos} start={zoom} onClose={() => setZoom(null)} />}
     </article>
   );
 }

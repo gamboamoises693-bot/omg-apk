@@ -6,13 +6,13 @@ import { ImagePlus, MessagesSquare, PenSquare } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { useCollection } from "@/lib/useCollection";
-import { uploadImage } from "@/lib/upload";
+import { compressPostPhotos } from "@/lib/upload";
 import { friendlyError, sortNewest } from "@/lib/format";
 import type { Post } from "@/lib/types";
 import { Button, EmptyState, ErrorText, FilterTabs, Modal, PageHeader, SectionTitle, Spinner, Textarea } from "@/components/ui";
 import { Avatar } from "@/components/Avatar";
 import { EmojiBar } from "@/components/PostCard";
-import { ImagePicker } from "@/components/ImagePicker";
+import { MultiImagePicker } from "@/components/MultiImagePicker";
 import { LoginGate } from "@/components/LoginGate";
 import { PostCard } from "@/components/PostCard";
 import { useToast } from "@/components/Toast";
@@ -24,7 +24,7 @@ function Composer() {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const first = profile?.fullName?.split(" ")[0] ?? "kabarangay";
@@ -36,20 +36,21 @@ function Composer() {
     setError("");
     setLoading(true);
     try {
-      const photoURL = file ? await uploadImage(file, user.uid) : "";
+      const photos = await compressPostPhotos(files);
       await addDoc(collection(db, "posts"), {
         authorId: user.uid,
         authorName: profile?.fullName ?? user.displayName ?? "Residente",
         purok: profile?.purok ?? "",
         content: content.trim().slice(0, 3000),
-        photoURL,
+        photoURL: "",
+        ...(photos.length ? { photos } : {}),
         status: "pending",
         likes: [],
         createdAt: serverTimestamp(),
       });
       logActivity("Board", `Nag-post sa Community Board: “${content.trim().slice(0, 60)}”`);
       setContent("");
-      setFile(null);
+      setFiles([]);
       setOpen(false);
       toast("Naipadala! Lalabas ang post kapag na-approve ng admin.");
     } catch (err) {
@@ -89,7 +90,7 @@ function Composer() {
           </div>
           <Textarea label="" placeholder={`Ano ang gusto mong ibahagi, ${first}?`} value={content} onChange={(e) => setContent(e.target.value)} maxLength={3000} autoFocus aria-label="Mensahe ng post" />
           <EmojiBar onPick={(e) => setContent((t) => (t + e).slice(0, 3000))} />
-          <ImagePicker file={file} onChange={setFile} />
+          <MultiImagePicker files={files} onChange={setFiles} />
           <ErrorText>{error}</ErrorText>
           <Button type="submit" full loading={loading}>
             <PenSquare className="h-5 w-5" /> I-post
