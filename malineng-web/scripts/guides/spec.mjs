@@ -153,7 +153,7 @@ export const GUIDES = [
       { ring: 'label:has-text("Email")',
         tl: "Ilagay ang email at password (hindi bababa sa 8 characters).", en: "Enter your email and a password (at least 8 characters)." },
       { ring: 'button:has-text("Gumawa ng Account")',
-        tl: "Pindutin ang Gumawa ng Account. Buksan ang email mo at i-click ang link para ma-confirm. Hindi marunong? Pumunta sa Barangay Hall dala ang ID at contact number; ang staff ang magre-register para sa iyo.", en: "Tap Create Account. Open your email and click the link to confirm. Not sure how? Go to the Barangay Hall with your ID and contact number; the staff will register you." },
+        tl: "Pindutin ang Gumawa ng Account. Pagkatapos, mag-selfie para ma-verify. Pwede mo ring buksan ang email mo at i-click ang link para ma-confirm (hindi ito hadlang). Hindi marunong? Pumunta sa Barangay Hall dala ang ID at contact number; ang staff ang magre-register para sa iyo.", en: "Tap Create Account. Then take a selfie to get verified. You can also open your email and click the link to confirm (it does not block you). Not sure how? Go to the Barangay Hall with your ID and contact number; the staff will register you." },
       { ring: 'button:has-text("Mag-login gamit ang Google")',
         tl: "Pwede ring Google ang gamitin kung wala kang gustong tandaang password.", en: "You can also use Google if you do not want to remember a password." },
     ],
