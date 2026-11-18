@@ -182,22 +182,44 @@ export function AdminRaffle() {
     }
   };
 
+  /** Verified residents (not staff, not suspended) who have no entry yet. */
+  const findMissing = async (): Promise<{ uid: string; fullName: string; purok: string }[]> => {
+    const [setSnap, entrySnap] = await Promise.all([getDoc(verifiedSetRef()), getDocs(collection(db, "raffleEntries"))]);
+    const have = new Set(entrySnap.docs.map((d) => d.id));
+    const uids = ((setSnap.data()?.uids as string[] | undefined) ?? []).filter((u) => !have.has(u));
+    const out: { uid: string; fullName: string; purok: string }[] = [];
+    for (const uid of uids) {
+      const data = (await getDoc(doc(db, "users", uid))).data();
+      if (!data || data.role !== "resident" || data.suspended === true) continue;
+      out.push({ uid, fullName: String(data.fullName ?? "").slice(0, 120) || "Residente", purok: String(data.purok ?? "").slice(0, 40) });
+    }
+    return out;
+  };
+
+  /** Shows how many verified residents have no entry yet, before anything is added. */
+  const [missing, setMissing] = useState<{ uid: string; fullName: string; purok: string }[] | null>(null);
+  const countMissing = async () => {
+    setBusy("count");
+    try {
+      setMissing(await findMissing());
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy("");
+    }
+  };
+
   /** Adds an entry for every verified resident who has none yet (people who never opened the app). */
   const sync = async () => {
     if (!confirm("Magdagdag ng entry sa lahat ng verified na wala pang entry? Hindi isasama ang admin at suspended.")) return;
     setBusy("sync");
     try {
-      const [setSnap, entrySnap] = await Promise.all([getDoc(verifiedSetRef()), getDocs(collection(db, "raffleEntries"))]);
-      const have = new Set(entrySnap.docs.map((d) => d.id));
-      const uids = ((setSnap.data()?.uids as string[] | undefined) ?? []).filter((u) => !have.has(u));
+      const list = await findMissing();
       let added = 0;
       let batch = writeBatch(db);
       let inBatch = 0;
-      for (const uid of uids) {
-        const u = await getDoc(doc(db, "users", uid));
-        const data = u.data();
-        if (!data || data.role !== "resident" || data.suspended === true) continue;
-        batch.set(doc(db, "raffleEntries", uid), { uid, code: newCode(), name: String(data.fullName ?? "").slice(0, 120) || "Residente", purok: String(data.purok ?? "").slice(0, 40), createdAt: serverTimestamp() });
+      for (const m of list) {
+        batch.set(doc(db, "raffleEntries", m.uid), { uid: m.uid, code: newCode(), name: m.fullName, purok: m.purok, createdAt: serverTimestamp() });
         added++;
         inBatch++;
         if (inBatch >= 400) {
@@ -209,6 +231,7 @@ export function AdminRaffle() {
       if (inBatch > 0) await batch.commit();
       logActivity("Raffle", `Nagdagdag ng ${added} entry para sa mga verified`);
       toast(added ? `Nagdagdag ng ${added} entry.` : "Wala nang kailangang idagdag.");
+      setMissing(null);
       refresh();
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -418,6 +441,15 @@ export function AdminRaffle() {
           <span className="text-xs text-gray-500">Status</span>
         </div>
       </div>
+      <Button variant="outline" full loading={busy === "count"} onClick={countMissing}>
+        Ilan ang verified na wala pang entry?
+      </Button>
+      {missing && (
+        <div className="rounded-2xl bg-white p-3 text-sm shadow-card">
+          <p className="font-extrabold">{missing.length ? `${missing.length} na verified ang wala pang entry` : "Lahat ng verified ay may entry na."}</p>
+          {missing.length > 0 && <p className="mt-1 text-xs text-gray-600">{missing.slice(0, 8).map((m) => `${m.fullName} (${m.purok || "walang purok"})`).join(", ")}{missing.length > 8 ? `, at ${missing.length - 8} pa` : ""}.</p>}
+        </div>
+      )}
       <Button variant="outline" full loading={busy === "sync"} disabled={locked} onClick={sync}>
         Isama ang lahat ng verified na wala pang entry
       </Button>
