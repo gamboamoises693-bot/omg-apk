@@ -105,7 +105,10 @@ export interface Post {
   authorName: string;
   purok: string;
   content: string;
+  /** The single photo of older posts. New posts use `photos` (see lib/postPhotos.ts). */
   photoURL: string;
+  /** Up to 4 photos of a Board post (small JPEG data URLs). */
+  photos?: string[];
   status: ModerationStatus;
   /** Everyone who reacted (kept for older posts). */
   likes: string[];

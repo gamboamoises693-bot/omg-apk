@@ -713,7 +713,13 @@ service cloud.firestore {
         && incoming().likes.size() == 0
         && incoming().get('reactions', {}).size() == 0
         && isNonEmptyString(incoming().content, 3000)
-        && optionalPhoto();
+        && optionalPhoto()
+        // Up to 4 photos (each a small image; the 1 MB size of the whole post is checked by Firestore itself).
+        && incoming().get('photos', []) is list && incoming().get('photos', []).size() <= 4
+        && (incoming().get('photos', []).size() < 1 || (incoming().photos[0] is string && incoming().photos[0].size() < 250000))
+        && (incoming().get('photos', []).size() < 2 || (incoming().photos[1] is string && incoming().photos[1].size() < 250000))
+        && (incoming().get('photos', []).size() < 3 || (incoming().photos[2] is string && incoming().photos[2].size() < 250000))
+        && (incoming().get('photos', []).size() < 4 || (incoming().photos[3] is string && incoming().photos[3].size() < 250000));
 
       // Reactions: a resident may only add/remove/change THEIR OWN uid in "likes" (everyone who reacted)
       // and in "reactions" (uid -> 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'pray').

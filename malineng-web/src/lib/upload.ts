@@ -109,6 +109,28 @@ export async function compressToSquare(file: File, size = 200, mode: SquareMode 
   }
 }
 
+/**
+ * Photos of one Board post (1 to 4), each a small JPEG data URL. A Firestore document holds at most 1 MB, so the more photos
+ * there are the smaller each one is made (1 photo about 1000 px, 4 photos about 720 px each).
+ */
+export async function compressPostPhotos(files: File[]): Promise<string[]> {
+  if (files.length === 0) return [];
+  const n = files.length;
+  const size = n === 1 ? 1000 : n === 2 ? 860 : 720;
+  const quality = n === 1 ? 0.7 : 0.62;
+  const out: string[] = [];
+  for (const f of files) {
+    if (!f.type.startsWith("image/")) throw new Error("Larawan lang ang pwedeng i-upload.");
+    if (f.size > MAX_FILE_BYTES) throw new Error("Masyadong malaki ang isang larawan (max 10MB).");
+    let url = await blobToDataUrl(await compressImage(f, size, quality));
+    if (url.length > 210_000) url = await blobToDataUrl(await compressImage(f, Math.round(size * 0.75), 0.5));
+    if (url.length > 210_000) throw new Error("Masyadong malaki pa rin ang isang larawan. Pumili ng iba.");
+    out.push(url);
+  }
+  if (out.reduce((sum, u) => sum + u.length, 0) > 800_000) throw new Error("Masyadong malalaki ang mga larawan. Bawasan ang bilang o pumili ng mas maliliit.");
+  return out;
+}
+
 /** Compress an image to a small JPEG data URL (stored directly in Firestore). */
 export async function compressToDataUrl(file: File, maxSize = 600, quality = 0.7, maxChars = 380_000, square = false): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("Larawan lang ang pwedeng i-upload.");
