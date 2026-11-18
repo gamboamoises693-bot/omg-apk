@@ -106,7 +106,13 @@ export function RaffleCard({ full = false }: { full?: boolean }) {
         {phase === "soon" && (
           <>
             <p className="text-lg font-extrabold">Magsisimula sa {formatWhen(config?.startAt)}</p>
-            <p className="text-sm text-white/85">Mag-register at mag-verify para magkaroon ng entry.</p>
+            {user && isStaff ? (
+              <p className="text-sm text-white/85">Hindi kasali sa raffle ang mga admin at opisyal.</p>
+            ) : user && isVerified ? (
+              <p className="text-sm text-white/85"><b>Verified ka na.</b> Hindi pa bukas ang entries. Pagbukas nito, awtomatiko kang magkakaroon ng entry kapag binuksan mo ang app.</p>
+            ) : (
+              <p className="text-sm text-white/85">Mag-register at mag-verify para magkaroon ng entry.</p>
+            )}
           </>
         )}
 

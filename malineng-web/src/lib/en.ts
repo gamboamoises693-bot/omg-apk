@@ -289,6 +289,8 @@ export const EN: Record<string, string> = {
   "Mag-register": "Register",
   "Mag-register at mag-verify ng account para magkaroon ng entry.": "Register and verify your account to get an entry.",
   "Mag-register at mag-verify para magkaroon ng entry.": "Register and verify to get an entry.",
+  "Hindi pa bukas ang entries. Pagbukas nito, awtomatiko kang magkakaroon ng entry kapag binuksan mo ang app.": "Entries are not open yet. When they open, you automatically get an entry as soon as you open the app.",
+  "Verified ka na.": "You are verified.",
   "Mag-register dito": "Register here",
   "Mag-register o mag-login": "Register or log in",
   "Mag-report": "Report",
