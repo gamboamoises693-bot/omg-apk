@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { LinkButton, Spinner } from "./ui";
+import { SampleIdCard } from "./SampleIdCard";
 
 /**
  * Renders children only when logged in.
@@ -16,6 +17,7 @@ export function LoginGate({ children, message = "Mag-login muna para magamit ito
   if (loading) return <Spinner />;
   if (!user) {
     return (
+      <>
       <div className="rounded-2xl bg-gold-light p-5 text-center">
         <LogIn className="mx-auto mb-2 h-8 w-8 text-brand" aria-hidden />
         <p className="mb-3 font-semibold text-gray-800">{message}</p>
@@ -24,6 +26,9 @@ export function LoginGate({ children, message = "Mag-login muna para magamit ito
           <LinkButton href="/register" variant="outline" full>Mag-register</LinkButton>
         </div>
       </div>
+      {/* Guests see what the Barangay ID looks like under the prompt. */}
+      {pathname.replace(/\/+$/, "") === "/barangay-id" && <SampleIdCard />}
+      </>
     );
   }
   return <>{children}</>;
