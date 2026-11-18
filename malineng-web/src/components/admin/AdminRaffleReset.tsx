@@ -20,7 +20,7 @@ interface Group {
 }
 
 const GROUPS: Group[] = [
-  { key: "entries", label: "Mga entry ng raffle", hint: "Ang mga verified ay makakakuha ng bagong entry code pagbukas nila ng app (habang bukas ang raffle).", collections: ["raffleEntries"], sim: true },
+  { key: "entries", label: "Mga entry ng raffle", hint: "Ang mga verified ay makakakuha ng bagong entry code pagbukas nila ng app (habang bukas ang raffle).", collections: ["raffleEntries", "raffleCodes"], sim: true },
   { key: "results", label: "Resulta ng bunutan at mga na-claim na premyo", hint: "Lahat ng round, mananalo, reserba at QR claims.", collections: ["raffleRounds", "rafflePublicRounds", "raffleClaims", "rafflePublic", "raffleResult"], sim: true },
   { key: "donations", label: "Mga donasyon at resibo", hint: "Mga pangako at resibo. Mawawala rin ang resibo sa donor.", collections: ["raffleDonations"], sim: true },
   { key: "sponsors", label: "Mga sponsor", hint: "Ang listahan ng sponsor na nakikita ng lahat.", collections: ["raffleSponsors"], sim: true },
