@@ -64,7 +64,7 @@ export default function RegisterPage() {
       }
       setActivityActor({ uid: cred.user.uid, name: form.fullName.trim(), role: "resident" });
       logActivity("Account", `Nag-register (${form.purok})`, cred.user.uid);
-      toast("Na-register ka na! Kumpirmahin ang email mo (may ipinadalang link), saka mag-selfie para ma-verify.");
+      toast("Na-register ka na! Mag-selfie na para ma-verify. Pwede mo ring kumpirmahin ang email mo (may ipinadalang link).");
       router.replace("/verify");
     } catch (err) {
       setError(friendlyError(err));

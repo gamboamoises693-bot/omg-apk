@@ -107,11 +107,12 @@ function SelfieStep() {
     }
   };
 
-  // The selfie is accepted only after the email is confirmed (the database checks this too).
-  if (needsEmailConfirm(user) && !isStaff) return <EmailVerifyCard />;
+  // The selfie no longer waits for the email: the admin's review of the selfie is what verifies the account.
+  const emailPending = needsEmailConfirm(user) && !isStaff;
 
   return (
     <Card className="space-y-3">
+      {emailPending && <EmailVerifyCard compact optional />}
       {status === "rejected" && (
         <p className="flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-800">
           <XCircle className="mt-0.5 h-4 w-4 shrink-0" />

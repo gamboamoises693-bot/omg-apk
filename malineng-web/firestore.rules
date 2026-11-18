@@ -233,11 +233,12 @@ service cloud.firestore {
       return request.resource.data;
     }
 
-    // Email/password accounts must confirm their email before posting or sending a selfie.
+    // Posting and commenting need a confirmed email OR a selfie that an admin already verified.
+    // The selfie itself no longer waits for the email (many residents had trouble with the confirmation email).
     // Google accounts are already confirmed; staff are exempt (accounts made by the Super Admin).
     function emailOk() {
       // Accounts made at the Barangay Hall have no real mailbox: the staff who registered them checked the ID in person.
-      return request.auth.token.email_verified == true || isStaff() || (hasProfile() && me().get('assistedBy', '') != '');
+      return request.auth.token.email_verified == true || isVerified() || (hasProfile() && me().get('assistedBy', '') != '');
     }
 
     // Kapitan, Secretary and the Developer register residents who cannot do it themselves (at the Barangay Hall).
@@ -563,7 +564,6 @@ service cloud.firestore {
       // Owner submits / re-submits (not after being verified). Kept until the account is deleted.
       allow create, update: if isSelf(uid)
         && notSuspended()
-        && emailOk()
         && (resource == null || existing().status != 'verified')
         && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'birthday', 'contact', 'email', 'selfie', 'status', 'submittedAt'])
         && incoming().uid == uid
