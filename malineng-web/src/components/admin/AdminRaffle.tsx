@@ -26,6 +26,7 @@ import {
 } from "@/lib/raffle";
 import { Button, Card, Input, Spinner } from "@/components/ui";
 import { AdminRaffleReset } from "@/components/admin/AdminRaffleReset";
+import { AdminRaffleDuplicates } from "@/components/admin/AdminRaffleDuplicates";
 import { useToast } from "@/components/Toast";
 
 interface Person {
@@ -197,39 +198,65 @@ export function AdminRaffle() {
     return out;
   };
 
-  /** Gives every entry whose code is not in the MG-######## form a new code. Only before the draw (the rules also check this). */
+  /** Every code in use (entries and the code registry), so a new code is never one that is taken. */
+  const allCodes = async () => {
+    const [entries, reg] = await Promise.all([getDocs(collection(db, "raffleEntries")), getDocs(collection(db, "raffleCodes"))]);
+    return { entries, reg, used: new Set<string>([...entries.docs.map((d) => String(d.data().code ?? "")), ...reg.docs.map((d) => d.id)]) };
+  };
+
+  /**
+   * Makes every entry hold its own code in the form MG-########: entries with an old-style code get a new one, entries whose code
+   * is shared with another entry get a new one, and every code is written to the registry (raffleCodes) that stops a second
+   * claim on the same code. Only before the draw (the rules also check this).
+   */
   const [oldCodes, setOldCodes] = useState<number | null>(null);
   const renewCodes = async () => {
     if (locked) return toast("Nasimulan na ang bunutan. Hindi na mababago ang mga code.", "error");
     setBusy("codes");
     try {
-      const snap = await getDocs(collection(db, "raffleEntries"));
-      const used = new Set(snap.docs.map((d) => String(d.data().code ?? "")));
-      const old = snap.docs.filter((d) => !CODE_RE.test(String(d.data().code ?? "")));
-      if (old.length === 0) {
+      const { entries, reg, used } = await allCodes();
+      const owner = new Map(reg.docs.map((d) => [d.id, String(d.data().uid)]));
+      const taken = new Map<string, string>(); // code -> uid, for the entries handled so far
+      const plan: { ref: ReturnType<typeof doc>; uid: string; oldCode: string; code: string; change: boolean }[] = [];
+      for (const d of entries.docs) {
+        const uid = d.id;
+        const c = String(d.data().code ?? "");
+        const fine = CODE_RE.test(c) && !taken.has(c) && (owner.get(c) === uid || !owner.has(c));
+        let code = c;
+        if (!fine) {
+          code = newCode();
+          while (used.has(code)) code = newCode();
+          used.add(code);
+        }
+        taken.set(code, uid);
+        // Already correct and registered: nothing to do.
+        if (fine && owner.get(c) === uid) continue;
+        plan.push({ ref: d.ref, uid, oldCode: c, code, change: code !== c });
+      }
+      if (plan.length === 0) {
         setOldCodes(0);
-        toast("Lahat ng code ay MG-######## na.");
+        toast("Maayos na ang lahat ng code: MG-######## at walang doble.");
         return;
       }
-      if (!confirm(`Gawing bagong code (MG-########) ang ${old.length} entry? Mapapalitan ang code na nakikita nila sa Home.`)) return;
+      const changing = plan.filter((p) => p.change).length;
+      if (!confirm(`${plan.length} entry ang aayusin: ${changing} ang papalitan ng bagong code (MG-########) at ${plan.length - changing} ang ire-rehistro lang. Mapapalitan ang code na nakikita nila sa Home.`)) return;
       let batch = writeBatch(db);
-      let inBatch = 0;
-      for (const d of old) {
-        let code = newCode();
-        while (used.has(code)) code = newCode();
-        used.add(code);
-        batch.update(d.ref, { code });
-        inBatch++;
-        if (inBatch >= 400) {
+      let ops = 0;
+      for (const p of plan) {
+        if (p.change) batch.update(p.ref, { code: p.code });
+        batch.set(doc(db, "raffleCodes", p.code), { uid: p.uid, createdAt: serverTimestamp() });
+        if (p.change && owner.get(p.oldCode) === p.uid) batch.delete(doc(db, "raffleCodes", p.oldCode));
+        ops += 3;
+        if (ops >= 450) {
           await batch.commit();
           batch = writeBatch(db);
-          inBatch = 0;
+          ops = 0;
         }
       }
-      if (inBatch > 0) await batch.commit();
-      logActivity("Raffle", `Pinalitan ang code ng ${old.length} entry (MG-########)`);
+      if (ops > 0) await batch.commit();
+      logActivity("Raffle", `Inayos ang code ng ${plan.length} entry (${changing} pinalitan, MG-########)`);
       setOldCodes(0);
-      toast(`Napalitan ang ${old.length} code.`);
+      toast(`Naayos ang ${plan.length} entry.`);
       refresh();
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -257,13 +284,18 @@ export function AdminRaffle() {
     setBusy("sync");
     try {
       const list = await findMissing();
+      const { used } = await allCodes();
       let added = 0;
       let batch = writeBatch(db);
       let inBatch = 0;
       for (const m of list) {
-        batch.set(doc(db, "raffleEntries", m.uid), { uid: m.uid, code: newCode(), name: m.fullName, purok: m.purok, createdAt: serverTimestamp() });
+        let code = newCode();
+        while (used.has(code)) code = newCode();
+        used.add(code);
+        batch.set(doc(db, "raffleEntries", m.uid), { uid: m.uid, code, name: m.fullName, purok: m.purok, createdAt: serverTimestamp() });
+        batch.set(doc(db, "raffleCodes", code), { uid: m.uid, createdAt: serverTimestamp() });
         added++;
-        inBatch++;
+        inBatch += 2;
         if (inBatch >= 400) {
           await batch.commit();
           batch = writeBatch(db);
@@ -484,9 +516,10 @@ export function AdminRaffle() {
         </div>
       </div>
       <Button variant="outline" full loading={busy === "codes"} disabled={locked} onClick={renewCodes}>
-        Gawing MG-######## ang mga code ng may entry na
+        Ayusin ang mga code: MG-######## at walang doble
       </Button>
       {oldCodes === 0 && <p className="text-xs font-semibold text-emerald-700">Lahat ng code ay nasa bagong anyo na.</p>}
+      <AdminRaffleDuplicates locked={locked} onChanged={refresh} />
       <Button variant="outline" full loading={busy === "count"} onClick={countMissing}>
         Ilan ang verified na wala pang entry?
       </Button>

@@ -971,7 +971,22 @@ service cloud.firestore {
         && incoming().code is string && incoming().code.matches('^MG-[A-Z0-9]{8}$')
         && incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 120
         && incoming().purok is string && incoming().purok.size() <= 40
-        && incoming().createdAt == request.time;
+        && incoming().createdAt == request.time
+        // The code must be claimed in raffleCodes in the same batch, so two entries can never share one code.
+        && getAfter(/databases/$(database)/documents/raffleCodes/$(incoming().code)).data.uid == uid;
+    }
+
+    // Each raffle code belongs to one entry: raffleCodes/{code} = { uid }. A second claim on a taken code is refused.
+    match /raffleCodes/{code} {
+      allow read: if isSuperAdmin();
+      allow create: if code.matches('^MG-[A-Z0-9]{8}$')
+        && incoming().keys().hasOnly(['uid', 'createdAt'])
+        && incoming().createdAt == request.time
+        && (incoming().uid == request.auth.uid || isSuperAdmin())
+        && getAfter(/databases/$(database)/documents/raffleEntries/$(incoming().uid)).data.code == code
+        && !exists(/databases/$(database)/documents/rafflePublicRounds/1);
+      allow update: if false;
+      allow delete: if isSuperAdmin();
     }
 
     // Old single-draw documents (kept readable for history; the Developer can clear them).
@@ -1004,7 +1019,8 @@ service cloud.firestore {
         || (isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublicRounds/1) && raffleEntryShape(uid));
       // The Developer can give every entry a new code (MG-########) as long as no draw has started.
       allow update: if isSuperAdmin() && !exists(/databases/$(database)/documents/rafflePublicRounds/1)
-        && changedOnly(['code']) && incoming().code is string && incoming().code.matches('^MG-[A-Z0-9]{8}$');
+        && changedOnly(['code']) && incoming().code is string && incoming().code.matches('^MG-[A-Z0-9]{8}$')
+        && getAfter(/databases/$(database)/documents/raffleCodes/$(incoming().code)).data.uid == resource.data.uid;
       allow delete: if isSuperAdmin();
     }
 

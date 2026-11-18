@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { collection, doc, onSnapshot, serverTimestamp, setDoc, type Timestamp } from "firebase/firestore";
+import { collection, doc, onSnapshot, serverTimestamp, writeBatch, type Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 /**
@@ -217,7 +217,22 @@ export function maskName(full: string): string {
 
 /** Gives the person their entry (the rules check that they are verified, not staff, and before the cutoff). */
 export async function claimEntry(uid: string, name: string, purok: string): Promise<void> {
-  await setDoc(doc(db, "raffleEntries", uid), { uid, code: newCode(), name, purok, createdAt: serverTimestamp() });
+  // The code is claimed together with the entry (raffleCodes/{code}); if somebody already holds that code the batch is
+  // refused and another code is tried, so two entries can never share a code.
+  let last: unknown;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const code = newCode();
+    try {
+      const batch = writeBatch(db);
+      batch.set(doc(db, "raffleEntries", uid), { uid, code, name, purok, createdAt: serverTimestamp() });
+      batch.set(doc(db, "raffleCodes", code), { uid, createdAt: serverTimestamp() });
+      await batch.commit();
+      return;
+    } catch (err) {
+      last = err;
+    }
+  }
+  throw last;
 }
 
 /** Countdown parts for display. */
