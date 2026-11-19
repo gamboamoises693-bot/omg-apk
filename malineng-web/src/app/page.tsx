@@ -1,5 +1,6 @@
 "use client";
 
+import { PhilippinesBanner } from "@/components/PhilippinesBanner";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
@@ -208,8 +209,10 @@ export default function HomePage() {
 
   return (
     <div>
+      {/* The flag stripe and "Republika ng Pilipinas" above the header */}
+      <div className="-mx-4 -mt-4"><PhilippinesBanner /></div>
       {/* Header: barangay identity, greeting, community numbers */}
-      <section className={`relative -mx-4 -mt-4 overflow-hidden px-4 pb-16 text-white ${xmas ? "xmas-card pt-9" : "bg-gradient-to-br from-brand via-brand to-brand-deep pt-4"}`}>
+      <section className={`relative -mx-4 overflow-hidden px-4 pb-16 text-white ${xmas ? "xmas-card pt-9" : "bg-gradient-to-br from-brand via-brand to-brand-deep pt-4"}`}>
         {xmas && (
           <>
             <XmasLights />
