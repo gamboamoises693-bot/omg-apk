@@ -7,6 +7,7 @@ import { PabatidBell } from "./PabatidBell";
 import { LogoButton, LogoMark } from "./BarangayLogo";
 import { LanguageToggle } from "./LanguageToggle";
 import { useXmas } from "@/lib/theme";
+import { PhilippinesBanner } from "./PhilippinesBanner";
 
 /** Slim app bar for inner pages. Home draws its own greeting header instead. */
 export function TopBar() {
@@ -16,6 +17,7 @@ export function TopBar() {
 
   return (
     <header className="no-print sticky top-0 z-40 bg-brand-deep text-white">
+      <PhilippinesBanner />
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-2.5">
         <LogoButton className="flex items-center gap-2">
           <LogoMark />
