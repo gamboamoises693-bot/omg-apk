@@ -7,13 +7,16 @@ import { useAuth } from "@/context/AuthContext";
 import { useAdminPending } from "@/context/AdminPendingContext";
 import { useToast } from "@/components/Toast";
 import { Avatar } from "@/components/Avatar";
+import { Badge, Button, Card, EmptyState, Modal, Spinner } from "@/components/ui";
+import { AyudaTab, BuodTab, KalusuganTab, ProyektoTab, type ExecTab } from "@/components/admin/AdminExecTabs";
 import { useOnlineCount } from "@/lib/presence";
-import { Badge, Button, Card, EmptyState, SectionTitle, Spinner } from "@/components/ui";
 import { downloadCsv } from "@/lib/csv";
 import { downloadDashboardPdf, loadSealPng } from "@/lib/dashboardPdf";
 import { logActivity, roleLabel } from "@/lib/activity";
 import { friendlyError } from "@/lib/format";
 import { useCaptainSignature } from "@/lib/signature";
+import { usePuroks } from "@/lib/useSettings";
+import { buildScorecard, loadAyuda, loadHealth, loadProjects, type AyudaData, type HealthData, type ProjectData, type Rag } from "@/lib/executive";
 import {
   PERIOD_LABEL,
   STATUS_WORD,
@@ -53,6 +56,14 @@ const TAB_LABEL: Record<string, string> = {
   approve: "I-approve",
 };
 
+const EXEC_TABS: { id: ExecTab; label: string }[] = [
+  { id: "buod", label: "Buod" },
+  { id: "kalusugan", label: "Kalusugan" },
+  { id: "proyekto", label: "Proyekto" },
+  { id: "ayuda", label: "Ayuda" },
+  { id: "transaksyon", label: "Transaksyon" },
+];
+
 const STATUS_BADGE: Record<TxnStatus, "gold" | "green" | "gray"> = { pending: "gold", done: "green", rejected: "gray" };
 
 /** Opens another admin section (the admin page listens to the URL hash). */
@@ -68,10 +79,18 @@ export function AdminDashboard() {
   const online = useOnlineCount();
   const toast = useToast();
   const signature = useCaptainSignature();
+  const puroks = usePuroks();
+  const [tab, setTab] = useState<ExecTab>("buod");
   const [period, setPeriod] = useState<Period>("week");
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>({ name: "home" });
+  const [health, setHealth] = useState<HealthData | null>(null);
+  const [projects, setProjects] = useState<ProjectData | null>(null);
+  const [ayuda, setAyuda] = useState<AyudaData | null>(null);
+  const [execLoading, setExecLoading] = useState(false);
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [pdfTabs, setPdfTabs] = useState<ExecTab[]>(["buod", "kalusugan", "proyekto", "ayuda", "transaksyon"]);
   const [pdfBusy, setPdfBusy] = useState(false);
 
   const range = useMemo(() => rangeFor(period), [period]);
@@ -99,6 +118,38 @@ export function AdminDashboard() {
   const summary = useMemo(() => summarize(current, previous), [current, previous]);
   const title = periodTitle(period, range);
 
+  /** Loads the extra numbers a tab needs (Buod needs all of them). `force` skips the two-minute memory. */
+  const loadExec = useCallback(
+    async (need: ExecTab[], force = false) => {
+      if (!loaded) return;
+      setExecLoading(true);
+      try {
+        const wantAll = need.includes("buod");
+        const [h, p, a] = await Promise.all([
+          wantAll || need.includes("kalusugan") ? loadHealth(current, force) : null,
+          wantAll || need.includes("proyekto") ? loadProjects(force) : null,
+          wantAll || need.includes("ayuda") ? loadAyuda(puroks, force) : null,
+        ]);
+        if (h) setHealth(h);
+        if (p) setProjects(p);
+        if (a) setAyuda(a);
+      } catch (err) {
+        toast(friendlyError(err), "error");
+      } finally {
+        setExecLoading(false);
+      }
+    },
+    [loaded, current, puroks, toast],
+  );
+
+  useEffect(() => {
+    if (tab !== "transaksyon") void loadExec([tab]);
+  }, [tab, loadExec]);
+
+  const card = useMemo(() => (health || projects || ayuda ? buildScorecard(health, projects, ayuda, current) : null), [health, projects, ayuda, current]);
+  const ragOf = (key: string): Rag => card?.items.find((i) => i.key === key)?.rag ?? "n";
+  const botikaRag: Rag = !health ? "n" : health.botika.low.some((m) => m.stock === 0) || health.botika.expiring.some((m) => m.days < 0) ? "r" : health.botika.low.length + health.botika.expiring.length > 0 ? "y" : "g";
+
   const exportCsv = () => {
     downloadCsv(`transaksyon-${period}.csv`, [
       ["Petsa", "Oras", "Residente", "Serbisyo", "Detalye", "Katayuan", "Reference", "Purok", "Huling kumilos"],
@@ -118,24 +169,38 @@ export function AdminDashboard() {
   };
 
   const exportPdf = async () => {
+    if (pdfTabs.length === 0) return;
     setPdfBusy(true);
     try {
+      // Make sure every picked page has its numbers (they come from the two-minute memory when already loaded).
+      const needAll = pdfTabs.includes("buod");
+      const [h, p, a] = await Promise.all([
+        needAll || pdfTabs.includes("kalusugan") ? loadHealth(current) : health,
+        needAll || pdfTabs.includes("proyekto") ? loadProjects() : projects,
+        needAll || pdfTabs.includes("ayuda") ? loadAyuda(puroks) : ayuda,
+      ]);
       const seal = await loadSealPng();
       await downloadDashboardPdf(
         {
+          tabs: pdfTabs,
           periodLabel: PERIOD_LABEL[period],
           rangeText: title,
           summary,
           txns: current,
+          health: h,
+          projects: p,
+          ayuda: a,
+          scorecard: h || p || a ? buildScorecard(h, p, a, current) : null,
           preparedBy: profile?.fullName ?? "",
           preparedRole: profile ? roleLabel(profile.role, profile.position) : "",
           captainName: signature.name,
           seal,
           truncated: (loaded?.truncated.length ?? 0) > 0,
         },
-        `ulat-transaksyon-${period}-${new Date().toISOString().slice(0, 10)}.pdf`,
+        `ulat-barangay-${period}-${new Date().toISOString().slice(0, 10)}.pdf`,
       );
-      logActivity("Settings", `Gumawa ng PDF na ulat ng transaksyon (${PERIOD_LABEL[period]})`);
+      logActivity("Settings", `Gumawa ng PDF na ulat (${pdfTabs.length} pahina, ${PERIOD_LABEL[period]})`);
+      setPdfOpen(false);
     } catch (err) {
       toast(friendlyError(err), "error");
     } finally {
@@ -148,11 +213,15 @@ export function AdminDashboard() {
 
   const actions = ACTION_ROWS.map((r) => ({ ...r, n: byTab[r.tab] ?? 0 })).filter((r) => r.n > 0);
   const top = Math.max(1, ...summary.byService.map((s) => s.count));
-
   const hour = new Date().getHours();
   const hello = hour < 12 ? "Magandang umaga" : hour < 18 ? "Magandang hapon" : "Magandang gabi";
   const first = (profile?.fullName ?? "").split(" ")[0];
   const enroute = (loaded?.txns ?? []).filter((t) => t.service === "Ambulansya" && t.statusLabel === "Papunta na").length;
+  const showsPeriod = tab === "buod" || tab === "kalusugan" || tab === "transaksyon";
+  const refresh = () => {
+    void load(true);
+    if (tab !== "transaksyon") void loadExec([tab], true);
+  };
 
   return (
     <div className="space-y-4">
@@ -176,36 +245,70 @@ export function AdminDashboard() {
         </div>
       </section>
 
-      {/* Period */}
-      <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Panahon">
-        {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
+      {/* Executive tabs */}
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Bahagi ng dashboard">
+        {EXEC_TABS.map((t) => (
           <button
-            key={p}
+            key={t.id}
             role="tab"
-            aria-selected={p === period}
-            onClick={() => setPeriod(p)}
-            className={`min-h-10 shrink-0 rounded-full px-4 text-[0.8rem] font-bold ${p === period ? "bg-brand-dark text-white" : "border border-gray-300 bg-white text-brand-dark"}`}
+            aria-selected={t.id === tab}
+            onClick={() => setTab(t.id)}
+            className={`min-h-10 shrink-0 rounded-full px-4 text-[0.82rem] font-bold ${t.id === tab ? "bg-gold text-brand-deep" : "border border-gray-300 bg-white text-brand-dark"}`}
           >
-            {PERIOD_LABEL[p]}
+            {t.label}
           </button>
         ))}
-        <button onClick={() => void load(true)} className="ml-auto flex min-h-10 shrink-0 items-center gap-1 rounded-full px-3 text-[0.8rem] font-bold text-brand" aria-label="I-refresh ang datos">
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden /> I-refresh
+      </div>
+
+      {/* Period */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {showsPeriod &&
+          (Object.keys(PERIOD_LABEL) as Period[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              aria-pressed={p === period}
+              className={`min-h-10 shrink-0 rounded-full px-4 text-[0.8rem] font-bold ${p === period ? "bg-brand-dark text-white" : "border border-gray-300 bg-white text-brand-dark"}`}
+            >
+              {PERIOD_LABEL[p]}
+            </button>
+          ))}
+        <button onClick={refresh} className="ml-auto flex min-h-10 shrink-0 items-center gap-1 rounded-full px-3 text-[0.8rem] font-bold text-brand" aria-label="I-refresh ang datos">
+          <RefreshCw className={`h-4 w-4 ${loading || execLoading ? "animate-spin" : ""}`} aria-hidden /> I-refresh
         </button>
       </div>
-      <p className="text-xs text-gray-600">{title}</p>
+      <p className="text-xs text-gray-600">{showsPeriod ? title : tab === "proyekto" ? `Taong ${new Date().getFullYear()}` : "Kasalukuyang datos"}</p>
 
       {loading && !loaded && <Spinner label="Kinukuha ang mga transaksyon..." />}
+      {loaded?.failed.length ? <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">Hindi nabasa: {loaded.failed.join(", ")}. Baka wala kang pahintulot o may problema sa koneksyon.</p> : null}
+      {loaded?.truncated.length ? <p className="rounded-xl bg-yellow-50 px-3 py-2 text-xs text-yellow-900">Napakarami ng {loaded.truncated.join(", ")}; unang 800 lang ang binasa. Pumili ng mas maikling panahon para sa eksaktong bilang.</p> : null}
 
-      {loaded && (
+      {loaded && tab === "buod" && (
+        <BuodTab
+          card={card}
+          loading={execLoading && !card}
+          residents={ayuda?.residents ?? null}
+          onGo={setTab}
+          summaryLine={<><b>{summary.total} transaksyon</b>{summary.change === null ? "" : <>, {summary.change >= 0 ? "tumaas" : "bumaba"} ng <b className={summary.change >= 0 ? "text-emerald-700" : "text-red-700"}>{Math.abs(summary.change)}%</b></>}.</>}
+        />
+      )}
+      {loaded && tab === "kalusugan" && <KalusuganTab data={health} loading={execLoading && !health} rag={{ emergency: ragOf("emergency"), botika: botikaRag }} />}
+      {tab === "proyekto" && <ProyektoTab data={projects} loading={execLoading && !projects} pondoRag={ragOf("pondo")} />}
+      {tab === "ayuda" && (
+        <AyudaTab
+          data={ayuda}
+          loading={execLoading && !ayuda}
+          ragAyuda={ragOf("ayuda")}
+          extras={[
+            { label: "Appointment: naghihintay", value: byTab.appointments ?? 0 },
+            { label: "Hiraman: naghihintay", value: byTab.hiraman ?? 0 },
+            { label: "Raffle: donasyong natanggap (panahong ito)", value: current.filter((t) => t.service === "Raffle donasyon" && t.status === "done").length },
+          ]}
+        />
+      )}
+
+      {loaded && tab === "transaksyon" && (
         <>
-          {loaded.failed.length > 0 && (
-            <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">Hindi nabasa: {loaded.failed.join(", ")}. Baka wala kang pahintulot o may problema sa koneksyon.</p>
-          )}
-          {loaded.truncated.length > 0 && (
-            <p className="rounded-xl bg-yellow-50 px-3 py-2 text-xs text-yellow-900">Napakarami ng {loaded.truncated.join(", ")}; unang 800 lang ang binasa. Pumili ng mas maikling panahon para sa eksaktong bilang.</p>
-          )}
-
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3">
             <Kpi label="Kabuuang transaksyon" value={summary.total} tone="text-brand-dark" note={summary.change === null ? "Walang ikukumpara" : `${summary.change >= 0 ? "+" : ""}${summary.change}% sa nakaraang panahon`} noteTone={summary.change !== null && summary.change >= 0 ? "text-emerald-700" : "text-gray-600"} />
@@ -273,17 +376,42 @@ export function AdminDashboard() {
               </ul>
             )}
           </Card>
+        </>
+      )}
 
-          <div className="grid gap-2">
-            <Button full loading={pdfBusy} onClick={() => void exportPdf()} disabled={current.length === 0}>
-              <FileText className="h-4 w-4" /> I-download ang PDF na ulat
-            </Button>
+      {(loaded || tab === "proyekto" || tab === "ayuda") && (
+        <div className="grid gap-2">
+          <Button full onClick={() => setPdfOpen(true)}>
+            <FileText className="h-4 w-4" /> I-download ang PDF na ulat
+          </Button>
+          {tab === "transaksyon" && (
             <Button variant="outline" full onClick={exportCsv} disabled={current.length === 0}>
               <Download className="h-4 w-4" /> I-export bilang CSV
             </Button>
-          </div>
-        </>
+          )}
+        </div>
       )}
+
+      {/* Pick the pages of the PDF: one page for each tab */}
+      <Modal open={pdfOpen} onClose={() => setPdfOpen(false)} title="PDF na ulat">
+        <p className="mb-3 text-sm text-gray-700">Pumili ng mga pahina. Isang pahina ang bawat napili. Ang panahon ay <b>{PERIOD_LABEL[period]}</b> ({title}).</p>
+        <ul className="space-y-1">
+          {EXEC_TABS.map((t) => {
+            const on = pdfTabs.includes(t.id);
+            return (
+              <li key={t.id}>
+                <label className="flex min-h-12 items-center gap-3 rounded-xl border border-gray-200 px-3 active:bg-brand-light">
+                  <input type="checkbox" checked={on} onChange={() => setPdfTabs((cur) => (on ? cur.filter((x) => x !== t.id) : [...cur, t.id]))} className="h-5 w-5 accent-brand" />
+                  <span className="font-semibold">{t.label}</span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+        <Button full className="mt-4" loading={pdfBusy} disabled={pdfTabs.length === 0} onClick={() => void exportPdf()}>
+          <FileText className="h-4 w-4" /> Gumawa ng PDF ({pdfTabs.length} pahina)
+        </Button>
+      </Modal>
     </div>
   );
 }

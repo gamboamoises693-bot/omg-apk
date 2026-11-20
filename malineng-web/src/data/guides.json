@@ -1131,29 +1131,29 @@
           "h": 1170
         },
         {
-          "tl": "Dito makikita agad ang mga naghihintay ng aksyon. Pindutin ang isa para buksan ang tamang listahan.",
-          "en": "Everything waiting for action shows here. Tap one to open the right list.",
+          "tl": "Pumili ng bahagi: Buod, Kalusugan, Proyekto, Ayuda o Transaksyon. Sa ilalim ay ang panahon: Ngayon, 7 araw, Buwan o Taon.",
+          "en": "Pick a part: Summary, Health, Projects, Ayuda or Transactions. Below it is the period: Today, 7 days, Month or Year.",
           "img": "admin-dashboard-2.jpg",
           "w": 585,
           "h": 1170
         },
         {
-          "tl": "Makikita rito kung ilan ang transaksyon sa bawat serbisyo. Pumili ng panahon sa itaas: Ngayon, 7 araw, Buwan o Taon.",
-          "en": "See how many transactions each service had. Pick the period at the top: Today, 7 days, Month or Year.",
+          "tl": "Sa Buod, ang scorecard ay may kulay na Maayos, Bantayan o Kritikal. Dito nakalista ang mga dapat mong bigyang-pansin; pindutin ang isa para buksan ang detalye.",
+          "en": "In Summary, the scorecard shows Good, Watch or Critical. What needs your attention is listed here; tap one to open the details.",
           "img": "admin-dashboard-3.jpg",
           "w": 585,
           "h": 1170
         },
         {
-          "tl": "Pindutin ang Tingnan lahat para sa buong listahan ng transaksyon. May search at filter, at pwedeng buksan ang bawat isa.",
-          "en": "Tap See all for the full list of transactions. It has search and filters, and you can open each one.",
+          "tl": "Sa Transaksyon, pindutin ang Tingnan lahat para sa buong listahan. May search at filter, at pwedeng buksan ang bawat isa.",
+          "en": "In Transactions, tap See all for the full list. It has search and filters, and you can open each one.",
           "img": "admin-dashboard-4.jpg",
           "w": 585,
           "h": 1170
         },
         {
-          "tl": "Pindutin ito para gumawa ng PDF na ulat na may bilang, tsart, listahan at lagayan ng pirma. May CSV din sa ilalim.",
-          "en": "Tap this to make a PDF report with the numbers, a chart, the list and signature lines. A CSV is just below.",
+          "tl": "Pindutin ito, pumili ng mga pahina (isang pahina ang bawat bahagi), at gagawa ng PDF na ulat na may lagayan ng pirma. May CSV din sa ilalim.",
+          "en": "Tap this, choose the pages (one page per part), and it makes a PDF report with signature lines. A CSV is just below.",
           "img": "admin-dashboard-5.jpg",
           "w": 585,
           "h": 1170
