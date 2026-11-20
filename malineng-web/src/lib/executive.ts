@@ -227,6 +227,8 @@ export interface ScoreItem {
   value: string;
   note: string;
   rag: Rag;
+  /** How full the gauge ring is (0 to 1); how good the number is, not always a percent. */
+  fill: number;
 }
 
 export interface AttentionItem {
@@ -259,25 +261,25 @@ export function buildScorecard(health: HealthData | null, projects: ProjectData 
 
   // Kalusugan
   const vp = health?.vaccine.completePct ?? null;
-  items.push({ key: "kalusugan", label: "Kalusugan", value: vp === null ? "—" : `${vp}%`, note: "Bakunadong sanggol", rag: vp === null ? "n" : vp >= 85 ? "g" : vp >= 70 ? "y" : "r" });
+  items.push({ key: "kalusugan", label: "Kalusugan", value: vp === null ? "—" : `${vp}%`, note: "Bakunadong sanggol", rag: vp === null ? "n" : vp >= 85 ? "g" : vp >= 70 ? "y" : "r", fill: (vp ?? 0) / 100 });
   if (health && health.vaccine.childrenDelayed > 0) attention.push({ key: "vax", title: `${health.vaccine.childrenDelayed} sanggol na delayed sa bakuna`, detail: "Buksan ang Kalusugan para sa detalye", tab: "kalusugan", tone: "y" });
   if (health && health.botika.low.length > 0) attention.push({ key: "low", title: `${health.botika.low.length} gamot na paubos na`, detail: health.botika.low.slice(0, 3).map((m) => m.name).join(" · "), tab: "kalusugan", tone: "y" });
   if (health && health.botika.expiring.length > 0) attention.push({ key: "exp", title: `${health.botika.expiring.length} gamot na malapit mag-expire`, detail: health.botika.expiring.slice(0, 3).map((m) => m.name).join(" · "), tab: "kalusugan", tone: "y" });
 
   // Emergency
   const resp = health?.ambulance.avgRespMin ?? null;
-  items.push({ key: "emergency", label: "Emergency", value: resp === null ? "—" : `${resp} min`, note: "Karaniwang sagot ng ambulansya", rag: resp === null ? "n" : resp <= 5 ? "g" : resp <= 10 ? "y" : "r" });
+  items.push({ key: "emergency", label: "Emergency", value: resp === null ? "—" : `${resp} min`, note: "Karaniwang sagot ng ambulansya", rag: resp === null ? "n" : resp <= 5 ? "g" : resp <= 10 ? "y" : "r", fill: resp === null ? 0 : Math.max(0.08, 1 - resp / 12) });
   const waitingAmb = txns.filter((t) => t.service === "Ambulansya" && t.status === "pending" && t.statusLabel === "Naghihintay");
   if (waitingAmb.length > 0) attention.unshift({ key: "amb", title: `${waitingAmb.length} ambulansya na naghihintay`, detail: waitingAmb.slice(0, 2).map((t) => `${t.name} · ${t.meta?.reason || t.detail}`).join(" | "), tab: "kalusugan", tone: "r" });
 
   // Proyekto
   const delayed = projects?.delayed ?? 0;
-  items.push({ key: "proyekto", label: "Proyekto", value: projects ? `${delayed} / ${projects.total}` : "—", note: "Naantalang proyekto", rag: !projects || projects.total === 0 ? "n" : delayed === 0 ? "g" : delayed === 1 ? "y" : "r" });
+  items.push({ key: "proyekto", label: "Proyekto", value: projects ? `${delayed} / ${projects.total}` : "—", note: "Naantalang proyekto", rag: !projects || projects.total === 0 ? "n" : delayed === 0 ? "g" : delayed === 1 ? "y" : "r", fill: projects && projects.total > 0 ? 1 - delayed / projects.total : 0 });
   if (projects && delayed > 0) attention.unshift({ key: "proj", title: `${delayed} proyektong naantala`, detail: projects.top.filter((p) => p.status === "delayed").map((p) => p.name).join(" · "), tab: "proyekto", tone: "r" });
 
   // Ayuda
   const ap = ayuda?.claimedPct ?? null;
-  items.push({ key: "ayuda", label: "Ayuda", value: ap === null ? "—" : `${ap}%`, note: "Nakuha na ng qualified", rag: ap === null ? "n" : ap >= 70 ? "g" : ap >= 40 ? "y" : "r" });
+  items.push({ key: "ayuda", label: "Ayuda", value: ap === null ? "—" : `${ap}%`, note: "Nakuha na ng qualified", rag: ap === null ? "n" : ap >= 70 ? "g" : ap >= 40 ? "y" : "r", fill: (ap ?? 0) / 100 });
   if (ayuda && ayuda.qualified + ayuda.scheduled > 0) attention.push({ key: "ayuda", title: `${ayuda.qualified + ayuda.scheduled} qualified na hindi pa nakukuha ang ayuda`, detail: `${ayuda.scheduled} naka-schedule na`, tab: "ayuda", tone: "y" });
 
   // Pondo: used share against how much of the year has passed.
@@ -287,13 +289,13 @@ export function buildScorecard(health: HealthData | null, projects: ProjectData 
     const start = new Date(now.getFullYear(), 0, 1).getTime();
     const elapsed = Math.round(((now.getTime() - start) / (365 * DAY)) * 100);
     const over = used - elapsed;
-    items.push({ key: "pondo", label: "Pondo", value: `${used}%`, note: "Nagamit sa taunang badyet", rag: over <= 10 ? "g" : over <= 25 ? "y" : "r" });
-  } else items.push({ key: "pondo", label: "Pondo", value: "—", note: "Wala pang badyet na naka-encode", rag: "n" });
+    items.push({ key: "pondo", label: "Pondo", value: `${used}%`, note: "Nagamit sa taunang badyet", rag: over <= 10 ? "g" : over <= 25 ? "y" : "r", fill: Math.min(1, used / 100) });
+  } else items.push({ key: "pondo", label: "Pondo", value: "—", note: "Wala pang badyet na naka-encode", rag: "n", fill: 0 });
 
   // Reklamo
   // All complaints still open (not only those of this period); falls back to this period while the numbers load.
   const open = ayuda?.complaints.open ?? txns.filter((t) => t.service === "Reklamo" && t.status === "pending").length;
-  items.push({ key: "reklamo", label: "Reklamo", value: String(open), note: "Bukas pa", rag: open <= 5 ? "g" : open <= 10 ? "y" : "r" });
+  items.push({ key: "reklamo", label: "Reklamo", value: String(open), note: "Bukas pa", rag: open <= 5 ? "g" : open <= 10 ? "y" : "r", fill: Math.min(1, open / 10) });
 
   return { items, attention };
 }
