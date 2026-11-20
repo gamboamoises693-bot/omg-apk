@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Card, Spinner } from "@/components/ui";
 import { formatPeso } from "@/lib/format";
-import { RAG_RULES, RAG_WORD, type AttentionItem, type AyudaData, type HealthData, type ProjectData, type Rag, type Scorecard } from "@/lib/executive";
+import { RAG_RULES, RAG_WORD, type AttentionItem, type AyudaData, type HealthData, type ProjectData, type Rag, type Scorecard, type ScoreItem } from "@/lib/executive";
 import { PROJECT_STATUS_LABEL } from "@/lib/constants";
 
 export type ExecTab = "buod" | "kalusugan" | "proyekto" | "ayuda" | "transaksyon";
@@ -15,6 +15,8 @@ const RAG_CLASS: Record<Rag, string> = {
   n: "bg-[#EDF0F5] text-gray-600",
 };
 const RAG_DOT: Record<Rag, string> = { g: "bg-emerald-600", y: "bg-amber-600", r: "bg-red-700", n: "bg-gray-400" };
+/** Gauge ring colours (light, to read on the navy card). */
+const RAG_RING: Record<Rag, string> = { g: "#34d399", y: "#fbbf24", r: "#f87171", n: "#9ca3af" };
 
 /** Status chip: always a word and a dot, never colour alone. */
 export function RagChip({ rag, label }: { rag: Rag; label?: string }) {
@@ -26,6 +28,7 @@ export function RagChip({ rag, label }: { rag: Rag; label?: string }) {
   );
 }
 
+/** Light tile (inside white cards). */
 function Stat({ value, label, tone = "text-brand-deep", bg = "bg-surface" }: { value: ReactNode; label: string; tone?: string; bg?: string }) {
   return (
     <div className={`flex flex-col gap-0.5 rounded-2xl p-3 ${bg}`}>
@@ -35,13 +38,37 @@ function Stat({ value, label, tone = "text-brand-deep", bg = "bg-surface" }: { v
   );
 }
 
-function Cap({ children }: { children: ReactNode }) {
-  return <p className="text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-gray-600">{children}</p>;
+/** Tile on a navy hero card; `tone` tints it when something needs attention. */
+function HeroStat({ value, label, tone }: { value: ReactNode; label: string; tone?: "warn" | "bad" }) {
+  const bg = tone === "bad" ? "bg-red-400/30" : tone === "warn" ? "bg-amber-300/25" : "bg-white/10";
+  return (
+    <div className={`rounded-2xl p-3 ${bg}`}>
+      <b className="block text-[1.5rem] font-extrabold leading-tight tabular-nums">{value}</b>
+      <span className="text-[0.7rem] font-bold text-blue-100">{label}</span>
+    </div>
+  );
 }
 
-function Track({ pct, color = "bg-brand" }: { pct: number; color?: string }) {
+/** Navy executive card: title, status chip and a row of tiles, then optional extra content. */
+function Hero({ title, rag, ragLabel, children }: { title: string; rag?: Rag; ragLabel?: string; children: ReactNode }) {
   return (
-    <span className="block h-3 overflow-hidden rounded-full bg-[#EDF0F5]" aria-hidden>
+    <section className="rounded-[1.125rem] bg-gradient-to-b from-brand-dark to-[#0A1B3C] p-4 text-white shadow-[0_10px_22px_-12px_rgba(10,27,60,0.7)]">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="text-[1.05rem] font-bold">{title}</h2>
+        {rag && <RagChip rag={rag} label={ragLabel} />}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Cap({ children, light }: { children: ReactNode; light?: boolean }) {
+  return <p className={`text-[0.72rem] font-extrabold uppercase tracking-[0.08em] ${light ? "text-blue-100" : "text-gray-600"}`}>{children}</p>;
+}
+
+function Track({ pct, color = "bg-brand", dark }: { pct: number; color?: string; dark?: boolean }) {
+  return (
+    <span className={`block h-3 overflow-hidden rounded-full ${dark ? "bg-white/15" : "bg-[#EDF0F5]"}`} aria-hidden>
       <span className={`block h-3 rounded-full ${color}`} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
     </span>
   );
@@ -57,7 +84,28 @@ function Row({ children, right }: { children: ReactNode; right?: ReactNode }) {
 }
 
 const Loading = () => <Spinner label="Kinukuha ang datos..." />;
-const NoData = ({ children }: { children: ReactNode }) => <p className="py-3 text-sm text-gray-600">{children}</p>;
+const NoData = ({ children, light }: { children: ReactNode; light?: boolean }) => <p className={`py-3 text-sm ${light ? "text-blue-100" : "text-gray-600"}`}>{children}</p>;
+
+/* ---------------- Gauge card (Buod) ---------------- */
+
+function GaugeCard({ item }: { item: ScoreItem }) {
+  const circ = 2 * Math.PI * 42;
+  const fill = Math.max(0, Math.min(1, item.fill));
+  return (
+    <div className="flex flex-col items-center gap-1 rounded-[1.125rem] bg-gradient-to-b from-brand-dark to-[#0A1B3C] px-2.5 pb-3 pt-3.5 text-center text-white shadow-[0_10px_22px_-12px_rgba(10,27,60,0.7)]">
+      <span className="text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-blue-100">{item.label}</span>
+      <span className="relative my-1 h-[5.4rem] w-[5.4rem]">
+        <svg viewBox="0 0 100 100" className="absolute inset-0" aria-hidden>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="9" />
+          <circle cx="50" cy="50" r="42" fill="none" stroke={RAG_RING[item.rag]} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${circ * fill} ${circ}`} transform="rotate(-90 50 50)" />
+        </svg>
+        <b className="absolute inset-0 flex items-center justify-center text-[1.2rem] font-extrabold tabular-nums">{item.value}</b>
+      </span>
+      <span className="min-h-8 text-[0.72rem] leading-4 text-blue-100">{item.note}</span>
+      <RagChip rag={item.rag} />
+    </div>
+  );
+}
 
 /* ---------------- Buod ---------------- */
 
@@ -77,13 +125,7 @@ export function BuodTab({ card, loading, summaryLine, onGo, residents }: { card:
       <div>
         <Cap>Scorecard ng barangay</Cap>
         <div className="mt-2 grid grid-cols-2 gap-2.5">
-          {card.items.map((it) => (
-            <div key={it.key} className="flex flex-col gap-1 rounded-2xl border border-line bg-white p-3 shadow-card">
-              <div className="flex items-center justify-between gap-1"><span className="text-[0.72rem] font-extrabold uppercase tracking-wide text-gray-600">{it.label}</span><RagChip rag={it.rag} /></div>
-              <b className="text-[1.9rem] font-extrabold leading-tight tabular-nums text-brand-deep">{it.value}</b>
-              <span className="text-xs text-gray-600">{it.note}</span>
-            </div>
-          ))}
+          {card.items.map((it) => <GaugeCard key={it.key} item={it} />)}
         </div>
         <details className="mt-2 text-xs text-gray-600">
           <summary className="min-h-8 cursor-pointer font-bold text-brand">Paano binibilang ang kulay?</summary>
@@ -115,7 +157,7 @@ function AttentionRow({ item, onGo }: { item: AttentionItem; onGo: (tab: ExecTab
   return (
     <li className="border-t border-line first:border-t-0">
       <button onClick={() => onGo(item.tab)} className="flex w-full items-start gap-3 py-3 text-left">
-        <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${item.tone === "r" ? "bg-red-700" : "bg-amber-600"}`} aria-hidden />
+        <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${item.tone === "r" ? "bg-red-700" : "bg-amber-600"}`} aria-hidden />
         <span className="min-w-0 flex-1">
           <b className="block text-[0.92rem]">{item.title}</b>
           {item.detail && <span className="block truncate text-[0.78rem] text-gray-600">{item.detail}</span>}
@@ -134,41 +176,48 @@ export function KalusuganTab({ data, loading, rag }: { data: HealthData | null; 
   const maxType = Math.max(1, a.emergency, a.scheduled);
   return (
     <div className="space-y-4">
-      <Card>
-        <div className="mb-3 flex items-center justify-between"><h2 className="text-[1.05rem] font-bold">Ambulansya at emergency</h2><RagChip rag={rag.emergency} /></div>
+      <Hero title="Ambulansya at emergency" rag={rag.emergency}>
         <div className="grid grid-cols-3 gap-2">
-          <Stat value={a.trips} label="Biyahe sa panahong ito" />
-          <Stat value={a.avgRespMin === null ? "—" : `${a.avgRespMin} min`} label="Karaniwang sagot" />
-          <Stat value={a.waiting} label="Naghihintay" tone={a.waiting ? "text-red-700" : "text-brand-deep"} bg={a.waiting ? "bg-red-50" : "bg-surface"} />
+          <HeroStat value={a.trips} label="Biyahe sa panahong ito" />
+          <HeroStat value={a.avgRespMin === null ? "—" : `${a.avgRespMin} min`} label="Karaniwang sagot" />
+          <HeroStat value={a.waiting} label="Naghihintay" tone={a.waiting ? "bad" : undefined} />
         </div>
-        <div className="mt-4 space-y-1"><Cap>Uri ng biyahe</Cap>
-          <div className="grid grid-cols-[7rem_minmax(0,1fr)_2rem] items-center gap-2 text-[0.85rem]"><span>Emergency</span><Track pct={(a.emergency / maxType) * 100} color="bg-red-700" /><b className="text-right">{a.emergency}</b></div>
-          <div className="grid grid-cols-[7rem_minmax(0,1fr)_2rem] items-center gap-2 text-[0.85rem]"><span>Naka-schedule</span><Track pct={(a.scheduled / maxType) * 100} /><b className="text-right">{a.scheduled}</b></div>
+        <div className="mt-4 space-y-1.5">
+          <Cap light>Uri ng biyahe</Cap>
+          <div className="grid grid-cols-[7rem_minmax(0,1fr)_2rem] items-center gap-2 text-[0.85rem]"><span>Emergency</span><Track dark pct={(a.emergency / maxType) * 100} color="bg-red-400" /><b className="text-right">{a.emergency}</b></div>
+          <div className="grid grid-cols-[7rem_minmax(0,1fr)_2rem] items-center gap-2 text-[0.85rem]"><span>Naka-schedule</span><Track dark pct={(a.scheduled / maxType) * 100} color="bg-blue-300" /><b className="text-right">{a.scheduled}</b></div>
         </div>
         {a.reasons.length > 0 && (
-          <div className="mt-4"><Cap>Pinakamadalas na dahilan</Cap>{a.reasons.map((r) => <Row key={r.reason} right={<b>{r.count}</b>}>{r.reason}</Row>)}</div>
+          <div className="mt-4">
+            <Cap light>Pinakamadalas na dahilan</Cap>
+            {a.reasons.map((r) => <div key={r.reason} className="flex min-h-10 items-center justify-between border-t border-white/10 text-[0.9rem] first:border-t-0"><span>{r.reason}</span><b>{r.count}</b></div>)}
+          </div>
         )}
-        {a.avgRespMin === null && <p className="mt-3 text-xs text-gray-600">Walang biyaheng may naka-tala na oras ng pag-alis, kaya wala pang karaniwang sagot.</p>}
-      </Card>
+        {a.avgRespMin === null && <p className="mt-3 text-xs text-blue-100">Walang biyaheng may naka-tala na oras ng pag-alis, kaya wala pang karaniwang sagot.</p>}
+      </Hero>
 
-      <Card>
-        <div className="mb-3 flex items-center justify-between"><h2 className="text-[1.05rem] font-bold">Botika</h2><RagChip rag={rag.botika} /></div>
+      <Hero title="Botika" rag={rag.botika}>
         <div className="grid grid-cols-3 gap-2">
-          <Stat value={data.botika.given} label="Gamot na naibigay" />
-          <Stat value={data.botika.low.length} label="Paubos na" tone={data.botika.low.length ? "text-yellow-900" : "text-brand-deep"} bg={data.botika.low.length ? "bg-yellow-50" : "bg-surface"} />
-          <Stat value={data.botika.expiring.length} label="Malapit mag-expire" tone={data.botika.expiring.length ? "text-red-700" : "text-brand-deep"} bg={data.botika.expiring.length ? "bg-red-50" : "bg-surface"} />
+          <HeroStat value={data.botika.given} label="Gamot na naibigay" />
+          <HeroStat value={data.botika.low.length} label="Paubos na" tone={data.botika.low.length ? "warn" : undefined} />
+          <HeroStat value={data.botika.expiring.length} label="Malapit mag-expire" tone={data.botika.expiring.length ? "bad" : undefined} />
         </div>
-        {data.botika.low.length > 0 && (
-          <div className="mt-4"><Cap>Kailangang i-restock</Cap>
-            {data.botika.low.slice(0, 5).map((m) => <Row key={m.name} right={<RagChip rag={m.stock === 0 ? "r" : "y"} label={`${m.stock} natitira`} />}>{m.name}<span className="block text-xs text-gray-600">Pinakamababa: {m.min}</span></Row>)}
-          </div>
-        )}
-        {data.botika.expiring.length > 0 && (
-          <div className="mt-4"><Cap>Malapit mag-expire</Cap>
-            {data.botika.expiring.slice(0, 5).map((m) => <Row key={m.name + m.expiry} right={<RagChip rag={m.days < 0 ? "r" : "y"} label={m.days < 0 ? "Expired" : `${m.days} araw`} />}>{m.name}<span className="block text-xs text-gray-600">{m.expiry}</span></Row>)}
-          </div>
-        )}
-      </Card>
+      </Hero>
+
+      {(data.botika.low.length > 0 || data.botika.expiring.length > 0) && (
+        <Card>
+          {data.botika.low.length > 0 && (
+            <div><h2 className="mb-1 text-[1.05rem] font-bold">Kailangang i-restock</h2>
+              {data.botika.low.slice(0, 5).map((m) => <Row key={m.name} right={<RagChip rag={m.stock === 0 ? "r" : "y"} label={`${m.stock} natitira`} />}>{m.name}<span className="block text-xs text-gray-600">Pinakamababa: {m.min}</span></Row>)}
+            </div>
+          )}
+          {data.botika.expiring.length > 0 && (
+            <div className={data.botika.low.length > 0 ? "mt-4" : ""}><h2 className="mb-1 text-[1.05rem] font-bold">Malapit mag-expire</h2>
+              {data.botika.expiring.slice(0, 5).map((m) => <Row key={m.name + m.expiry} right={<RagChip rag={m.days < 0 ? "r" : "y"} label={m.days < 0 ? "Expired" : `${m.days} araw`} />}>{m.name}<span className="block text-xs text-gray-600">{m.expiry}</span></Row>)}
+            </div>
+          )}
+        </Card>
+      )}
 
       <Card>
         <h2 className="mb-3 text-[1.05rem] font-bold">Bakuna at buntis</h2>
@@ -204,25 +253,24 @@ export function ProyektoTab({ data, loading, pondoRag }: { data: ProjectData | n
   const maxCat = Math.max(1, ...data.spendByCategory.map((c) => c.amount));
   return (
     <div className="space-y-4">
-      <Card>
-        <div className="mb-3 flex items-center justify-between"><h2 className="text-[1.05rem] font-bold">Mga proyekto</h2>{data.delayed > 0 && <RagChip rag="r" label={`${data.delayed} naantala`} />}</div>
+      <Hero title="Mga proyekto" rag={data.delayed > 0 ? "r" : data.total > 0 ? "g" : "n"} ragLabel={data.delayed > 0 ? `${data.delayed} naantala` : data.total > 0 ? "Walang naantala" : undefined}>
         {data.total === 0 ? (
-          <NoData>Wala pang proyektong naka-encode.</NoData>
+          <NoData light>Wala pang proyektong naka-encode.</NoData>
         ) : (
           <>
             <div className="grid grid-cols-4 gap-1.5">
-              <Stat value={data.total} label="Lahat" />
-              <Stat value={data.ongoing} label="Ginagawa" tone="text-brand-dark" />
-              <Stat value={data.completed} label="Tapos" tone="text-emerald-700" />
-              <Stat value={data.delayed} label="Naantala" tone="text-red-700" />
+              <HeroStat value={data.total} label="Lahat" />
+              <HeroStat value={data.ongoing} label="Ginagawa" />
+              <HeroStat value={data.completed} label="Tapos" />
+              <HeroStat value={data.delayed} label="Naantala" tone={data.delayed ? "bad" : undefined} />
             </div>
-            <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-[#EDF0F5]" aria-hidden>
-              <span className="bg-brand" style={{ width: `${seg(data.ongoing)}%` }} /><span className="bg-emerald-600" style={{ width: `${seg(data.completed)}%` }} /><span className="bg-red-700" style={{ width: `${seg(data.delayed)}%` }} /><span className="bg-gray-300" style={{ width: `${seg(data.planned)}%` }} />
+            <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-white/15" aria-hidden>
+              <span className="bg-blue-300" style={{ width: `${seg(data.ongoing)}%` }} /><span className="bg-emerald-400" style={{ width: `${seg(data.completed)}%` }} /><span className="bg-red-400" style={{ width: `${seg(data.delayed)}%` }} /><span className="bg-gray-400" style={{ width: `${seg(data.planned)}%` }} />
             </div>
-            <div className="mt-1.5 flex flex-wrap gap-x-3 text-[0.7rem] text-gray-600"><span>Ginagawa</span><span>Tapos na</span><span>Naantala</span><span>Nakaplano</span></div>
+            <div className="mt-1.5 flex flex-wrap gap-x-3 text-[0.7rem] text-blue-100"><span>Ginagawa</span><span>Tapos na</span><span>Naantala</span><span>Nakaplano</span></div>
           </>
         )}
-      </Card>
+      </Hero>
 
       {data.top.length > 0 && (
         <Card className="!pb-2">
@@ -237,25 +285,24 @@ export function ProyektoTab({ data, loading, pondoRag }: { data: ProjectData | n
         </Card>
       )}
 
-      <Card>
-        <div className="mb-1 flex items-center justify-between"><h2 className="text-[1.05rem] font-bold">Pondo ng barangay {data.year}</h2><RagChip rag={pondoRag} /></div>
+      <Hero title={`Pondo ng barangay ${data.year}`} rag={pondoRag}>
         {!b || used === null ? (
-          <NoData>Wala pang badyet na naka-encode para sa {data.year}. Ilagay ito sa Pondo / Transparency.</NoData>
+          <NoData light>Wala pang badyet na naka-encode para sa {data.year}. Ilagay ito sa Pondo / Transparency.</NoData>
         ) : (
           <>
-            <div className="flex items-baseline gap-2"><span className="text-[1.9rem] font-extrabold leading-tight text-brand-deep">{used}%</span><span className="text-sm text-gray-600">ng taunang badyet ang nagamit</span></div>
-            <div className="my-2"><Track pct={used} /></div>
-            <div className="flex justify-between text-[0.78rem] text-gray-600"><span>Nagastos {formatPeso(b.spent)}</span><span>Badyet {formatPeso(b.total)}</span></div>
+            <div className="flex items-baseline gap-2"><span className="text-[2rem] font-extrabold leading-tight">{used}%</span><span className="text-sm text-blue-100">ng taunang badyet ang nagamit</span></div>
+            <div className="my-2"><Track dark pct={used} color="bg-blue-300" /></div>
+            <div className="flex justify-between text-[0.78rem] text-blue-100"><span>Nagastos {formatPeso(b.spent)}</span><span>Badyet {formatPeso(b.total)}</span></div>
             {data.spendByCategory.length > 0 && (
-              <div className="mt-4 space-y-1"><Cap>Gastos ayon sa uri</Cap>
+              <div className="mt-4 space-y-1.5"><Cap light>Gastos ayon sa uri</Cap>
                 {data.spendByCategory.map((c) => (
-                  <div key={c.name} className="grid grid-cols-[7.4rem_minmax(0,1fr)_4.6rem] items-center gap-2 text-[0.85rem]"><span className="truncate">{c.name}</span><Track pct={(c.amount / maxCat) * 100} /><b className="text-right text-[0.78rem]">{formatPeso(c.amount)}</b></div>
+                  <div key={c.name} className="grid grid-cols-[7.4rem_minmax(0,1fr)_4.6rem] items-center gap-2 text-[0.85rem]"><span className="truncate">{c.name}</span><Track dark pct={(c.amount / maxCat) * 100} color="bg-blue-300" /><b className="text-right text-[0.78rem]">{formatPeso(c.amount)}</b></div>
                 ))}
               </div>
             )}
           </>
         )}
-      </Card>
+      </Hero>
     </div>
   );
 }
@@ -268,26 +315,25 @@ export function AyudaTab({ data, loading, extras, ragAyuda }: { data: AyudaData 
   const maxP = Math.max(1, ...data.puroks.map((r) => r.members));
   return (
     <div className="space-y-4">
-      <Card>
-        <div className="mb-1 flex items-center justify-between"><h2 className="text-[1.05rem] font-bold">Ayuda</h2><RagChip rag={ragAyuda} /></div>
+      <Hero title="Ayuda" rag={ragAyuda}>
         {all === 0 ? (
-          <NoData>Wala pang naka-encode na ayuda.</NoData>
+          <NoData light>Wala pang naka-encode na ayuda.</NoData>
         ) : (
           <>
-            <div className="flex items-baseline gap-2"><span className="text-[1.9rem] font-extrabold leading-tight text-brand-deep">{data.claimedPct}%</span><span className="text-sm text-gray-600">ng qualified ang nakakuha na</span></div>
-            <div className="mt-3 space-y-1">
-              <Cap>Daloy ng ayuda</Cap>
-              <div className="grid grid-cols-[7rem_minmax(0,1fr)_2.4rem] items-center gap-2 text-[0.85rem]"><span>Qualified</span><Track pct={(data.qualified / all) * 100} /><b className="text-right">{data.qualified}</b></div>
-              <div className="grid grid-cols-[7rem_minmax(0,1fr)_2.4rem] items-center gap-2 text-[0.85rem]"><span>Naka-schedule</span><Track pct={(data.scheduled / all) * 100} /><b className="text-right">{data.scheduled}</b></div>
-              <div className="grid grid-cols-[7rem_minmax(0,1fr)_2.4rem] items-center gap-2 text-[0.85rem]"><span>Nakuha na</span><Track pct={(data.claimed / all) * 100} color="bg-emerald-600" /><b className="text-right">{data.claimed}</b></div>
+            <div className="flex items-baseline gap-2"><span className="text-[2rem] font-extrabold leading-tight">{data.claimedPct}%</span><span className="text-sm text-blue-100">ng qualified ang nakakuha na</span></div>
+            <div className="mt-3 space-y-1.5">
+              <Cap light>Daloy ng ayuda</Cap>
+              <div className="grid grid-cols-[7rem_minmax(0,1fr)_2.4rem] items-center gap-2 text-[0.85rem]"><span>Qualified</span><Track dark pct={(data.qualified / all) * 100} color="bg-blue-300" /><b className="text-right">{data.qualified}</b></div>
+              <div className="grid grid-cols-[7rem_minmax(0,1fr)_2.4rem] items-center gap-2 text-[0.85rem]"><span>Naka-schedule</span><Track dark pct={(data.scheduled / all) * 100} color="bg-amber-300" /><b className="text-right">{data.scheduled}</b></div>
+              <div className="grid grid-cols-[7rem_minmax(0,1fr)_2.4rem] items-center gap-2 text-[0.85rem]"><span>Nakuha na</span><Track dark pct={(data.claimed / all) * 100} color="bg-emerald-400" /><b className="text-right">{data.claimed}</b></div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <Stat value={data.qualified + data.scheduled} label="Hindi pa nakukuha" tone="text-yellow-900" bg="bg-yellow-50" />
-              <Stat value={data.batches} label="Batch na nagawa" />
+              <HeroStat value={data.qualified + data.scheduled} label="Hindi pa nakukuha" tone="warn" />
+              <HeroStat value={data.batches} label="Batch na nagawa" />
             </div>
           </>
         )}
-      </Card>
+      </Hero>
 
       <Card>
         <h2 className="mb-3 text-[1.05rem] font-bold">Mga residente</h2>

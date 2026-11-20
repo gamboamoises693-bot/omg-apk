@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Download, FileText, Home, RefreshCw, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileText, HandCoins, HardHat, HeartPulse, Home, LayoutDashboard, ListChecks, RefreshCw, Search, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAdminPending } from "@/context/AdminPendingContext";
 import { useToast } from "@/components/Toast";
@@ -56,12 +56,12 @@ const TAB_LABEL: Record<string, string> = {
   approve: "I-approve",
 };
 
-const EXEC_TABS: { id: ExecTab; label: string }[] = [
-  { id: "buod", label: "Buod" },
-  { id: "kalusugan", label: "Kalusugan" },
-  { id: "proyekto", label: "Proyekto" },
-  { id: "ayuda", label: "Ayuda" },
-  { id: "transaksyon", label: "Transaksyon" },
+const EXEC_TABS: { id: ExecTab; label: string; icon: LucideIcon }[] = [
+  { id: "buod", label: "Buod", icon: LayoutDashboard },
+  { id: "kalusugan", label: "Kalusugan", icon: HeartPulse },
+  { id: "proyekto", label: "Proyekto", icon: HardHat },
+  { id: "ayuda", label: "Ayuda", icon: HandCoins },
+  { id: "transaksyon", label: "Transaksyon", icon: ListChecks },
 ];
 
 const STATUS_BADGE: Record<TxnStatus, "gold" | "green" | "gray"> = { pending: "gold", done: "green", rejected: "gray" };
@@ -224,7 +224,8 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="space-y-4">
+    // The admin screens stay in Tagalog (see src/lib/en.ts), so none of the dashboard is half-translated.
+    <div className="space-y-4" data-no-i18n>
       {/* Greeting and what is happening right now */}
       <section className="rounded-[1.125rem] bg-gradient-to-br from-brand-dark to-brand-deep p-4 text-white shadow-card">
         <div className="flex items-center gap-3">
@@ -245,19 +246,24 @@ export function AdminDashboard() {
         </div>
       </section>
 
-      {/* Executive tabs */}
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Bahagi ng dashboard">
-        {EXEC_TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={t.id === tab}
-            onClick={() => setTab(t.id)}
-            className={`min-h-10 shrink-0 rounded-full px-4 text-[0.82rem] font-bold ${t.id === tab ? "bg-gold text-brand-deep" : "border border-gray-300 bg-white text-brand-dark"}`}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* Executive tabs: icon and word, a gold line under the open one */}
+      <div className="-mx-4 flex overflow-x-auto border-b border-line bg-white px-2" role="tablist" aria-label="Bahagi ng dashboard">
+        {EXEC_TABS.map((t) => {
+          const on = t.id === tab;
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={on}
+              onClick={() => setTab(t.id)}
+              className={`-mb-px flex min-h-12 shrink-0 items-center gap-1.5 border-b-[3px] px-3 text-[0.85rem] font-bold ${on ? "border-gold text-brand-deep" : "border-transparent text-gray-500 active:text-brand"}`}
+            >
+              <Icon className="h-4 w-4" aria-hidden />
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Period */}
@@ -268,7 +274,7 @@ export function AdminDashboard() {
               key={p}
               onClick={() => setPeriod(p)}
               aria-pressed={p === period}
-              className={`min-h-10 shrink-0 rounded-full px-4 text-[0.8rem] font-bold ${p === period ? "bg-brand-dark text-white" : "border border-gray-300 bg-white text-brand-dark"}`}
+              className={`min-h-9 shrink-0 rounded-full px-3.5 text-[0.78rem] font-bold ${p === period ? "bg-brand-dark text-white" : "bg-brand-light text-brand-dark"}`}
             >
               {PERIOD_LABEL[p]}
             </button>
@@ -394,6 +400,7 @@ export function AdminDashboard() {
 
       {/* Pick the pages of the PDF: one page for each tab */}
       <Modal open={pdfOpen} onClose={() => setPdfOpen(false)} title="PDF na ulat">
+        <div data-no-i18n>
         <p className="mb-3 text-sm text-gray-700">Pumili ng mga pahina. Isang pahina ang bawat napili. Ang panahon ay <b>{PERIOD_LABEL[period]}</b> ({title}).</p>
         <ul className="space-y-1">
           {EXEC_TABS.map((t) => {
@@ -411,6 +418,7 @@ export function AdminDashboard() {
         <Button full className="mt-4" loading={pdfBusy} disabled={pdfTabs.length === 0} onClick={() => void exportPdf()}>
           <FileText className="h-4 w-4" /> Gumawa ng PDF ({pdfTabs.length} pahina)
         </Button>
+        </div>
       </Modal>
     </div>
   );
@@ -467,7 +475,7 @@ function TxnList({ txns, title, onBack, onOpen, onCsv }: { txns: Txn[]; title: s
   const chip = (on: boolean) => `min-h-10 shrink-0 rounded-full border px-4 text-[0.8rem] font-bold ${on ? "border-brand-dark bg-brand-dark text-white" : "border-gray-300 bg-white text-brand-dark"}`;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-no-i18n>
       <button onClick={onBack} className="flex min-h-10 items-center gap-1 text-sm font-bold text-brand"><ChevronLeft className="h-4 w-4" aria-hidden /> Dashboard</button>
       <div>
         <h2 className="text-lg font-extrabold">Lahat ng transaksyon</h2>
@@ -522,7 +530,7 @@ function TxnDetail({ txn, onBack }: { txn: Txn; onBack: () => void }) {
     ["Huling kumilos", txn.handledBy || "—"],
   ];
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-no-i18n>
       <button onClick={onBack} className="flex min-h-10 items-center gap-1 text-sm font-bold text-brand"><ChevronLeft className="h-4 w-4" aria-hidden /> Listahan</button>
       <Card>
         <div className="mb-2 flex items-center justify-between gap-2">
