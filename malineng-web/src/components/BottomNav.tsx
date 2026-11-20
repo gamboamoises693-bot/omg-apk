@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, MessageCircle, MessagesSquare, UserCircle, Phone } from "lucide-react";
+import { Home, LayoutDashboard, MessageCircle, MessagesSquare, UserCircle, Phone } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { useChatUnread } from "@/lib/useChatUnread";
+
+/** Kapitan, Secretary and the Developer get the Dashboard where Home is (Home stays one tap away: "Website" on the Dashboard). */
+const OFFICER_HOME = { href: "/admin/", label: "Dashboard", icon: LayoutDashboard } as const;
 
 const NAV = [
   { href: "/", label: "Home", icon: Home },
@@ -16,12 +20,14 @@ const NAV = [
 export function BottomNav() {
   const pathname = usePathname() ?? "/";
   const unread = useChatUnread();
+  const { isOfficer } = useAuth();
+  const items = isOfficer ? [OFFICER_HOME, ...NAV.slice(1)] : NAV;
 
   return (
     <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur" aria-label="Main">
       <ul className="mx-auto grid max-w-3xl grid-cols-5 items-end">
-        {NAV.map(({ href, label, icon: Icon, ...rest }) => {
-          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        {items.map(({ href, label, icon: Icon, ...rest }) => {
+          const active = href === "/" ? pathname === "/" : pathname.startsWith(href.replace(/\/$/, ""));
           if ("sos" in rest) {
             return (
               <li key={href} className="flex justify-center">
