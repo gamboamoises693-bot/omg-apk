@@ -401,7 +401,9 @@ export const GUIDES = [
     id: "admin-dashboard", as: "kapitan", staff: true, routes: [], group: "Para sa admin",
     title: { tl: "Paano gamitin ang Dashboard ng Kapitan", en: "How to use the Captain's Dashboard" },
     steps: [
-      { before: [go("/admin/#dashboard")], ring: 'h2:has-text("Kailangan ng aksyon")',
+      { before: [go("/admin/#dashboard")], ring: 'section:has-text("Kalagayan ng barangay")',
+        tl: "Pagka-login mo, ito agad ang makikita. Sa taas: ilan ang naghihintay, may ambulansyang nasa daan, at ilan ang online. Pindutin ang Website para pumunta sa Home.", en: "Right after you log in you see this. At the top: how many are waiting, any ambulance on the way, and how many are online. Tap Website to go to Home." },
+      { ring: 'h2:has-text("Kailangan ng aksyon")',
         tl: "Dito makikita agad ang mga naghihintay ng aksyon. Pindutin ang isa para buksan ang tamang listahan.", en: "Everything waiting for action shows here. Tap one to open the right list." },
       { ring: 'h2:has-text("Transaksyon ayon sa serbisyo")',
         tl: "Makikita rito kung ilan ang transaksyon sa bawat serbisyo. Pumili ng panahon sa itaas: Ngayon, 7 araw, Buwan o Taon.", en: "See how many transactions each service had. Pick the period at the top: Today, 7 days, Month or Year." },

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ComponentType } from "react";
-import Link from "next/link";
 import {
   Pill,
   HeartPulse,
@@ -13,10 +12,7 @@ import {
   MapPinned,
   Package,
   Ambulance,
-  ArrowLeft,
   BadgeCheck,
-  BellOff,
-  BellRing,
   CalendarCheck,
   CalendarDays,
   ClipboardCheck,
@@ -33,7 +29,6 @@ import {
   Trophy,
   Users,
   Vote,
-  X,
   Clapperboard,
   Globe,
   MessageCircle,
@@ -50,7 +45,6 @@ import { useAdminPending } from "@/context/AdminPendingContext";
 import { ALERTS_EVENT, getAlertsEnabled } from "@/lib/alerts";
 import { roleLabel } from "@/lib/activity";
 import { AdminGate } from "@/components/LoginGate";
-import { Avatar } from "@/components/Avatar";
 import { AlertsSettingsCard } from "@/components/admin/AlertsSettingsCard";
 import { AdminModeration } from "@/components/admin/AdminModeration";
 import { AdminAppointments } from "@/components/admin/AdminAppointments";
@@ -69,6 +63,7 @@ import { AdminIdPrint } from "@/components/admin/AdminIdPrint";
 import { AdminHouseholds } from "@/components/admin/AdminHouseholds";
 import { AdminReport } from "@/components/admin/AdminReport";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { AdminNav, type NavCategory, type NavItem } from "@/components/admin/AdminNav";
 import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminActivity } from "@/components/admin/AdminActivity";
 import { AdminProjects } from "@/components/admin/AdminProjects";
@@ -89,7 +84,6 @@ import { DevInbox, useDevInboxCount } from "@/components/DevInbox";
 import { HowToButton } from "@/components/HowTo";
 import { AdminDecisions } from "@/components/admin/AdminDecisions";
 import { useXmas } from "@/lib/raffle";
-import { XmasLights, XmasSnow, XmasStar } from "@/components/Xmas";
 import { AdminAyudaBatches } from "@/components/admin/AdminAyudaBatches";
 
 interface Section {
@@ -187,6 +181,24 @@ export default function AdminPage() {
     [isSuperAdmin, canBorrowAdmin, isAdmin],
   );
   const sections = useMemo(() => groups.flatMap((g) => g.sections), [groups]);
+  const { byTab: pendingByTab } = useAdminPending();
+  // Rail categories of the menu: the section groups, plus an "Opisina" group of shortcuts to other pages.
+  const categories = useMemo<NavCategory[]>(() => {
+    const toItems = (list: Section[]): NavItem[] => list.map((x) => ({ key: x.key, label: x.label, icon: x.icon, badge: x.key === "devchat" ? devWaiting : pendingByTab[x.key] }));
+    const byTitle = (t: string) => groups.find((g) => g.title === t);
+    const links: NavItem[] = [];
+    if (canBotika) links.push({ key: "l-botika", label: "Botika (BHW)", icon: Pill, href: "/botika/manage" }, { key: "l-kalusugan", label: "Bakuna at Buntis", icon: HeartPulse, href: "/kalusugan" });
+    if (canLiga) links.push({ key: "l-liga", label: "Liga (score at teams)", icon: Trophy, href: "/liga" });
+    if (isOfficer) links.push({ key: "l-pabatid", label: "Pabatid (magpadala)", icon: Megaphone, href: "/pabatid" }, { key: "l-survey", label: "Survey at Suhestiyon", icon: Vote, href: "/survey" }, { key: "l-pondo", label: "Pondo / Transparency", icon: Landmark, href: "/pondo" });
+    const out: NavCategory[] = [];
+    const add = (id: string, label: string, icon: LucideIcon, items: NavItem[]) => items.length > 0 && out.push({ id, label, icon, items });
+    add("aksyon", "Aksyon", ClipboardCheck, toItems(byTitle("Kailangang aksyunan")?.sections ?? []));
+    add("residente", "Residente", Users, toItems(byTitle("Mga residente")?.sections ?? []));
+    add("website", "Komunidad", Globe, toItems(byTitle("Website at komunidad")?.sections ?? []));
+    add("opisina", "Opisina", Landmark, links);
+    add("dev", "Developer", Crown, toItems(byTitle("Super Admin lang")?.sections ?? []));
+    return out;
+  }, [groups, devWaiting, pendingByTab, canBotika, canLiga, isOfficer]);
   // Kapitan, Secretary and the Developer open on the Dashboard; the others (no such section) fall back to the first one.
   const [current, setCurrent] = useState("dashboard");
   const [open, setOpen] = useState(false);
@@ -272,114 +284,16 @@ export default function AdminPage() {
       )}
       <Active />
 
-      {/* Side drawer */}
-      {open && (
-        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Admin menu">
-          <button className="absolute inset-0 h-full w-full cursor-default bg-black/40" onClick={() => setOpen(false)} aria-label="Isara ang menu" tabIndex={-1} />
-          <nav className="absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col bg-white shadow-2xl motion-safe:animate-drawer-in">
-            <div className={`relative flex items-center gap-3 overflow-hidden px-4 pb-4 text-white ${xmas ? "xmas-card pt-[max(2.25rem,calc(env(safe-area-inset-top)+1rem))]" : "bg-gradient-to-br from-brand to-brand-deep pt-[max(1.25rem,env(safe-area-inset-top))]"}`}>
-              {xmas && (
-                <>
-                  <XmasLights />
-                  <XmasSnow />
-                </>
-              )}
-              <Avatar name={profile?.fullName ?? "Admin"} photo={profile?.photoURL} size="h-11 w-11" textClass="text-base" ring="ring-2 ring-white/40" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-bold">{profile?.fullName}</p>
-                <p className="truncate text-xs text-white/85">
-                  {isSuperAdmin ? "👑 " : ""}{profile ? roleLabel(profile.role, profile.position) : ""}{total ? ` · ${total} naghihintay` : ""}
-                </p>
-              </div>
-              <button onClick={() => setOpen(false)} className="rounded-full p-1.5 active:bg-white/15" aria-label="Isara">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {xmas && <div className="xmas-cane" aria-hidden />}
-            <div className="flex-1 overflow-y-auto px-2 pb-3">
-              {groups.map((g) => (
-                <div key={g.title}>
-                  <p className={`flex items-center gap-1 px-2 pb-1 pt-3 text-[0.68rem] font-bold uppercase tracking-wider ${g.superOnly ? "text-purple-600" : xmas ? "text-[#0F4A36]" : "text-gray-500"}`}>{xmas && !g.superOnly && <XmasStar className="h-2.5 w-2.5 fill-[#B3202B]" />}{g.title}</p>
-                  {g.sections.map((s) => {
-                    const Icon = s.icon;
-                    const on = s.key === active.key;
-                    return (
-                      <button
-                        key={s.key}
-                        onClick={() => choose(s.key)}
-                        className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left ${on ? "bg-gold-light" : "active:bg-gray-50"}`}
-                        aria-current={on ? "page" : undefined}
-                      >
-                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${g.superOnly ? "bg-purple-50 text-purple-600" : "bg-brand-light text-brand"}`}>
-                          <Icon className="h-[1.1rem] w-[1.1rem]" aria-hidden />
-                        </span>
-                        <span className={`min-w-0 flex-1 truncate text-sm ${on ? "font-bold" : "font-medium"} ${g.superOnly ? "text-purple-700" : "text-gray-800"}`}>{s.label}</span>
-                        <Badge n={s.key === "devchat" ? devWaiting : byTab[s.key]} />
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-              {canBotika && (
-                <div>
-                  <p className="px-2 pb-1 pt-3 text-[0.68rem] font-bold uppercase tracking-wider text-gray-500">Kalusugan</p>
-                  <Link href="/botika/manage" className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left active:bg-gray-50">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
-                      <Pill className="h-[1.1rem] w-[1.1rem]" aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800">Botika (BHW)</span>
-                  </Link>
-                  <Link href="/kalusugan" className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left active:bg-gray-50">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
-                      <HeartPulse className="h-[1.1rem] w-[1.1rem]" aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800">Bakuna at Buntis</span>
-                  </Link>
-                </div>
-              )}
-              {canLiga && (
-                <div>
-                  <p className="px-2 pb-1 pt-3 text-[0.68rem] font-bold uppercase tracking-wider text-gray-500">SK at Palaro</p>
-                  <Link href="/liga" className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left active:bg-gray-50">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
-                      <Trophy className="h-[1.1rem] w-[1.1rem]" aria-hidden />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800">Liga (score at teams)</span>
-                  </Link>
-                </div>
-              )}
-              {isOfficer && (
-                <div>
-                  <p className="px-2 pb-1 pt-3 text-[0.68rem] font-bold uppercase tracking-wider text-gray-500">Kapitan at Secretary</p>
-                  {[
-                    { href: "/pabatid", label: "Pabatid (magpadala)", Icon: Megaphone },
-                    { href: "/survey", label: "Survey at Suhestiyon", Icon: Vote },
-                    { href: "/pondo", label: "Pondo / Transparency", Icon: Landmark },
-                  ].map(({ href, label, Icon }) => (
-                    <Link key={href} href={href} className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left active:bg-gray-50">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-light text-brand">
-                        <Icon className="h-[1.1rem] w-[1.1rem]" aria-hidden />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800">{label}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {xmas && <p className="bg-[#FFF8EA] py-1.5 text-center text-xs font-bold tracking-wide text-[#B3202B]">Maligayang Pasko, Malineng!</p>}
-            <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm">
-              <Link href="/" className="flex items-center gap-1 font-semibold text-brand">
-                <ArrowLeft className="h-4 w-4" /> Bumalik sa website
-              </Link>
-              <button onClick={() => choose("approve")} className={`flex items-center gap-1 text-xs font-semibold ${alertsOn ? "text-brand" : "text-gray-500"}`}>
-                {alertsOn ? <BellRing className="h-4 w-4" /> : <BellOff className="h-4 w-4" />} Alerts: {alertsOn ? "ON" : "OFF"}
-              </button>
-            </div>
-          </nav>
-        </div>
-      )}
+      <AdminNav
+        open={open}
+        onClose={() => setOpen(false)}
+        categories={categories}
+        current={active.key}
+        onChoose={choose}
+        alertsOn={alertsOn}
+        onAlerts={() => choose("approve")}
+        xmas={xmas}
+      />
     </AdminGate>
   );
 }

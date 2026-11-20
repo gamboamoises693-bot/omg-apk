@@ -1,10 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, FileText, RefreshCw, Search } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Download, FileText, Home, RefreshCw, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAdminPending } from "@/context/AdminPendingContext";
 import { useToast } from "@/components/Toast";
+import { Avatar } from "@/components/Avatar";
+import { useOnlineCount } from "@/lib/presence";
 import { Badge, Button, Card, EmptyState, SectionTitle, Spinner } from "@/components/ui";
 import { downloadCsv } from "@/lib/csv";
 import { downloadDashboardPdf, loadSealPng } from "@/lib/dashboardPdf";
@@ -61,7 +64,8 @@ type View = { name: "home" } | { name: "list" } | { name: "detail"; txn: Txn };
 
 export function AdminDashboard() {
   const { profile } = useAuth();
-  const { byTab } = useAdminPending();
+  const { byTab, total: waiting } = useAdminPending();
+  const online = useOnlineCount();
   const toast = useToast();
   const signature = useCaptainSignature();
   const [period, setPeriod] = useState<Period>("week");
@@ -145,8 +149,33 @@ export function AdminDashboard() {
   const actions = ACTION_ROWS.map((r) => ({ ...r, n: byTab[r.tab] ?? 0 })).filter((r) => r.n > 0);
   const top = Math.max(1, ...summary.byService.map((s) => s.count));
 
+  const hour = new Date().getHours();
+  const hello = hour < 12 ? "Magandang umaga" : hour < 18 ? "Magandang hapon" : "Magandang gabi";
+  const first = (profile?.fullName ?? "").split(" ")[0];
+  const enroute = (loaded?.txns ?? []).filter((t) => t.service === "Ambulansya" && t.statusLabel === "Papunta na").length;
+
   return (
     <div className="space-y-4">
+      {/* Greeting and what is happening right now */}
+      <section className="rounded-[1.125rem] bg-gradient-to-br from-brand-dark to-brand-deep p-4 text-white shadow-card">
+        <div className="flex items-center gap-3">
+          {profile && <Avatar name={profile.fullName} photo={profile.photoURL} size="h-12 w-12" textClass="text-base" ring="ring-2 ring-white/30" />}
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.8rem] text-white/85">{hello}{profile?.position ? `, ${profile.position}` : ""}</p>
+            <p className="truncate text-[1.15rem] font-extrabold leading-tight">{first || "Kapitan"}</p>
+          </div>
+          <Link href="/" className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3.5 text-[0.8rem] font-bold active:bg-white/25">
+            <Home className="h-4 w-4" aria-hidden /> Website
+          </Link>
+        </div>
+        <p className="mt-3 text-[0.78rem] text-white/80">{new Date().toLocaleDateString("fil-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} · Kalagayan ng barangay</p>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="rounded-xl bg-white/10 px-2.5 py-2"><p className="text-[1.6rem] font-extrabold leading-tight tabular-nums">{waiting}</p><p className="text-[0.7rem] font-bold text-blue-100">Naghihintay</p></div>
+          <div className={`rounded-xl px-2.5 py-2 ${enroute > 0 ? "bg-red-600/80" : "bg-white/10"}`}><p className="text-[1.6rem] font-extrabold leading-tight tabular-nums">{enroute}</p><p className="text-[0.7rem] font-bold text-blue-100">Ambulansya sa daan</p></div>
+          <div className="rounded-xl bg-white/10 px-2.5 py-2"><p className="text-[1.6rem] font-extrabold leading-tight tabular-nums">{online ?? "—"}</p><p className="text-[0.7rem] font-bold text-blue-100">Online ngayon</p></div>
+        </div>
+      </section>
+
       {/* Period */}
       <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Panahon">
         {(Object.keys(PERIOD_LABEL) as Period[]).map((p) => (

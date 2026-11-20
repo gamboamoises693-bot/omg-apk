@@ -13,6 +13,7 @@ import { Button, Card, ErrorText, Input } from "@/components/ui";
 import { GoogleButton } from "@/components/GoogleButton";
 import { useToast } from "@/components/Toast";
 import { nextFromLocation } from "@/lib/nextPath";
+import { markFreshLogin } from "@/lib/officerLanding";
 import { loginIdFor } from "@/lib/phoneLogin";
 
 export default function LoginPage() {
@@ -36,7 +37,10 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, loginIdFor(email), password);
       toast("Welcome back!");
-      router.replace(nextFromLocation() || "/");
+      const next = nextFromLocation();
+      // No page asked for a redirect: officers land on the Dashboard (see OfficerLanding).
+      if (!next) markFreshLogin();
+      router.replace(next || "/");
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -78,7 +82,7 @@ export default function LoginPage() {
         <div className="my-4 flex items-center gap-3 text-sm text-gray-400">
           <span className="h-px flex-1 bg-gray-200" /> o kaya <span className="h-px flex-1 bg-gray-200" />
         </div>
-        <GoogleButton onSuccess={() => router.replace("/account")} onError={setError} />
+        <GoogleButton onSuccess={() => { markFreshLogin(); router.replace("/account"); }} onError={setError} />
       </Card>
       <p className="mt-4 text-center">
         Wala pang account?{" "}
