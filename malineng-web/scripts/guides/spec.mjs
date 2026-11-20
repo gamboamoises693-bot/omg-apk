@@ -14,7 +14,7 @@ export const GUIDES = [
       { before: [go("/")], ring: '[aria-label="Buksan ang menu ng serbisyo"]', after: [click('[aria-label="Buksan ang menu ng serbisyo"]')],
         tl: "Pindutin ang menu sa kaliwang taas para makita ang lahat ng serbisyo ng Barangay.", en: "Tap the menu at the top left to see every service of the Barangay." },
       { ring: 'nav a:has-text("Ambulansya")', after: [{ press: "Escape" }],
-        tl: "Piliin ang serbisyong kailangan mo, halimbawa Ambulansya, Appointment o Reklamo.", en: "Choose the service you need, for example Ambulance, Appointment or Complaints." },
+        tl: "Piliin ang kategorya sa kaliwa (Emergency, Papeles, Komunidad…), tapos ang serbisyong kailangan mo. May search din kung hindi mo makita.", en: "Pick a category on the left (Emergency, Papers, Community…), then the service you need. Use the search if you cannot find it." },
       { ring: 'a:visible:has-text("SOS")',
         tl: "Sa emergency, pindutin ang pulang SOS sa gitna para tumawag agad.", en: "In an emergency, tap the red SOS in the middle to call right away." },
       { ring: 'a:visible:has-text("Account")',

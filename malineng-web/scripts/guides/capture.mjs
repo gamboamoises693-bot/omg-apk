@@ -48,8 +48,20 @@ async function ring(page, selector, label) {
 
 /** The raffle pop-up ("Kasali ka sa raffle!") covers the page the first time; close it so it never ends up in a picture. */
 async function dismiss(page) {
-  const b = page.locator("text=Sige, salamat").first();
-  if (await b.isVisible().catch(() => false)) await b.click().catch(() => {});
+  // More than one pop-up can be queued (raffle invite, donation received), so close up to three.
+  for (let i = 0; i < 3; i++) {
+    const b = page.locator("text=Sige, salamat").first();
+    if (!(await b.isVisible().catch(() => false))) break;
+    await b.click().catch(() => {});
+    await page.waitForTimeout(400);
+  }
+  // Pop-ups that only have a close (X) button: Escape closes them (only while one is on screen, so an open menu stays open).
+  for (let i = 0; i < 3; i++) {
+    const popup = page.locator("text=/Kasali ka sa raffle|Natanggap na ang donasyon/").first();
+    if (!(await popup.isVisible().catch(() => false))) break;
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(400);
+  }
   await page.waitForTimeout(300);
 }
 
