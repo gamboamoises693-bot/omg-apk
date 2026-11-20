@@ -43,6 +43,7 @@ import {
   LifeBuoy,
   UserPlus,
   Printer,
+  LayoutDashboard,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAdminPending } from "@/context/AdminPendingContext";
@@ -67,6 +68,7 @@ import { AdminHallRegister } from "@/components/admin/AdminHallRegister";
 import { AdminIdPrint } from "@/components/admin/AdminIdPrint";
 import { AdminHouseholds } from "@/components/admin/AdminHouseholds";
 import { AdminReport } from "@/components/admin/AdminReport";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminActivity } from "@/components/admin/AdminActivity";
 import { AdminProjects } from "@/components/admin/AdminProjects";
@@ -112,6 +114,7 @@ const GROUPS: Group[] = [
   {
     title: "Kailangang aksyunan",
     sections: [
+      { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, Component: AdminDashboard, borrowOnly: true },
       { key: "approve", label: "I-approve", icon: ClipboardCheck, Component: AdminModeration },
       { key: "verification", label: "Verification", icon: BadgeCheck, Component: AdminVerification },
       { key: "profilechange", label: "Pagbabago sa Profile", icon: UserCog, Component: AdminProfileChanges },
@@ -184,7 +187,8 @@ export default function AdminPage() {
     [isSuperAdmin, canBorrowAdmin, isAdmin],
   );
   const sections = useMemo(() => groups.flatMap((g) => g.sections), [groups]);
-  const [current, setCurrent] = useState("approve");
+  // Kapitan, Secretary and the Developer open on the Dashboard; the others (no such section) fall back to the first one.
+  const [current, setCurrent] = useState("dashboard");
   const [open, setOpen] = useState(false);
   const [alertsOn, setAlertsOn] = useState(false);
 

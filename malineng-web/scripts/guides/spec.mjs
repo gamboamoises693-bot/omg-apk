@@ -398,6 +398,20 @@ export const GUIDES = [
   },
   // ---------------- Para sa admin (staff only; the Admin page asks for them by id, so `routes` is empty) ----------------
   {
+    id: "admin-dashboard", as: "kapitan", staff: true, routes: [], group: "Para sa admin",
+    title: { tl: "Paano gamitin ang Dashboard ng Kapitan", en: "How to use the Captain's Dashboard" },
+    steps: [
+      { before: [go("/admin/#dashboard")], ring: 'h2:has-text("Kailangan ng aksyon")',
+        tl: "Dito makikita agad ang mga naghihintay ng aksyon. Pindutin ang isa para buksan ang tamang listahan.", en: "Everything waiting for action shows here. Tap one to open the right list." },
+      { ring: 'h2:has-text("Transaksyon ayon sa serbisyo")',
+        tl: "Makikita rito kung ilan ang transaksyon sa bawat serbisyo. Pumili ng panahon sa itaas: Ngayon, 7 araw, Buwan o Taon.", en: "See how many transactions each service had. Pick the period at the top: Today, 7 days, Month or Year." },
+      { ring: 'button:has-text("Tingnan lahat")',
+        tl: "Pindutin ang Tingnan lahat para sa buong listahan ng transaksyon. May search at filter, at pwedeng buksan ang bawat isa.", en: "Tap See all for the full list of transactions. It has search and filters, and you can open each one." },
+      { ring: 'button:has-text("I-download ang PDF na ulat")',
+        tl: "Pindutin ito para gumawa ng PDF na ulat na may bilang, tsart, listahan at lagayan ng pirma. May CSV din sa ilalim.", en: "Tap this to make a PDF report with the numbers, a chart, the list and signature lines. A CSV is just below." },
+    ],
+  },
+  {
     id: "admin-approve", as: "kapitan", staff: true, routes: [], group: "Para sa admin",
     title: { tl: "Paano mag-approve ng post, paninda at trabaho", en: "How to approve posts, listings and jobs" },
     steps: [
