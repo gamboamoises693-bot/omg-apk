@@ -41,6 +41,8 @@ export interface Txn {
   /** Last person who acted on it, when the data says. */
   handledBy: string;
   trail: TxnTrail[];
+  /** Extra facts for the executive view (ambulance trips only). */
+  meta?: { kind?: string; reason?: string; /** minutes from request to "papunta na" */ respMin?: number };
   /** Admin section (src/app/admin/page.tsx) where it is handled; empty when it is handled elsewhere. */
   tab: string;
   urgent: boolean;
@@ -167,6 +169,12 @@ const SOURCES: { name: string; field: string; read: Reader }[] = [
         contact: String(d.contact ?? ""),
         handledBy: lastTrail(trail) || String(d.doneBy ?? ""),
         trail,
+        meta: {
+          kind: String(d.type ?? ""),
+          reason: String(d.reason ?? ""),
+          // How long the Barangay took to send the ambulance (only when the request has both times).
+          respMin: d.enrouteAt instanceof Timestamp && d.createdAt instanceof Timestamp ? Math.max(0, Math.round((d.enrouteAt.toMillis() - d.createdAt.toMillis()) / 60000)) : undefined,
+        },
         tab: "ambulansya",
         urgent: d.type === "emergency" || d.urgent === true,
       };
