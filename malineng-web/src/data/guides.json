@@ -1114,6 +1114,46 @@
       ]
     },
     {
+      "id": "admin-dashboard",
+      "routes": [],
+      "staff": true,
+      "group": "Para sa admin",
+      "title": {
+        "tl": "Paano gamitin ang Dashboard ng Kapitan",
+        "en": "How to use the Captain's Dashboard"
+      },
+      "steps": [
+        {
+          "tl": "Dito makikita agad ang mga naghihintay ng aksyon. Pindutin ang isa para buksan ang tamang listahan.",
+          "en": "Everything waiting for action shows here. Tap one to open the right list.",
+          "img": "admin-dashboard-1.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Makikita rito kung ilan ang transaksyon sa bawat serbisyo. Pumili ng panahon sa itaas: Ngayon, 7 araw, Buwan o Taon.",
+          "en": "See how many transactions each service had. Pick the period at the top: Today, 7 days, Month or Year.",
+          "img": "admin-dashboard-2.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ang Tingnan lahat para sa buong listahan ng transaksyon. May search at filter, at pwedeng buksan ang bawat isa.",
+          "en": "Tap See all for the full list of transactions. It has search and filters, and you can open each one.",
+          "img": "admin-dashboard-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
+          "tl": "Pindutin ito para gumawa ng PDF na ulat na may bilang, tsart, listahan at lagayan ng pirma. May CSV din sa ilalim.",
+          "en": "Tap this to make a PDF report with the numbers, a chart, the list and signature lines. A CSV is just below.",
+          "img": "admin-dashboard-4.jpg",
+          "w": 585,
+          "h": 1170
+        }
+      ]
+    },
+    {
       "id": "admin-approve",
       "routes": [],
       "staff": true,
