@@ -19,8 +19,8 @@
           "h": 1170
         },
         {
-          "tl": "Piliin ang serbisyong kailangan mo, halimbawa Ambulansya, Appointment o Reklamo.",
-          "en": "Choose the service you need, for example Ambulance, Appointment or Complaints.",
+          "tl": "Piliin ang kategorya sa kaliwa (Emergency, Papeles, Komunidad…), tapos ang serbisyong kailangan mo. May search din kung hindi mo makita.",
+          "en": "Pick a category on the left (Emergency, Papers, Community…), then the service you need. Use the search if you cannot find it.",
           "img": "home-2.jpg",
           "w": 585,
           "h": 1170
