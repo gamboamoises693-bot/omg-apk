@@ -142,6 +142,20 @@ export async function seed(selfieFile) {
   await put("raffleSponsors/dncertdncertdncert", { name: S("Aling Nena Store"), what: S("Grocery package"), amount: I(2000), tier: S("reg"), show: B(true), donationId: S("dncertdncertdncert"), createdAt: T(Date.now() - day) });
   // A long business name, to check that nothing overlaps on the certificate.
   await put("raffleDonations/dnlongdnlongdnlong", { userId: S(uid), name: S("Omega Purified Ice Cubes and Distilled Water Refilling Station"), anon: B(false), kind: S("Gamit / premyo"), what: S("Media Noche Package at Regalo para sa mga Bata"), amount: I(1500), contact: S("09170001111"), message: S(""), status: S("received"), receiptNo: S("RAF-20261115-NABT"), receivedBy: S("x"), receivedByName: S("Roberto Halimbawa"), receivedAt: T(Date.now() - day), createdAt: T(Date.now() - 3 * day) });
+  // Sample visitor marks for the last 14 days (the Kapitan's "Bisita at login" chart). Only counts, nobody real.
+  const verifiedSeries = [8, 8, 8, 9, 10, 10, 7, 9, 9, 11, 12, 11, 12, 13];
+  const unverifiedSeries = [2, 3, 2, 3, 4, 3, 2, 3, 3, 3, 4, 3, 4, 4];
+  const guestSeries = [16, 19, 18, 22, 28, 24, 15, 20, 24, 30, 32, 26, 34, 36];
+  const marks = [];
+  const localDay = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  for (let i = 0; i < 14; i++) {
+    const t = Date.now() - (13 - i) * day;
+    const dstr = localDay(t);
+    for (let n = 0; n < verifiedSeries[i]; n++) marks.push([`visitMarks/${dstr}_v${n}`, { day: S(dstr), kind: S("verified"), at: T(t) }]);
+    for (let n = 0; n < unverifiedSeries[i]; n++) marks.push([`visitMarks/${dstr}_u${n}`, { day: S(dstr), kind: S("unverified"), at: T(t) }]);
+    for (let n = 0; n < guestSeries[i]; n++) marks.push([`visitMarks/${dstr}_gx${n}`, { day: S(dstr), kind: S("guest"), at: T(t) }]);
+  }
+  for (let i = 0; i < marks.length; i += 40) await Promise.all(marks.slice(i, i + 40).map(([path, f]) => put(path, f)));
   process.env.GUIDE_DONATION = "dncertdncertdncert";
   return uid;
 }

@@ -243,3 +243,26 @@ textarea {
 /* The sample Barangay ID: a "HALIMBAWA" stamp across the card. */
 .id-sample-mark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
 .id-sample-mark span { transform: rotate(-22deg); font: 800 44px Inter, Arial, sans-serif; letter-spacing: 0.1em; color: rgba(179, 32, 43, 0.28); border: 5px solid rgba(179, 32, 43, 0.28); border-radius: 14px; padding: 2px 18px; }
+
+/* ---------- Dark look of the Kapitan's dashboard (see components/admin/DashTheme.tsx) ---------- */
+.dash-dark { background: #1a1b1f; color: #e8eaee; }
+.dash-dark .bg-white { background-color: #25272d; }
+.dash-dark .bg-surface { background-color: #2c2f36; }
+.dash-dark .bg-brand-light { background-color: #2a2d34; }
+.dash-dark .bg-\[\#EDF0F5\] { background-color: #33363d; }
+.dash-dark .bg-gradient-to-b.from-white { background-image: none; background-color: #25272d; }
+.dash-dark .border-line, .dash-dark .border-gray-200, .dash-dark .border-gray-300 { border-color: #33363d; }
+.dash-dark .text-gray-500, .dash-dark .text-gray-600, .dash-dark .text-gray-700 { color: #a9afbb; }
+.dash-dark .text-gray-800 { color: #d5d9e0; }
+.dash-dark .text-brand-deep, .dash-dark .text-slate-900 { color: #e8eaee; }
+.dash-dark .text-brand-dark { color: #c9d4ee; }
+.dash-dark .text-brand { color: #8fb4f5; }
+.dash-dark .text-emerald-700 { color: #7fd1ae; }
+.dash-dark .text-red-700 { color: #f59e9e; }
+.dash-dark .text-yellow-900 { color: #f3c76b; }
+.dash-dark .bg-emerald-50 { background-color: rgba(127, 209, 174, 0.14); }
+.dash-dark .bg-red-50 { background-color: rgba(245, 158, 158, 0.14); }
+.dash-dark .bg-yellow-50 { background-color: rgba(243, 199, 107, 0.14); }
+.dash-dark .bg-gold-light { background-color: rgba(243, 199, 107, 0.16); }
+.dash-dark .shadow-card { box-shadow: 0 12px 24px -16px rgba(0, 0, 0, 0.7); }
+.dash-dark input, .dash-dark label { color: #e8eaee; }

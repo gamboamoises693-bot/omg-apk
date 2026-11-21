@@ -18,7 +18,7 @@ const DEVICE_KEY = "malineng.deviceId";
 let lastBeat = 0;
 let lastUserBeat = { uid: "", at: 0 };
 
-function deviceId(): string {
+export function deviceId(): string {
   try {
     let id = localStorage.getItem(DEVICE_KEY);
     if (!id || !/^[a-z0-9]{20}$/.test(id)) {
