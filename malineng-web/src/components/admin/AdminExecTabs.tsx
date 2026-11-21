@@ -1,10 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Card, Spinner } from "@/components/ui";
 import { formatPeso } from "@/lib/format";
 import { RAG_RULES, RAG_WORD, type AttentionItem, type AyudaData, type HealthData, type ProjectData, type Rag, type Scorecard, type ScoreItem } from "@/lib/executive";
 import { PROJECT_STATUS_LABEL } from "@/lib/constants";
+import { Num, useDash } from "@/components/admin/DashTheme";
+import { loadVisits, type VisitDay } from "@/lib/visits";
 
 export type ExecTab = "buod" | "kalusugan" | "proyekto" | "ayuda" | "transaksyon";
 
@@ -32,7 +34,7 @@ export function RagChip({ rag, label }: { rag: Rag; label?: string }) {
 function Stat({ value, label, tone = "text-brand-deep", bg = "bg-surface" }: { value: ReactNode; label: string; tone?: string; bg?: string }) {
   return (
     <div className={`flex flex-col gap-0.5 rounded-2xl p-3 ${bg}`}>
-      <b className={`text-[1.5rem] font-extrabold leading-tight tabular-nums ${tone}`}>{value}</b>
+      <b className={`text-[1.5rem] font-extrabold leading-tight tabular-nums ${tone}`}><Num>{value}</Num></b>
       <span className="text-[0.74rem] font-bold text-gray-600">{label}</span>
     </div>
   );
@@ -43,7 +45,7 @@ function HeroStat({ value, label, tone }: { value: ReactNode; label: string; ton
   const bg = tone === "bad" ? "bg-red-400/30" : tone === "warn" ? "bg-amber-300/25" : "bg-white/10";
   return (
     <div className={`rounded-2xl p-3 ${bg}`}>
-      <b className="block text-[1.5rem] font-extrabold leading-tight tabular-nums">{value}</b>
+      <b className="block text-[1.5rem] font-extrabold leading-tight tabular-nums"><Num>{value}</Num></b>
       <span className="text-[0.7rem] font-bold text-blue-100">{label}</span>
     </div>
   );
@@ -99,7 +101,7 @@ function GaugeCard({ item }: { item: ScoreItem }) {
           <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="9" />
           <circle cx="50" cy="50" r="42" fill="none" stroke={RAG_RING[item.rag]} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${circ * fill} ${circ}`} transform="rotate(-90 50 50)" />
         </svg>
-        <b className="absolute inset-0 flex items-center justify-center text-[1.2rem] font-extrabold tabular-nums">{item.value}</b>
+        <b className="absolute inset-0 flex items-center justify-center text-[1.2rem] font-extrabold tabular-nums"><Num>{item.value}</Num></b>
       </span>
       <span className="min-h-8 text-[0.72rem] leading-4 text-blue-100">{item.note}</span>
       <RagChip rag={item.rag} />
@@ -133,6 +135,8 @@ export function BuodTab({ card, loading, summaryLine, onGo, residents }: { card:
         </details>
       </div>
 
+      <VisitsCard />
+
       <Card className="!pb-2">
         <h2 className="text-[1.05rem] font-bold">Dapat bigyang-pansin</h2>
         {card.attention.length === 0 ? (
@@ -144,9 +148,9 @@ export function BuodTab({ card, loading, summaryLine, onGo, residents }: { card:
 
       {residents && (
         <Card className="grid grid-cols-3 gap-2 text-center">
-          <div><div className="text-[1.5rem] font-extrabold text-brand-deep tabular-nums">{residents.total}</div><div className="text-[0.72rem] font-bold text-gray-600">Account ng residente</div></div>
-          <div><div className="text-[1.5rem] font-extrabold text-brand-deep tabular-nums">{residents.households}</div><div className="text-[0.72rem] font-bold text-gray-600">Household</div></div>
-          <div><div className="text-[1.5rem] font-extrabold text-brand-deep tabular-nums">{residents.total ? Math.round((residents.verified / residents.total) * 100) : 0}%</div><div className="text-[0.72rem] font-bold text-gray-600">Verified</div></div>
+          <div><div className="text-[1.5rem] font-extrabold text-brand-deep tabular-nums"><Num>{residents.total}</Num></div><div className="text-[0.72rem] font-bold text-gray-600">Account ng residente</div></div>
+          <div><div className="text-[1.5rem] font-extrabold text-brand-deep tabular-nums"><Num>{residents.households}</Num></div><div className="text-[0.72rem] font-bold text-gray-600">Household</div></div>
+          <div><div className="text-[1.5rem] font-extrabold text-brand-deep tabular-nums"><Num>{`${residents.total ? Math.round((residents.verified / residents.total) * 100) : 0}%`}</Num></div><div className="text-[0.72rem] font-bold text-gray-600">Verified</div></div>
         </Card>
       )}
     </div>
@@ -358,5 +362,135 @@ export function AyudaTab({ data, loading, extras, ragAyuda }: { data: AyudaData 
         {extras.map((e) => <Row key={e.label} right={<b>{e.value}</b>}>{e.label}</Row>)}
       </Card>
     </div>
+  );
+}
+
+/* ---------------- Bisita at login (sparklines) ---------------- */
+
+const VISIT_COLORS = {
+  light: { verified: "#1f5fae", unverified: "#b45309", guest: "#6b7280" },
+  dark: { verified: "#8fb4f5", unverified: "#f3c76b", guest: "#9be3c4" },
+};
+
+/** Points of a series scaled into a w x h box (its own min and max when `max` is not given). */
+function scale(values: number[], w: number, h: number, pad: number, lo: number, hi: number): [number, number][] {
+  const n = values.length;
+  const span = hi - lo || 1;
+  return values.map((v, i) => [pad + (n === 1 ? (w - 2 * pad) / 2 : (i * (w - 2 * pad)) / (n - 1)), h - pad - ((v - lo) / span) * (h - 2 * pad)]);
+}
+const path = (pts: [number, number][]) => pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+
+function Spark({ values, color, label }: { values: number[]; color: string; label: string }) {
+  const pts = scale(values, 100, 32, 3, Math.min(...values), Math.max(...values));
+  const last = pts[pts.length - 1];
+  return (
+    <svg viewBox="0 0 100 32" width="100%" height="48" role="img" aria-label={label}>
+      <path d={`${path(pts)} L${last[0]},32 L${pts[0][0]},32 Z`} fill={color} fillOpacity={0.13} />
+      <path d={path(pts)} fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={last[0]} cy={last[1]} r={2.6} fill={color} />
+    </svg>
+  );
+}
+
+const pctText = (now: number, before: number): { text: string; up: boolean | null } => {
+  if (before === 0) return { text: now === 0 ? "pareho kahapon" : "bago ngayon", up: null };
+  const p = Math.round(((now - before) / before) * 100);
+  return { text: `${p >= 0 ? "+" : ""}${p}% kahapon`, up: p >= 0 };
+};
+
+const dayShort = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("fil-PH", { month: "short", day: "numeric" });
+
+function VisitsCard() {
+  const { dark } = useDash();
+  const colors = dark ? VISIT_COLORS.dark : VISIT_COLORS.light;
+  const [days, setDays] = useState<7 | 14 | 30>(14);
+  const [data, setData] = useState<VisitDay[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    setData(null);
+    setFailed(false);
+    loadVisits(days)
+      .then((d) => live && setData(d))
+      .catch(() => live && setFailed(true));
+    return () => {
+      live = false;
+    };
+  }, [days]);
+
+  const rows: { key: keyof Omit<VisitDay, "day">; label: string }[] = [
+    { key: "verified", label: "Verified na naglogin" },
+    { key: "unverified", label: "Residente, hindi pa verified" },
+    { key: "guest", label: "Guest (hindi naglogin)" },
+  ];
+  const series = (k: keyof Omit<VisitDay, "day">) => (data ?? []).map((d) => d[k]);
+  const totalAll = (data ?? []).reduce((n, d) => n + d.verified + d.unverified + d.guest, 0);
+  const verifiedSum = (data ?? []).reduce((n, d) => n + d.verified, 0);
+  const activeDays = (data ?? []).filter((d) => d.verified + d.unverified + d.guest > 0).length;
+  const peak = (data ?? []).reduce<VisitDay | null>((m, d) => (!m || d.verified + d.unverified + d.guest > m.verified + m.unverified + m.guest ? d : m), null);
+  const W = 330, H = 120;
+  const top = Math.max(1, ...(data ?? []).flatMap((d) => [d.verified, d.unverified, d.guest]));
+
+  return (
+    <Card>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <h2 className="text-[1.05rem] font-bold">Bisita at login</h2>
+        <div className="flex gap-1.5">
+          {([7, 14, 30] as const).map((n) => (
+            <button key={n} onClick={() => setDays(n)} aria-pressed={n === days} className={`min-h-9 rounded-full px-3 text-[0.75rem] font-bold ${n === days ? "bg-brand-dark text-white" : "bg-brand-light text-brand-dark"}`}>
+              {n} araw
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="mb-1 text-xs text-gray-600">Natatanging account o device bawat araw</p>
+
+      {failed ? (
+        <NoData>Hindi ma-load ang bilang ng bisita. Subukan ulit mamaya.</NoData>
+      ) : !data ? (
+        <Loading />
+      ) : (
+        <>
+          {rows.map((r) => {
+            const vals = series(r.key);
+            const now = vals[vals.length - 1] ?? 0;
+            const d = pctText(now, vals[vals.length - 2] ?? 0);
+            return (
+              <div key={r.key} className="grid grid-cols-[minmax(0,1fr)_6.2rem] items-center gap-2.5 border-t border-line py-3 first:border-t-0">
+                <div>
+                  <span className="flex items-center gap-1.5 text-[0.78rem] font-bold text-gray-600"><span className="h-2.5 w-2.5 rounded-full" style={{ background: colors[r.key] }} aria-hidden />{r.label}</span>
+                  <b className="block text-[2rem] font-extrabold leading-tight tabular-nums text-brand-deep"><Num>{now}</Num></b>
+                  <span className={`text-[0.74rem] font-extrabold ${d.up === null ? "text-gray-600" : d.up ? "text-emerald-700" : "text-red-700"}`}>{d.text}</span>
+                </div>
+                <Spark values={vals.length > 1 ? vals : [0, ...vals]} color={colors[r.key]} label={`${r.label}, ${days} araw`} />
+              </div>
+            );
+          })}
+
+          {activeDays > 1 && (
+            <div className="mt-2 border-t border-line pt-3">
+              <p className="mb-1 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-gray-600">Paghahambing, {days} araw</p>
+              <svg viewBox={`0 0 ${W} ${H + 18}`} width="100%" role="img" aria-label="Linya ng bisita bawat araw">
+                {[0.25, 0.5, 0.75].map((f) => <line key={f} x1="8" x2={W - 8} y1={H - 8 - f * (H - 16)} y2={H - 8 - f * (H - 16)} stroke={dark ? "#33363d" : "#e3e8f0"} />)}
+                {rows.map((r) => <path key={r.key} d={path(scale(series(r.key), W, H, 8, 0, top))} fill="none" stroke={colors[r.key]} strokeWidth={r.key === "verified" ? 2.4 : 2} strokeLinecap="round" strokeLinejoin="round" />)}
+                {rows.map((r) => { const p = scale(series(r.key), W, H, 8, 0, top).slice(-1)[0]; return <circle key={r.key} cx={p[0]} cy={p[1]} r={3.2} fill={colors[r.key]} />; })}
+                <text x="8" y={H + 14} fontSize="9" fill={dark ? "#a9afbb" : "#6b7280"}>{dayShort(data[0].day)}</text>
+                <text x={W - 8} y={H + 14} fontSize="9" textAnchor="end" fill={dark ? "#a9afbb" : "#6b7280"}>{dayShort(data[data.length - 1].day)}</text>
+              </svg>
+              <div className="mt-1 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-xl bg-surface p-2"><b className="block text-[1.3rem] font-extrabold tabular-nums text-brand-deep"><Num>{peak ? peak.verified + peak.unverified + peak.guest : 0}</Num></b><span className="text-[0.68rem] font-bold text-gray-600">Pinakamarami sa isang araw{peak ? ` (${dayShort(peak.day)})` : ""}</span></div>
+                <div className="rounded-xl bg-surface p-2"><b className="block text-[1.3rem] font-extrabold tabular-nums text-brand-deep"><Num>{Math.round(verifiedSum / Math.max(1, activeDays))}</Num></b><span className="text-[0.68rem] font-bold text-gray-600">Karaniwang verified bawat araw</span></div>
+                <div className="rounded-xl bg-surface p-2"><b className="block text-[1.3rem] font-extrabold tabular-nums text-brand-deep"><Num>{`${totalAll ? Math.round((verifiedSum / totalAll) * 100) : 0}%`}</Num></b><span className="text-[0.68rem] font-bold text-gray-600">Ng bisita ay verified</span></div>
+              </div>
+            </div>
+          )}
+          <p className="mt-3 text-xs text-gray-600">
+            {activeDays <= 1 ? "Nagsisimula pa lang ang pagbibilang: dadami ang laman ng chart habang lumilipas ang mga araw. " : ""}
+            Ang bawat account o phone ay isang beses lang binibilang bawat araw. Ang guest ay phone na hindi naka-login.
+          </p>
+        </>
+      )}
+    </Card>
   );
 }

@@ -9,6 +9,7 @@ import { AdminAlertWatcher } from "./admin/AdminAlertWatcher";
 import { ListingHousekeeping } from "./admin/ListingHousekeeping";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { PresenceBeat } from "@/lib/presence";
+import { VisitTracker } from "@/lib/visits";
 import { PabatidWatcher } from "./PabatidBell";
 import { BoardNotifier } from "./BoardNotifier";
 import { RaffleEntryManager } from "./RaffleEntryManager";
@@ -31,6 +32,7 @@ export function Providers({ children }: { children: ReactNode }) {
           )}
           <RegisterServiceWorker />
           <PresenceBeat />
+          <VisitTracker />
           <PabatidWatcher />
           <BoardNotifier />
           <RaffleEntryManager />

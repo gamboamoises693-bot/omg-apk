@@ -1124,8 +1124,8 @@
       },
       "steps": [
         {
-          "tl": "Pagka-login mo, ito agad ang makikita. Sa taas: ilan ang naghihintay, may ambulansyang nasa daan, at ilan ang online. Pindutin ang Website para pumunta sa Home.",
-          "en": "Right after you log in you see this. At the top: how many are waiting, any ambulance on the way, and how many are online. Tap Website to go to Home.",
+          "tl": "Pagka-login mo, ito agad ang makikita. Sa taas: ilan ang naghihintay, may ambulansyang nasa daan, at ilan ang online. Ang buwan o araw na button ay para sa Light o Dark na itsura. Pindutin ang Website para pumunta sa Home.",
+          "en": "Right after you log in you see this. At the top: how many are waiting, any ambulance on the way, and how many are online. The moon or sun button switches between Light and Dark. Tap Website to go to Home.",
           "img": "admin-dashboard-1.jpg",
           "w": 585,
           "h": 1170
@@ -1138,23 +1138,30 @@
           "h": 1170
         },
         {
+          "tl": "Sa Buod, ang Bisita at login ay may sparkline bawat araw: ilan ang verified na naglogin, ilan ang hindi pa verified, at ilan ang guest. Pumili ng 7, 14 o 30 araw.",
+          "en": "In Summary, Visitors and logins has a daily sparkline: how many verified people logged in, how many are not verified yet, and how many were guests. Pick 7, 14 or 30 days.",
+          "img": "admin-dashboard-3.jpg",
+          "w": 585,
+          "h": 1170
+        },
+        {
           "tl": "Sa Buod, ang scorecard ay may kulay na Maayos, Bantayan o Kritikal. Dito nakalista ang mga dapat mong bigyang-pansin; pindutin ang isa para buksan ang detalye.",
           "en": "In Summary, the scorecard shows Good, Watch or Critical. What needs your attention is listed here; tap one to open the details.",
-          "img": "admin-dashboard-3.jpg",
+          "img": "admin-dashboard-4.jpg",
           "w": 585,
           "h": 1170
         },
         {
           "tl": "Sa Transaksyon, pindutin ang Tingnan lahat para sa buong listahan. May search at filter, at pwedeng buksan ang bawat isa.",
           "en": "In Transactions, tap See all for the full list. It has search and filters, and you can open each one.",
-          "img": "admin-dashboard-4.jpg",
+          "img": "admin-dashboard-5.jpg",
           "w": 585,
           "h": 1170
         },
         {
           "tl": "Pindutin ito, pumili ng mga pahina (isang pahina ang bawat bahagi), at gagawa ng PDF na ulat na may lagayan ng pirma. May CSV din sa ilalim.",
           "en": "Tap this, choose the pages (one page per part), and it makes a PDF report with signature lines. A CSV is just below.",
-          "img": "admin-dashboard-5.jpg",
+          "img": "admin-dashboard-6.jpg",
           "w": 585,
           "h": 1170
         }

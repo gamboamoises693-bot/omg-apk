@@ -402,9 +402,11 @@ export const GUIDES = [
     title: { tl: "Paano gamitin ang Dashboard ng Kapitan", en: "How to use the Captain's Dashboard" },
     steps: [
       { before: [go("/admin/#dashboard")], ring: 'section:has-text("Kalagayan ng barangay")',
-        tl: "Pagka-login mo, ito agad ang makikita. Sa taas: ilan ang naghihintay, may ambulansyang nasa daan, at ilan ang online. Pindutin ang Website para pumunta sa Home.", en: "Right after you log in you see this. At the top: how many are waiting, any ambulance on the way, and how many are online. Tap Website to go to Home." },
+        tl: "Pagka-login mo, ito agad ang makikita. Sa taas: ilan ang naghihintay, may ambulansyang nasa daan, at ilan ang online. Ang buwan o araw na button ay para sa Light o Dark na itsura. Pindutin ang Website para pumunta sa Home.", en: "Right after you log in you see this. At the top: how many are waiting, any ambulance on the way, and how many are online. The moon or sun button switches between Light and Dark. Tap Website to go to Home." },
       { ring: '[role=tablist]',
         tl: "Pumili ng bahagi: Buod, Kalusugan, Proyekto, Ayuda o Transaksyon. Sa ilalim ay ang panahon: Ngayon, 7 araw, Buwan o Taon.", en: "Pick a part: Summary, Health, Projects, Ayuda or Transactions. Below it is the period: Today, 7 days, Month or Year." },
+      { ring: 'h2:has-text("Bisita at login")',
+        tl: "Sa Buod, ang Bisita at login ay may sparkline bawat araw: ilan ang verified na naglogin, ilan ang hindi pa verified, at ilan ang guest. Pumili ng 7, 14 o 30 araw.", en: "In Summary, Visitors and logins has a daily sparkline: how many verified people logged in, how many are not verified yet, and how many were guests. Pick 7, 14 or 30 days." },
       { ring: 'h2:has-text("Dapat bigyang-pansin")',
         tl: "Sa Buod, ang scorecard ay may kulay na Maayos, Bantayan o Kritikal. Dito nakalista ang mga dapat mong bigyang-pansin; pindutin ang isa para buksan ang detalye.", en: "In Summary, the scorecard shows Good, Watch or Critical. What needs your attention is listed here; tap one to open the details." },
       { before: [click('[role=tab]:has-text("Transaksyon")')], ring: 'button:has-text("Tingnan lahat")',

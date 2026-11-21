@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Download, FileText, HandCoins, HardHat, HeartPulse, Home, LayoutDashboard, ListChecks, RefreshCw, Search, type LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileText, HandCoins, HardHat, HeartPulse, Home, LayoutDashboard, ListChecks, Moon, RefreshCw, Search, Sun, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAdminPending } from "@/context/AdminPendingContext";
 import { useToast } from "@/components/Toast";
 import { Avatar } from "@/components/Avatar";
 import { Badge, Button, Card, EmptyState, Modal, Spinner } from "@/components/ui";
 import { AyudaTab, BuodTab, KalusuganTab, ProyektoTab, type ExecTab } from "@/components/admin/AdminExecTabs";
+import { DashThemeProvider, Num, useDash } from "@/components/admin/DashTheme";
 import { useOnlineCount } from "@/lib/presence";
 import { downloadCsv } from "@/lib/csv";
 import { downloadDashboardPdf, loadSealPng } from "@/lib/dashboardPdf";
@@ -73,7 +74,27 @@ const goToTab = (tab: string) => {
 
 type View = { name: "home" } | { name: "list" } | { name: "detail"; txn: Txn };
 
+/** The dashboard with its Light / Dark look. */
 export function AdminDashboard() {
+  return (
+    <DashThemeProvider>
+      <DashFrame />
+    </DashThemeProvider>
+  );
+}
+
+/** Dark look: fills the page behind the cards (see .dash-dark in globals.css). */
+function DashFrame() {
+  const { dark } = useDash();
+  return (
+    <div className={dark ? "dash-dark -mx-4 -mb-4 -mt-4 min-h-[80vh] px-4 pb-28 pt-4" : ""}>
+      <DashboardBody />
+    </div>
+  );
+}
+
+function DashboardBody() {
+  const { dark, toggle } = useDash();
   const { profile } = useAuth();
   const { byTab, total: waiting } = useAdminPending();
   const online = useOnlineCount();
@@ -234,15 +255,18 @@ export function AdminDashboard() {
             <p className="text-[0.8rem] text-white/85">{hello}{profile?.position ? `, ${profile.position}` : ""}</p>
             <p className="truncate text-[1.15rem] font-extrabold leading-tight">{first || "Kapitan"}</p>
           </div>
+          <button onClick={toggle} aria-pressed={dark} aria-label={dark ? "Gawing Light ang dashboard" : "Gawing Dark ang dashboard"} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 active:bg-white/25">
+            {dark ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
+          </button>
           <Link href="/" className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3.5 text-[0.8rem] font-bold active:bg-white/25">
             <Home className="h-4 w-4" aria-hidden /> Website
           </Link>
         </div>
         <p className="mt-3 text-[0.78rem] text-white/80">{new Date().toLocaleDateString("fil-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} · Kalagayan ng barangay</p>
         <div className="mt-3 grid grid-cols-3 gap-2">
-          <div className="rounded-xl bg-white/10 px-2.5 py-2"><p className="text-[1.6rem] font-extrabold leading-tight tabular-nums">{waiting}</p><p className="text-[0.7rem] font-bold text-blue-100">Naghihintay</p></div>
-          <div className={`rounded-xl px-2.5 py-2 ${enroute > 0 ? "bg-red-600/80" : "bg-white/10"}`}><p className="text-[1.6rem] font-extrabold leading-tight tabular-nums">{enroute}</p><p className="text-[0.7rem] font-bold text-blue-100">Ambulansya sa daan</p></div>
-          <div className="rounded-xl bg-white/10 px-2.5 py-2"><p className="text-[1.6rem] font-extrabold leading-tight tabular-nums">{online ?? "—"}</p><p className="text-[0.7rem] font-bold text-blue-100">Online ngayon</p></div>
+          <div className="rounded-xl bg-white/10 px-2.5 py-2"><p className="text-[1.6rem] font-extrabold leading-tight tabular-nums"><Num>{waiting}</Num></p><p className="text-[0.7rem] font-bold text-blue-100">Naghihintay</p></div>
+          <div className={`rounded-xl px-2.5 py-2 ${enroute > 0 ? "bg-red-600/80" : "bg-white/10"}`}><p className="text-[1.6rem] font-extrabold leading-tight tabular-nums"><Num>{enroute}</Num></p><p className="text-[0.7rem] font-bold text-blue-100">Ambulansya sa daan</p></div>
+          <div className="rounded-xl bg-white/10 px-2.5 py-2"><p className="text-[1.6rem] font-extrabold leading-tight tabular-nums"><Num>{online ?? "-"}</Num></p><p className="text-[0.7rem] font-bold text-blue-100">Online ngayon</p></div>
         </div>
       </section>
 
@@ -428,7 +452,7 @@ function Kpi({ label, value, tone, note, noteTone = "text-gray-600" }: { label: 
   return (
     <Card className="!p-3.5">
       <p className="text-[0.8rem] font-bold text-gray-600">{label}</p>
-      <p className={`text-[2rem] font-extrabold leading-tight tabular-nums ${tone}`}>{value}</p>
+      <p className={`text-[2rem] font-extrabold leading-tight tabular-nums ${tone}`}><Num>{value}</Num></p>
       <p className={`text-xs ${noteTone}`}>{note}</p>
     </Card>
   );
