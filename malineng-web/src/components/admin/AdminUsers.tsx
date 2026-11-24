@@ -91,6 +91,24 @@ function ProfilePhotoEditor({ u }: { u: UserRow }) {
   );
 }
 
+/**
+ * Officials do not join the raffle, so when someone becomes an Admin their entry and code are removed.
+ * Once the draw has started the entry is kept (it may already be a winner and is part of the record).
+ * Returns the batch operations to add to the caller's batch.
+ */
+async function raffleCleanup(batch: ReturnType<typeof writeBatch>, uid: string): Promise<boolean> {
+  try {
+    const [entry, drawn] = await Promise.all([getDoc(doc(db, "raffleEntries", uid)), getDoc(doc(db, "rafflePublicRounds", "1"))]);
+    if (!entry.exists() || drawn.exists()) return false;
+    const code = entry.data().code as string | undefined;
+    batch.delete(entry.ref);
+    if (code) batch.delete(doc(db, "raffleCodes", code));
+    return true;
+  } catch {
+    return false; // never block the promotion because of the raffle
+  }
+}
+
 export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boolean; onClose: () => void }) {
   const { user, isSuperAdmin } = useAuth();
   const toast = useToast();
@@ -130,8 +148,12 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
   const savePosition = async (next: string) => {
     setBusy(true);
     try {
-      await updateDoc(doc(db, "users", u.id), next ? { role: "admin", position: next } : { role: "resident", position: "", photoURL: "" });
+      const batch = writeBatch(db);
+      batch.update(doc(db, "users", u.id), next ? { role: "admin", position: next } : { role: "resident", position: "", photoURL: "" });
+      const dropped = next ? await raffleCleanup(batch, u.id) : false;
+      await batch.commit();
       logActivity("Roles", next ? `Itinalaga si ${u.fullName} bilang ${next} (dati: ${u.position || (u.role === "admin" ? "Admin" : "Residente")})` : `Inalis ang posisyon ni ${u.fullName} (${u.position || "Admin"}), naging Residente`, u.id);
+      if (dropped) logActivity("Raffle", `Inalis ang raffle entry at code ni ${u.fullName} (naging opisyal)`, u.id);
       toast(next ? `Na-update na: si ${u.fullName.split(" ")[0]} ay ${next} na.` : "Inalis ang posisyon.");
       onClose();
     } catch (err) {
@@ -146,6 +168,7 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
     try {
       const batch = writeBatch(db);
       // Profile photos are admin-only, so a demoted user's photo is cleared too.
+      if (role === "admin") await raffleCleanup(batch, u.id);
       batch.update(doc(db, "users", u.id), role === "admin" ? { role, position: position || "Secretary" } : { role, position: "", photoURL: "" });
       await batch.commit();
       logActivity("Roles", `Ginawang ${roleLabel(role, role === "admin" ? position : "")} si ${u.fullName}`, u.id);
