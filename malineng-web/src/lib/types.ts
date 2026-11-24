@@ -46,6 +46,13 @@ export interface Verification {
   email: string;
   selfie: string; // compressed data URL
   status: VerificationStatus;
+  /** Photo for the Barangay ID made on the phone (white background, maybe office clothes). The selfie above stays the original. */
+  idPhoto?: string;
+  idLook?: "white" | "office";
+  /** Missing = waiting for the Kapitan or Secretary. Only an approved photo is printed on the ID. */
+  idPhotoStatus?: "approved" | "rejected";
+  idPhotoBy?: string;
+  idPhotoAt?: Timestamp;
   reason?: string;
   reviewedBy?: string;
   reviewedByName?: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import { photoForId } from "@/lib/idPhotoChoice";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -74,7 +75,7 @@ function Sheet() {
             sex: String(ud.sex ?? ""),
             civilStatus: String(ud.civilStatus ?? ""),
             idNo: String(ud.idNo ?? "") || "Wala pang ID no.",
-            selfie: String(v.data()?.selfie ?? ""),
+            selfie: photoForId(v.data()),
             verified: f.exists() || ud.role === "admin" || ud.role === "superadmin",
             roleText: ud.role && ud.role !== "resident" ? roleLabel(ud.role, ud.position).toUpperCase() : undefined,
             sectors: sectors.get(uid) ?? [],
