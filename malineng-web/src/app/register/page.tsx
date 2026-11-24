@@ -6,7 +6,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { SelfieCapture } from "@/components/SelfieCapture";
+import { IdPhotoLook, type LookChoice } from "@/components/IdPhotoLook";
+import { makeFaceThumb } from "@/lib/faceThumb";
 import { ensureUserDoc, useAuth } from "@/context/AuthContext";
 import { PHONE_TAKEN_MESSAGE, normalizePhone } from "@/lib/phone";
 import { usePuroks } from "@/lib/useSettings";
@@ -25,6 +29,10 @@ export default function RegisterPage() {
   const [form, setForm] = useState({ fullName: "", purok: "", contact: "", email: "", password: "", birthday: "", sex: "", civilStatus: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Selfie first (kept on the phone until the account exists), then the look for the ID, then the details.
+  const [step, setStep] = useState<"selfie" | "look" | "details">("selfie");
+  const [selfie, setSelfie] = useState<string | null>(null);
+  const [choice, setChoice] = useState<LookChoice>({ look: "original", idPhoto: null });
 
   useEffect(() => {
     if (!authLoading && user && !loading) router.replace("/account");
@@ -64,7 +72,30 @@ export default function RegisterPage() {
       }
       setActivityActor({ uid: cred.user.uid, name: form.fullName.trim(), role: "resident" });
       logActivity("Account", `Nag-register (${form.purok})`, cred.user.uid);
-      toast("Na-register ka na! Mag-selfie na para ma-verify. Pwede mo ring kumpirmahin ang email mo (may ipinadalang link).");
+      // The selfie taken at the start goes to the Barangay right away (with the ID photo, if one was made).
+      let sent = false;
+      if (selfie) {
+        try {
+          await setDoc(doc(db, "verifications", cred.user.uid), {
+            uid: cred.user.uid,
+            fullName: form.fullName.trim(),
+            purok: form.purok,
+            birthday: form.birthday,
+            contact,
+            email: cred.user.email ?? form.email.trim(),
+            selfie,
+            ...(choice.idPhoto ? { idPhoto: choice.idPhoto, idLook: choice.look } : {}),
+            status: "pending",
+            submittedAt: serverTimestamp(),
+          });
+          makeFaceThumb(selfie).then((faceThumb) => updateDoc(doc(db, "users", cred.user.uid), { faceThumb })).catch(() => {});
+          logActivity("Verification", `Nagpadala ng selfie sa pag-register (${form.purok})`, cred.user.uid);
+          sent = true;
+        } catch (selfieErr) {
+          console.warn("[register] selfie not saved:", selfieErr);
+        }
+      }
+      toast(sent ? "Na-register ka na at naipadala ang selfie! Susuriin ito ng Barangay. Pwede mo ring kumpirmahin ang email mo." : "Na-register ka na! Hindi naipadala ang selfie, kaya kumuha ulit dito.");
       router.replace("/verify");
     } catch (err) {
       setError(friendlyError(err));
@@ -72,28 +103,63 @@ export default function RegisterPage() {
     }
   };
 
+  const stepNo = step === "selfie" ? 1 : step === "look" ? 2 : 3;
+  const STEPS = ["Selfie", "Itsura", "Detalye"];
+
   return (
     <div className="mx-auto max-w-md">
-      <AuthHero title="Mag-register" subtitle="Para sa mga residente ng Barangay Malineng. Libre ito." />
+      <AuthHero title="Mag-register" subtitle={step === "selfie" ? "Selfie muna, para mabilis. Libre ito." : step === "look" ? "Pumili ng itsura para sa Barangay ID mo." : "Halos tapos ka na. Detalye mo na lang."} />
       <Card className="relative -mt-10">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="Buong Pangalan" required autoComplete="name" placeholder="Juan Dela Cruz" value={form.fullName} onChange={update("fullName")} />
-          <Select label="Purok" required options={puroks} placeholder="-- Pumili ng Purok --" value={form.purok} onChange={update("purok")} />
-          <Input label="Contact Number" type="tel" inputMode="tel" required placeholder="09171234567" value={form.contact} onChange={update("contact")} />
-          <Input label="Birthday" type="date" required value={form.birthday} onChange={update("birthday")} />
-          <div className="grid grid-cols-2 gap-2">
-            <Select label="Kasarian" options={SEX_OPTIONS} placeholder="-- Pumili --" value={form.sex} onChange={update("sex")} />
-            <Select label="Civil status" options={CIVIL_STATUS_OPTIONS} placeholder="-- Pumili --" value={form.civilStatus} onChange={update("civilStatus")} />
-          </div>
-          <Input label="Email" type="email" required autoComplete="email" value={form.email} onChange={update("email")} />
-          <Input label="Password" type="password" required autoComplete="new-password" hint="Hindi bababa sa 8 characters" value={form.password} onChange={update("password")} />
-          <ErrorText>{error}</ErrorText>
-          <Button type="submit" full loading={loading}>Gumawa ng Account</Button>
-        </form>
-        <div className="my-4 flex items-center gap-3 text-sm text-gray-400">
-          <span className="h-px flex-1 bg-gray-200" /> o kaya <span className="h-px flex-1 bg-gray-200" />
-        </div>
-        <GoogleButton onSuccess={() => router.replace("/account")} onError={setError} />
+        <ol className="mb-4 grid grid-cols-3 gap-1.5" aria-label="Mga hakbang">
+          {STEPS.map((label, i) => (
+            <li key={label} className={`flex flex-col gap-1 text-[0.66rem] font-extrabold uppercase tracking-wide ${i + 1 <= stepNo ? "text-brand-deep" : "text-gray-500"}`} aria-current={i + 1 === stepNo ? "step" : undefined}>
+              <span className={`h-1.5 rounded-full ${i + 1 < stepNo ? "bg-emerald-500" : i + 1 === stepNo ? "bg-gold" : "bg-gray-200"}`} />
+              {i + 1} {label}
+            </li>
+          ))}
+        </ol>
+
+        {step === "selfie" && (
+          <>
+            <SelfieCapture onCapture={(url) => { setSelfie(url); setChoice({ look: "original", idPhoto: null }); setStep("look"); }} />
+            <p className="mt-3 text-center text-[0.72rem] leading-4 text-gray-600">Gagamitin lang ng Barangay ang selfie mo sa pag-verify at sa Barangay ID, ayon sa Data Privacy Act (RA 10173). Admin lang ang makakakita nito.</p>
+            <div className="my-4 flex items-center gap-3 text-sm text-gray-400">
+              <span className="h-px flex-1 bg-gray-200" /> o kaya <span className="h-px flex-1 bg-gray-200" />
+            </div>
+            <GoogleButton onSuccess={() => router.replace("/account")} onError={setError} />
+            <ErrorText>{error}</ErrorText>
+          </>
+        )}
+
+        {step === "look" && selfie && <IdPhotoLook selfie={selfie} onRetake={() => { setSelfie(null); setStep("selfie"); }} onUse={(c) => { setChoice(c); setStep("details"); }} />}
+
+        {step === "details" && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {selfie && (
+              <div className="flex items-center gap-3 rounded-2xl border border-line p-2.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={choice.idPhoto ?? selfie} alt="Selfie mo" className="h-[4.75rem] w-16 shrink-0 rounded-xl border border-line object-cover" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.9rem] font-extrabold text-emerald-700">Handa na ang selfie</p>
+                  <p className="text-xs text-gray-600">{choice.look === "original" ? "Orihinal na selfie" : choice.look === "white" ? "Puting background" : "Pang-opisina, puting background"}</p>
+                </div>
+                <button type="button" onClick={() => setStep("look")} className="min-h-10 rounded-xl bg-brand-light px-3 text-[0.8rem] font-bold text-brand-dark">Palitan</button>
+              </div>
+            )}
+            <Input label="Buong Pangalan" required autoComplete="name" placeholder="Juan Dela Cruz" value={form.fullName} onChange={update("fullName")} />
+            <Select label="Purok" required options={puroks} placeholder="-- Pumili ng Purok --" value={form.purok} onChange={update("purok")} />
+            <Input label="Contact Number" type="tel" inputMode="tel" required placeholder="09171234567" value={form.contact} onChange={update("contact")} />
+            <Input label="Birthday" type="date" required value={form.birthday} onChange={update("birthday")} />
+            <div className="grid grid-cols-2 gap-2">
+              <Select label="Kasarian" options={SEX_OPTIONS} placeholder="-- Pumili --" value={form.sex} onChange={update("sex")} />
+              <Select label="Civil status" options={CIVIL_STATUS_OPTIONS} placeholder="-- Pumili --" value={form.civilStatus} onChange={update("civilStatus")} />
+            </div>
+            <Input label="Email" type="email" required autoComplete="email" value={form.email} onChange={update("email")} />
+            <Input label="Password" type="password" required autoComplete="new-password" hint="Hindi bababa sa 8 characters" value={form.password} onChange={update("password")} />
+            <ErrorText>{error}</ErrorText>
+            <Button type="submit" full loading={loading}>Gumawa ng Account at ipadala</Button>
+          </form>
+        )}
       </Card>
       <p className="mt-4 text-center">
         May account na?{" "}

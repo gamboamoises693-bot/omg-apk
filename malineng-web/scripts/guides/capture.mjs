@@ -74,17 +74,19 @@ async function act(page, a) {
     await page.waitForTimeout(1800);
     await dismiss(page);
   }
+  else if (a.upload) await page.locator(a.upload).first().setInputFiles(process.env.GUIDE_SELFIE_FILE);
   else if (a.wait) await page.waitForTimeout(a.wait);
   else if (a.press) await page.keyboard.press(a.press);
   await page.waitForTimeout(a.settle ?? 500);
 }
 
-const browser = await chromium.launch();
+// A fake camera, so the camera screen opens without asking for permission.
+const browser = await chromium.launch({ args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] });
 /** One browser per kind of person: "resident" (verified, default), "newbie" (not verified yet), "guest" (not logged in), "kapitan" (admin) or "dev" (Super Admin). */
 const pages = new Map();
 async function pageFor(who) {
   if (pages.has(who)) return pages.get(who);
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 1.5, locale: "fil-PH" });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 1.5, locale: "fil-PH", permissions: ["camera"] });
   // Only the local app and the emulators: nothing from the internet gets into the pictures.
   await ctx.route("**/*", (r) => (/localhost|127\.0\.0\.1/.test(r.request().url()) ? r.continue() : r.abort()));
   const page = await ctx.newPage();
