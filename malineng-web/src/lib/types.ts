@@ -16,6 +16,8 @@ export interface UserProfile {
   role: "resident" | "admin" | "superadmin";
   /** Admin position, e.g. "Kapitan", "Secretary". Kapitan approves ambulance trips. */
   position?: string;
+  /** Kagawad only: admin section keys the Developer allowed (see lib/adminAccess.ts). */
+  adminAccess?: string[];
   /** Admin-only profile photo (small data URL). */
   photoURL?: string;
   suspended?: boolean;
