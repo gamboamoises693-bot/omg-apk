@@ -1,6 +1,5 @@
 "use client";
 
-import { photoForId } from "@/lib/idPhotoChoice";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
@@ -20,8 +19,6 @@ import { RequireVerified } from "@/components/RequireVerified";
 function IdCard() {
   const { user, profile, isStaff, isSuperAdmin } = useAuth();
   const [selfie, setSelfie] = useState<string | null>(null);
-  // State of the ID photo made at registration: "" none, "pending", "approved" or "rejected".
-  const [idPhotoState, setIdPhotoState] = useState("");
   const [flag, setFlag] = useState<boolean | null>(null);
   const [qr, setQr] = useState("");
   const captain = useCaptainSignature();
@@ -36,11 +33,7 @@ function IdCard() {
   useEffect(() => {
     if (!user) return;
     getDoc(doc(db, "verifications", user.uid))
-      .then((s) => {
-        setSelfie(photoForId(s.data()));
-        const d = s.data();
-        setIdPhotoState(d?.idPhoto ? ((d.idPhotoStatus as string) ?? "pending") : "");
-      })
+      .then((s) => setSelfie((s.data()?.selfie as string) ?? ""))
       .catch(() => setSelfie(""));
     getDoc(doc(db, "verifiedUsers", user.uid))
       .then((s) => setFlag(s.exists()))
@@ -86,16 +79,6 @@ function IdCard() {
         </p>
       )}
 
-      {idPhotoState === "pending" && (
-        <p className="mb-3 rounded-2xl bg-yellow-50 p-3 text-sm text-yellow-900">
-          Naghihintay pa ng pag-apruba ng Kapitan o Secretary ang inayos mong larawan (puting background / pang-opisina). Habang naghihintay, ang selfie mo ang nasa ID.
-        </p>
-      )}
-      {idPhotoState === "rejected" && (
-        <p className="mb-3 rounded-2xl bg-red-50 p-3 text-sm text-red-700">
-          Hindi naaprubahan ang inayos na larawan para sa ID, kaya ang orihinal na selfie mo ang gamit. Magtanong sa Barangay Hall kung gusto mong magpalit.
-        </p>
-      )}
       <BarangayIdCard
         idNo={idNo}
         name={profile.fullName}
