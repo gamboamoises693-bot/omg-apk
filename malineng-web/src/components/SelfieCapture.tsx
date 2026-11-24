@@ -227,7 +227,7 @@ export function SelfieCapture({ onCapture }: { onCapture: (dataUrl: string) => v
         </button>
       </div>
       <p className="px-3 text-center text-[0.68rem] leading-4 text-[#7da3bd]">Kusa itong kukuha kapag steady ang phone at maliwanag. Pwede mo ring pindutin ang malaking button anumang oras.</p>
-      <input ref={fileRef} type="file" accept="image/*" capture="user" hidden onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ""; }} />
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ""; }} />
     </div>
   );
 }
