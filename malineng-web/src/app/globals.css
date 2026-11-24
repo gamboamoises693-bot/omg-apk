@@ -266,3 +266,10 @@ textarea {
 .dash-dark .bg-gold-light { background-color: rgba(243, 199, 107, 0.16); }
 .dash-dark .shadow-card { box-shadow: 0 12px 24px -16px rgba(0, 0, 0, 0.7); }
 .dash-dark input, .dash-dark label { color: #e8eaee; }
+
+/* ---------- Face-scan look of the selfie camera (components/SelfieCapture.tsx) ---------- */
+@keyframes selfie-scan { 0% { transform: translateY(0); } 50% { transform: translateY(150px); } 100% { transform: translateY(0); } }
+@keyframes selfie-spin { to { transform: rotate(360deg); } }
+.selfie-scanline { animation: selfie-scan 3.2s ease-in-out infinite; }
+.selfie-spin { animation: selfie-spin 6s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .selfie-scanline, .selfie-spin { animation: none; } }

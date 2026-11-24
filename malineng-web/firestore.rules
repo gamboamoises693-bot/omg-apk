@@ -565,13 +565,10 @@ service cloud.firestore {
       allow create, update: if isSelf(uid)
         && notSuspended()
         && (resource == null || existing().status != 'verified')
-        && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'birthday', 'contact', 'email', 'selfie', 'status', 'submittedAt', 'idPhoto', 'idLook'])
+        && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'birthday', 'contact', 'email', 'selfie', 'status', 'submittedAt'])
         && incoming().uid == uid
         && incoming().status == 'pending'
         && incoming().selfie is string && incoming().selfie.size() < 400000
-        // Optional photo for the Barangay ID (white background / office look, made on the phone). It starts unapproved.
-        && (!('idPhoto' in incoming()) || (incoming().idPhoto is string && incoming().idPhoto.size() > 0 && incoming().idPhoto.size() < 250000 && incoming().get('idLook', '') in ['white', 'office']))
-        && (!('idLook' in incoming()) || 'idPhoto' in incoming())
         && incoming().submittedAt == request.time;
       // At the Barangay Hall the staff verifies the person face to face and may take the selfie for the ID.
       allow create: if canRegisterOthers()
@@ -588,13 +585,6 @@ service cloud.firestore {
       // The Super Admin can replace the photo that is printed on a Barangay ID (e.g. a dark or blurry selfie).
       allow update: if isSuperAdmin() && changedOnly(['selfie'])
         && incoming().selfie is string && incoming().selfie.size() > 0 && incoming().selfie.size() < 400000;
-      // The Kapitan, Secretary or Developer approves (or refuses) the ID photo the person made. Only then is it printed on the ID.
-      allow update: if isOfficer()
-        && changedOnly(['idPhotoStatus', 'idPhotoBy', 'idPhotoAt'])
-        && incoming().idPhotoStatus in ['approved', 'rejected']
-        && existing().get('idPhoto', '') != ''
-        && incoming().idPhotoBy == request.auth.uid
-        && incoming().idPhotoAt == request.time;
       // Admin review.
       allow update: if isAdmin()
         && (existing().uid != request.auth.uid || isSuperAdmin())

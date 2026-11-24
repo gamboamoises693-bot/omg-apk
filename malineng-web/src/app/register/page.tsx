@@ -8,8 +8,7 @@ import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from "firebase/auth";
 import { doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { SelfieCapture } from "@/components/SelfieCapture";
-import { IdPhotoLook, type LookChoice } from "@/components/IdPhotoLook";
+import { SelfieCapture, SelfieReview } from "@/components/SelfieCapture";
 import { makeFaceThumb } from "@/lib/faceThumb";
 import { ensureUserDoc, useAuth } from "@/context/AuthContext";
 import { PHONE_TAKEN_MESSAGE, normalizePhone } from "@/lib/phone";
@@ -29,10 +28,9 @@ export default function RegisterPage() {
   const [form, setForm] = useState({ fullName: "", purok: "", contact: "", email: "", password: "", birthday: "", sex: "", civilStatus: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  // Selfie first (kept on the phone until the account exists), then the look for the ID, then the details.
-  const [step, setStep] = useState<"selfie" | "look" | "details">("selfie");
+  // Selfie first (kept on the phone until the account exists), then the details.
+  const [step, setStep] = useState<"selfie" | "details">("selfie");
   const [selfie, setSelfie] = useState<string | null>(null);
-  const [choice, setChoice] = useState<LookChoice>({ look: "original", idPhoto: null });
 
   useEffect(() => {
     if (!authLoading && user && !loading) router.replace("/account");
@@ -84,7 +82,6 @@ export default function RegisterPage() {
             contact,
             email: cred.user.email ?? form.email.trim(),
             selfie,
-            ...(choice.idPhoto ? { idPhoto: choice.idPhoto, idLook: choice.look } : {}),
             status: "pending",
             submittedAt: serverTimestamp(),
           });
@@ -103,14 +100,14 @@ export default function RegisterPage() {
     }
   };
 
-  const stepNo = step === "selfie" ? 1 : step === "look" ? 2 : 3;
-  const STEPS = ["Selfie", "Itsura", "Detalye"];
+  const stepNo = step === "selfie" ? 1 : 2;
+  const STEPS = ["Selfie", "Detalye"];
 
   return (
     <div className="mx-auto max-w-md">
-      <AuthHero title="Mag-register" subtitle={step === "selfie" ? "Selfie muna, para mabilis. Libre ito." : step === "look" ? "Pumili ng itsura para sa Barangay ID mo." : "Halos tapos ka na. Detalye mo na lang."} />
+      <AuthHero title="Mag-register" subtitle={step === "selfie" ? "Selfie muna, para mabilis. Libre ito." : "Halos tapos ka na. Detalye mo na lang."} />
       <Card className="relative -mt-10">
-        <ol className="mb-4 grid grid-cols-3 gap-1.5" aria-label="Mga hakbang">
+        <ol className="mb-4 grid grid-cols-2 gap-1.5" aria-label="Mga hakbang">
           {STEPS.map((label, i) => (
             <li key={label} className={`flex flex-col gap-1 text-[0.66rem] font-extrabold uppercase tracking-wide ${i + 1 <= stepNo ? "text-brand-deep" : "text-gray-500"}`} aria-current={i + 1 === stepNo ? "step" : undefined}>
               <span className={`h-1.5 rounded-full ${i + 1 < stepNo ? "bg-emerald-500" : i + 1 === stepNo ? "bg-gold" : "bg-gray-200"}`} />
@@ -121,29 +118,31 @@ export default function RegisterPage() {
 
         {step === "selfie" && (
           <>
-            <SelfieCapture onCapture={(url) => { setSelfie(url); setChoice({ look: "original", idPhoto: null }); setStep("look"); }} />
-            <p className="mt-3 text-center text-[0.72rem] leading-4 text-gray-600">Gagamitin lang ng Barangay ang selfie mo sa pag-verify at sa Barangay ID, ayon sa Data Privacy Act (RA 10173). Admin lang ang makakakita nito.</p>
-            <div className="my-4 flex items-center gap-3 text-sm text-gray-400">
-              <span className="h-px flex-1 bg-gray-200" /> o kaya <span className="h-px flex-1 bg-gray-200" />
-            </div>
-            <GoogleButton onSuccess={() => router.replace("/account")} onError={setError} />
-            <ErrorText>{error}</ErrorText>
+            {selfie ? <SelfieReview selfie={selfie} onRetake={() => setSelfie(null)} onUse={() => setStep("details")} /> : <SelfieCapture onCapture={setSelfie} />}
+            {!selfie && <p className="mt-3 text-center text-[0.72rem] leading-4 text-gray-600">Gagamitin lang ng Barangay ang selfie mo sa pag-verify at sa Barangay ID, ayon sa Data Privacy Act (RA 10173). Admin lang ang makakakita nito.</p>}
+            {!selfie && (
+              <>
+                <div className="my-4 flex items-center gap-3 text-sm text-gray-400">
+                  <span className="h-px flex-1 bg-gray-200" /> o kaya <span className="h-px flex-1 bg-gray-200" />
+                </div>
+                <GoogleButton onSuccess={() => router.replace("/account")} onError={setError} />
+                <ErrorText>{error}</ErrorText>
+              </>
+            )}
           </>
         )}
-
-        {step === "look" && selfie && <IdPhotoLook selfie={selfie} onRetake={() => { setSelfie(null); setStep("selfie"); }} onUse={(c) => { setChoice(c); setStep("details"); }} />}
 
         {step === "details" && (
           <form onSubmit={handleSubmit} className="space-y-4">
             {selfie && (
               <div className="flex items-center gap-3 rounded-2xl border border-line p-2.5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={choice.idPhoto ?? selfie} alt="Selfie mo" className="h-[4.75rem] w-16 shrink-0 rounded-xl border border-line object-cover" />
+                <img src={selfie} alt="Selfie mo" className="h-[4.75rem] w-16 shrink-0 rounded-xl border border-line object-cover" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[0.9rem] font-extrabold text-emerald-700">Handa na ang selfie</p>
-                  <p className="text-xs text-gray-600">{choice.look === "original" ? "Orihinal na selfie" : choice.look === "white" ? "Puting background" : "Pang-opisina, puting background"}</p>
+                  <p className="text-xs text-gray-600">Susuriin ito ng Barangay</p>
                 </div>
-                <button type="button" onClick={() => setStep("look")} className="min-h-10 rounded-xl bg-brand-light px-3 text-[0.8rem] font-bold text-brand-dark">Palitan</button>
+                <button type="button" onClick={() => { setSelfie(null); setStep("selfie"); }} className="min-h-10 rounded-xl bg-brand-light px-3 text-[0.8rem] font-bold text-brand-dark">Palitan</button>
               </div>
             )}
             <Input label="Buong Pangalan" required autoComplete="name" placeholder="Juan Dela Cruz" value={form.fullName} onChange={update("fullName")} />

@@ -149,9 +149,9 @@ export const GUIDES = [
     title: { tl: "Paano mag-register", en: "How to register" },
     steps: [
       { before: [go("/register/")], ring: 'button[aria-label="Kumuha ng selfie"]',
-        tl: "Selfie muna. Ilagay ang mukha sa loob ng oval at pindutin ang gold na button. Kung ayaw bumukas ng camera, pindutin ang Mag-upload at pumili ng larawan.", en: "Selfie first. Put your face inside the oval and tap the gold button. If the camera does not open, tap Upload and pick a photo." },
-      { before: [{ upload: 'input[type=file]' }, { wait: 1200 }], ring: '[role=tablist][aria-label="Itsura ng larawan"]',
-        tl: "Pumili ng itsura para sa Barangay ID: Orihinal, Puting background, o Pang-opisina (blazer, barong o polo). Hindi nito binabago ang orihinal mong selfie, na siyang susuriin ng Barangay. Kailangan pang aprubahan ng Kapitan o Secretary ang inayos na larawan.", en: "Choose the look for your Barangay ID: Original, White background, or Office (blazer, barong or polo). It does not change your original selfie, which is what the Barangay reviews. The Captain or Secretary must still approve the edited photo." },
+        tl: "Selfie muna. Ilagay ang mukha sa loob ng oval. Kusa itong kukuha kapag steady ang phone at maliwanag, o pindutin ang malaking button. Kung ayaw bumukas ng camera, pindutin ang Mag-upload at pumili ng larawan.", en: "Selfie first. Put your face inside the oval. It takes the photo by itself when the phone is steady and the light is good, or press the big button. If the camera does not open, tap Upload and pick a photo." },
+      { before: [{ upload: 'input[type=file]' }, { wait: 800 }], ring: 'button:has-text("Gamitin ito, susunod")',
+        tl: "Tingnan ang selfie: kita ba ang buong mukha, walang shades o mask, at maliwanag? Kung oo, pindutin ang Gamitin ito. Kung hindi, pindutin ang Ulitin. Ito ang susuriin ng Barangay para ma-verify ka, at ito rin ang lalabas sa Barangay ID mo.", en: "Look at the selfie: is your whole face visible, no shades or mask, and bright? If so, tap Use this. If not, tap Retake. The Barangay reviews this to verify you, and it is also what shows on your Barangay ID." },
       { before: [click('button:has-text("Gamitin ito, susunod")'), { wait: 600 }], ring: 'label:has-text("Buong Pangalan")',
         tl: "Isulat ang buong pangalan mo, ang purok, contact number at birthday.", en: "Write your full name, your purok, your contact number and your birthday." },
       { ring: 'label:has-text("Email")',
