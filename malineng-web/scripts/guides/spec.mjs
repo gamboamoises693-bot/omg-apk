@@ -594,7 +594,9 @@ export const GUIDES = [
       { ring: 'button:has-text("Di verified")',
         tl: "Piliin ang Di verified para makita ang mga hindi pa verified.", en: "Choose Not verified to see those who are not verified yet." },
       { ring: 'button:has-text("Pedro Reyes")',
-        tl: "Pindutin ang user para palitan ang role, i-suspend o palitan ang litrato sa ID.", en: "Tap a user to change the role, suspend, or change the photo on the ID." },
+        tl: "Pindutin ang user para palitan ang role, posisyon, i-suspend o palitan ang litrato sa ID.", en: "Tap a user to change the role, position, suspend, or change the photo on the ID." },
+      { before: [click('button:has-text("Pedro Reyes")')], ring: 'button:text-is("Magtalaga"), button:text-is("Palitan")',
+        tl: "Para sa barangay official na nag-register: pindutin ang Magtalaga (o Palitan), piliin ang posisyon (Kapitan, Kagawad, atbp.) at pindutin ang I-save. Magiging Admin siya. Kung may Kapitan na, may babala. Pindutin ang Alisin ang posisyon para ibalik siya sa Residente.", en: "For a barangay official who registered: tap Assign (or Change), pick the position (Kapitan, Kagawad, etc.) and tap Save. They become an Admin. If a Kapitan already exists, you get a warning. Tap Remove position to turn them back into a Resident." },
     ],
   },
   {

@@ -6,7 +6,7 @@ import { verifiedSetAdd, verifiedSetRef, verifiedSetRemove } from "@/lib/verifie
 import { useEffect, useMemo, useState } from "react";
 import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where, writeBatch, setDoc } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { Ban, Camera, Copy, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2, UserPlus } from "lucide-react";
+import { Ban, Camera, Copy, Landmark, ExternalLink, KeyRound, ShieldCheck, Trash2, Undo2, UserPlus } from "lucide-react";
 import { VERIFY_LINK, verifyInviteText } from "@/lib/nextPath";
 import { ChatWithButton } from "@/components/ChatWithButton";
 import { firebaseConfig } from "@/config/firebase.config";
@@ -20,7 +20,7 @@ import { logActivity, roleLabel } from "@/lib/activity";
 import { ADMIN_POSITIONS } from "@/lib/constants";
 import { friendlyError, timeAgo } from "@/lib/format";
 import type { UserProfile } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, FilterTabs, Modal, Select, Spinner, SelectOther } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, FilterTabs, Modal, Select, Spinner } from "@/components/ui";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { AddAccountForm } from "./AddAccountForm";
 import { PurokCountsCard } from "./PurokCountsCard";
@@ -35,6 +35,18 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "admins", label: "Admins" },
   { key: "unverified", label: "Di verified" },
   { key: "suspended", label: "Suspended" },
+];
+
+/** Short explanations shown in the position picker. */
+const POSITION_INFO: { name: string; hint: string }[] = [
+  { name: "Kapitan", hint: "Punong Barangay. Isa lang ang Kapitan." },
+  { name: "Secretary", hint: "Katuwang ng Kapitan sa mga dokumento at ulat." },
+  { name: "Treasurer", hint: "Pondo at gastos." },
+  { name: "Kagawad", hint: "Miyembro ng Sangguniang Barangay." },
+  { name: "SK Chairman", hint: "Liga at mga programa ng kabataan." },
+  { name: "BHW Head", hint: "Botika at kalusugan, nangunguna sa BHW." },
+  { name: "BHW", hint: "Botika at kalusugan lang." },
+  { name: "Iba pa", hint: "Isulat ang posisyon, halimbawa Tanod." },
 ];
 
 export type UserRow = UserProfile & { id: string };
@@ -89,15 +101,52 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
     getDoc(doc(db, "verifications", u.id)).then((s) => setIdPhoto(s.exists() ? ((s.data().selfie as string) ?? "") : null)).catch(() => setIdPhoto(null));
   }, [isSuperAdmin, u.id]);
   const [role, setRole] = useState<"resident" | "admin">(u.role === "admin" ? "admin" : "resident");
-  const [position, setPosition] = useState<string>(u.position || "Secretary");
+  const [position, setPosition] = useState<string>(u.position || "");
   const [busy, setBusy] = useState(false);
+  // Position picker (Developer only): opens inline, remembers the choice until saved.
+  const [picking, setPicking] = useState(false);
+  const [pick, setPick] = useState<string>(u.role === "admin" && u.position ? u.position : "");
+  const [customPos, setCustomPos] = useState("");
+  const [otherKapitan, setOtherKapitan] = useState<string | null>(null);
+
+  const isListed = (ADMIN_POSITIONS as readonly string[]).includes(u.position ?? "");
+  const chosen = pick === "Iba pa" ? customPos.trim() : pick;
+
+  // Warn (not block) when another account already holds the Kapitan position.
+  useEffect(() => {
+    setOtherKapitan(null);
+    if (!picking || pick !== "Kapitan") return;
+    let live = true;
+    getDocs(query(usersCollection, where("position", "==", "Kapitan")))
+      .then((snap) => {
+        const other = snap.docs.find((d) => d.id !== u.id && d.data().role === "admin");
+        if (live) setOtherKapitan(other ? ((other.data().fullName as string) ?? "isa pang account") : null);
+      })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, [picking, pick, u.id]);
+
+  /** Sets (or clears, with "") the barangay position. A position makes the user an Admin; clearing returns them to Residente. */
+  const savePosition = async (next: string) => {
+    setBusy(true);
+    try {
+      await updateDoc(doc(db, "users", u.id), next ? { role: "admin", position: next } : { role: "resident", position: "", photoURL: "" });
+      logActivity("Roles", next ? `Itinalaga si ${u.fullName} bilang ${next} (dati: ${u.position || (u.role === "admin" ? "Admin" : "Residente")})` : `Inalis ang posisyon ni ${u.fullName} (${u.position || "Admin"}), naging Residente`, u.id);
+      toast(next ? `Na-update na: si ${u.fullName.split(" ")[0]} ay ${next} na.` : "Inalis ang posisyon.");
+      onClose();
+    } catch (err) {
+      toast(friendlyError(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const saveRole = async () => {
     setBusy(true);
     try {
       const batch = writeBatch(db);
       // Profile photos are admin-only, so a demoted user's photo is cleared too.
-      batch.update(doc(db, "users", u.id), role === "admin" ? { role, position } : { role, position: "", photoURL: "" });
+      batch.update(doc(db, "users", u.id), role === "admin" ? { role, position: position || "Secretary" } : { role, position: "", photoURL: "" });
       await batch.commit();
       logActivity("Roles", `Ginawang ${roleLabel(role, role === "admin" ? position : "")} si ${u.fullName}`, u.id);
       toast("Na-save ang role.");
@@ -259,6 +308,53 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
         <p className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Hindi pwedeng baguhin dito ang role ng Super Admin, para hindi ma-lock out ang website.</p>
       ) : (
         <>
+          {isSuperAdmin && (
+            <Card className="space-y-3 border-2 border-gold bg-white">
+              <div className="flex items-center justify-between">
+                <p className="flex items-center gap-1 font-bold"><Landmark className="h-4 w-4" aria-hidden /> Posisyon sa Barangay</p>
+              </div>
+              {!picking ? (
+                <>
+                  <div className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 p-3">
+                    <div className="min-w-0">
+                      <p className="text-[0.7rem] font-bold uppercase tracking-wide text-gray-500">Ngayon</p>
+                      <p className="truncate text-base font-extrabold text-brand">{u.role === "admin" ? (u.position || "Admin") : "Residente"}</p>
+                      {u.role !== "admin" && <p className="text-xs text-gray-500">Walang posisyon</p>}
+                    </div>
+                    <Button variant={u.role === "admin" ? "outline" : "gold"} onClick={() => { setPick(u.role === "admin" && isListed ? (u.position as string) : u.role === "admin" && u.position ? "Iba pa" : ""); setCustomPos(u.role === "admin" && !isListed ? (u.position ?? "") : ""); setPicking(true); }}>
+                      {u.role === "admin" ? "Palitan" : "Magtalaga"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-600">Kapag naglagay ng posisyon, nagiging <b>Admin</b> siya. Kapag inalis, bumabalik siya sa Residente.</p>
+                  {u.role === "admin" && (
+                    <Button variant="danger" full loading={busy} onClick={() => confirm(`Alisin ang posisyon ni ${u.fullName}? Magiging Residente na siya.`) && savePosition("")}>Alisin ang posisyon</Button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2" role="radiogroup" aria-label="Posisyon">
+                    {POSITION_INFO.map((p) => (
+                      <button key={p.name} role="radio" aria-checked={pick === p.name} onClick={() => setPick(p.name)}
+                        className={`flex min-h-12 w-full items-center gap-3 rounded-xl border-2 px-3 py-2 text-left ${pick === p.name ? "border-gold bg-gold-light" : "border-gray-200 bg-white"}`}>
+                        <span className={`h-5 w-5 flex-none rounded-full border-2 ${pick === p.name ? "border-brand bg-brand ring-2 ring-inset ring-white" : "border-gray-300"}`} aria-hidden />
+                        <span><b className="block text-sm">{p.name}</b><span className="block text-xs text-gray-600">{p.hint}</span></span>
+                      </button>
+                    ))}
+                  </div>
+                  {pick === "Iba pa" && (
+                    <input value={customPos} onChange={(e) => setCustomPos(e.target.value)} maxLength={40} placeholder="Isulat ang posisyon (hal. Tanod)" aria-label="Ibang posisyon" className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5" />
+                  )}
+                  {otherKapitan && (
+                    <p className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-900" role="alert">⚠ May Kapitan na: {otherKapitan}. Isa lang dapat ang Kapitan. Pwede mo pa ring ituloy kung papalitan siya.</p>
+                  )}
+                  <div className="grid grid-cols-[1fr_1.6fr] gap-2">
+                    <Button variant="outline" onClick={() => setPicking(false)}>Kanselahin</Button>
+                    <Button loading={busy} disabled={!chosen} onClick={() => savePosition(chosen)}>I-save{chosen ? `: ${chosen}` : ""}</Button>
+                  </div>
+                </>
+              )}
+            </Card>
+          )}
           <Card className="space-y-3 bg-gray-50 shadow-none">
             <p className="flex items-center gap-1 font-bold"><ShieldCheck className="h-4 w-4" /> Role</p>
             <div className="grid grid-cols-2 gap-2">
@@ -268,9 +364,6 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
                 </button>
               ))}
             </div>
-            {role === "admin" && (
-              <SelectOther label="Posisyon" options={ADMIN_POSITIONS} value={position} onChange={setPosition} maxLength={40} hint="“Kapitan” lang ang makaka-approve ng ambulansya." />
-            )}
             <Button full loading={busy} onClick={saveRole}>I-save ang role</Button>
           </Card>
           <div className="grid grid-cols-2 gap-2">
