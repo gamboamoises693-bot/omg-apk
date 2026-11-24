@@ -18,6 +18,7 @@ import { useCollection } from "@/lib/useCollection";
 import { useVerifiedSet } from "@/lib/useVerifiedSet";
 import { logActivity, roleLabel } from "@/lib/activity";
 import { ADMIN_POSITIONS } from "@/lib/constants";
+import { isLimitedPosition, KAGAWAD_SECTIONS } from "@/lib/adminAccess";
 import { friendlyError, timeAgo } from "@/lib/format";
 import type { UserProfile } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, FilterTabs, Modal, Select, Spinner } from "@/components/ui";
@@ -126,6 +127,9 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
   const [pick, setPick] = useState<string>(u.role === "admin" && u.position ? u.position : "");
   const [customPos, setCustomPos] = useState("");
   const [otherKapitan, setOtherKapitan] = useState<string | null>(null);
+  // Kagawad only: the admin sections they may open.
+  const [access, setAccess] = useState<string[]>(u.adminAccess ?? []);
+  const toggleAccess = (key: string) => setAccess((a) => (a.includes(key) ? a.filter((k) => k !== key) : [...a, key]));
 
   const isListed = (ADMIN_POSITIONS as readonly string[]).includes(u.position ?? "");
   const chosen = pick === "Iba pa" ? customPos.trim() : pick;
@@ -145,14 +149,14 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
   }, [picking, pick, u.id]);
 
   /** Sets (or clears, with "") the barangay position. A position makes the user an Admin; clearing returns them to Residente. */
-  const savePosition = async (next: string) => {
+  const savePosition = async (next: string, allowed: string[] = []) => {
     setBusy(true);
     try {
       const batch = writeBatch(db);
-      batch.update(doc(db, "users", u.id), next ? { role: "admin", position: next } : { role: "resident", position: "", photoURL: "" });
+      batch.update(doc(db, "users", u.id), next ? { role: "admin", position: next, adminAccess: isLimitedPosition(next) ? allowed : [] } : { role: "resident", position: "", adminAccess: [], photoURL: "" });
       const dropped = next ? await raffleCleanup(batch, u.id) : false;
       await batch.commit();
-      logActivity("Roles", next ? `Itinalaga si ${u.fullName} bilang ${next} (dati: ${u.position || (u.role === "admin" ? "Admin" : "Residente")})` : `Inalis ang posisyon ni ${u.fullName} (${u.position || "Admin"}), naging Residente`, u.id);
+      logActivity("Roles", next ? `Itinalaga si ${u.fullName} bilang ${next} (dati: ${u.position || (u.role === "admin" ? "Admin" : "Residente")})${isLimitedPosition(next) ? `, access: ${allowed.length} na section` : ""}` : `Inalis ang posisyon ni ${u.fullName} (${u.position || "Admin"}), naging Residente`, u.id);
       if (dropped) logActivity("Raffle", `Inalis ang raffle entry at code ni ${u.fullName} (naging opisyal)`, u.id);
       toast(next ? `Na-update na: si ${u.fullName.split(" ")[0]} ay ${next} na.` : "Inalis ang posisyon.");
       onClose();
@@ -169,7 +173,7 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
       const batch = writeBatch(db);
       // Profile photos are admin-only, so a demoted user's photo is cleared too.
       if (role === "admin") await raffleCleanup(batch, u.id);
-      batch.update(doc(db, "users", u.id), role === "admin" ? { role, position: position || "Secretary" } : { role, position: "", photoURL: "" });
+      batch.update(doc(db, "users", u.id), role === "admin" ? { role, position: position || "Secretary" } : { role, position: "", adminAccess: [], photoURL: "" });
       await batch.commit();
       logActivity("Roles", `Ginawang ${roleLabel(role, role === "admin" ? position : "")} si ${u.fullName}`, u.id);
       toast("Na-save ang role.");
@@ -348,6 +352,13 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
                       {u.role === "admin" ? "Palitan" : "Magtalaga"}
                     </Button>
                   </div>
+                  {u.role === "admin" && isLimitedPosition(u.position) && (
+                    <p className="rounded-xl bg-gray-50 p-3 text-xs text-gray-700">
+                      {(u.adminAccess ?? []).length === 0
+                        ? <>⚠ Wala pa siyang <b>access</b> sa admin. Pindutin ang Palitan para pumili ng sections.</>
+                        : <>Access: <b>{(u.adminAccess ?? []).length}</b> na section lang ang mabubuksan niya.</>}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-600">Kapag naglagay ng posisyon, nagiging <b>Admin</b> siya. Kapag inalis, bumabalik siya sa Residente.</p>
                   {u.role === "admin" && (
                     <Button variant="danger" full loading={busy} onClick={() => confirm(`Alisin ang posisyon ni ${u.fullName}? Magiging Residente na siya.`) && savePosition("")}>Alisin ang posisyon</Button>
@@ -367,12 +378,33 @@ export function UserDetail({ u, verified, onClose }: { u: UserRow; verified: boo
                   {pick === "Iba pa" && (
                     <input value={customPos} onChange={(e) => setCustomPos(e.target.value)} maxLength={40} placeholder="Isulat ang posisyon (hal. Tanod)" aria-label="Ibang posisyon" className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5" />
                   )}
+                  {pick === "Kagawad" && (
+                    <div className="space-y-3 rounded-xl bg-gray-50 p-3">
+                      <p className="text-sm font-bold">Ano ang pwede niyang buksan sa Admin?</p>
+                      <p className="text-xs text-gray-600">Ikaw lang ang makakapagbago nito. Kapag walang tinick, wala siyang admin access.</p>
+                      {KAGAWAD_SECTIONS.map((g) => (
+                        <fieldset key={g.title} className="space-y-1">
+                          <legend className="text-[0.7rem] font-bold uppercase tracking-wide text-gray-500">{g.title}</legend>
+                          {g.items.map((it) => (
+                            <label key={it.key} className="flex min-h-10 items-center gap-2.5 text-sm">
+                              <input type="checkbox" checked={access.includes(it.key)} onChange={() => toggleAccess(it.key)} className="h-5 w-5 accent-brand" />
+                              {it.label}
+                            </label>
+                          ))}
+                        </fieldset>
+                      ))}
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button variant="outline" onClick={() => setAccess(KAGAWAD_SECTIONS.flatMap((g) => g.items.map((i) => i.key)))}>Piliin lahat</Button>
+                        <Button variant="outline" onClick={() => setAccess([])}>Alisin lahat</Button>
+                      </div>
+                    </div>
+                  )}
                   {otherKapitan && (
                     <p className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-900" role="alert">⚠ May Kapitan na: {otherKapitan}. Isa lang dapat ang Kapitan. Pwede mo pa ring ituloy kung papalitan siya.</p>
                   )}
                   <div className="grid grid-cols-[1fr_1.6fr] gap-2">
                     <Button variant="outline" onClick={() => setPicking(false)}>Kanselahin</Button>
-                    <Button loading={busy} disabled={!chosen} onClick={() => savePosition(chosen)}>I-save{chosen ? `: ${chosen}` : ""}</Button>
+                    <Button loading={busy} disabled={!chosen} onClick={() => savePosition(chosen, access)}>I-save{chosen ? `: ${chosen}` : ""}</Button>
                   </div>
                 </>
               )}

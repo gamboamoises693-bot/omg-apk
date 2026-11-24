@@ -1,5 +1,6 @@
 "use client";
 
+import { isLimitedPosition } from "@/lib/adminAccess";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { doc, onSnapshot, serverTimestamp, getDoc, writeBatch } from "firebase/firestore";
@@ -14,6 +15,8 @@ interface AuthContextValue {
   loading: boolean;
   /** Admin or Super Admin (full admin powers; a BHW is not included). */
   isAdmin: boolean;
+  /** Kagawad: only the admin sections the Developer allowed (empty list = no admin access). */
+  adminAccess: string[] | null;
   /** Any staff account: admins, Super Admin and BHW. */
   isStaff: boolean;
   /** Can manage the Botika: BHW, BHW Head, Kapitan, Secretary or Super Admin. */
@@ -163,12 +166,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isSuperAdmin = profile?.role === "superadmin";
     const isStaff = isSuperAdmin || profile?.role === "admin";
     const isBhw = profile?.role === "admin" && (profile?.position === "BHW" || profile?.position === "BHW Head");
-    const isAdmin = isStaff && !isBhw;
+    // A Kagawad only has the admin sections the Developer ticked; with none ticked there is no admin access.
+    const adminAccess = profile?.role === "admin" && isLimitedPosition(profile.position) ? (profile.adminAccess ?? []) : null;
+    const isAdmin = isStaff && !isBhw && !(adminAccess && adminAccess.length === 0);
     return {
       user,
       profile,
       loading,
       isAdmin,
+      adminAccess,
       isStaff,
       canBotika: isSuperAdmin || isBhw || (isAdmin && (profile?.position === "Kapitan" || profile?.position === "Secretary")),
       canBorrowAdmin: isSuperAdmin || (isAdmin && (profile?.position === "Kapitan" || profile?.position === "Secretary")),

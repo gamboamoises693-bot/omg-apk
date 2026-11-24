@@ -170,15 +170,15 @@ function Badge({ n }: { n?: number }) {
 }
 
 export default function AdminPage() {
-  const { isSuperAdmin, isAdmin, canBotika, canBorrowAdmin, isOfficer, canLiga, profile } = useAuth();
+  const { isSuperAdmin, isAdmin, adminAccess, canBotika, canBorrowAdmin, isOfficer, canLiga, profile } = useAuth();
   const xmas = useXmas();
   // People waiting for the Developer's answer (shown on the "Mensahe sa Developer" menu item).
   const devWaiting = useDevInboxCount(isSuperAdmin);
   const { byTab, total } = useAdminPending();
   const groups = useMemo(
     () =>
-      GROUPS.filter((g) => !g.superOnly || isSuperAdmin).map((g) => ({ ...g, sections: g.sections.filter((s) => !s.borrowOnly || canBorrowAdmin || (s.approver && isAdmin)) })),
-    [isSuperAdmin, canBorrowAdmin, isAdmin],
+      GROUPS.filter((g) => !g.superOnly || isSuperAdmin).map((g) => ({ ...g, sections: g.sections.filter((s) => (!s.borrowOnly || canBorrowAdmin || (s.approver && isAdmin)) && (!adminAccess || adminAccess.includes(s.key))) })),
+    [isSuperAdmin, canBorrowAdmin, isAdmin, adminAccess],
   );
   const sections = useMemo(() => groups.flatMap((g) => g.sections), [groups]);
   const { byTab: pendingByTab } = useAdminPending();

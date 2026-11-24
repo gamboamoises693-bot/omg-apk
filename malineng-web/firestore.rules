@@ -39,8 +39,10 @@ service cloud.firestore {
     }
 
     // Full admin powers. A BHW (or BHW Head) is staff but only manages the Botika.
+    // A Kagawad only counts as an admin once the Developer ticked at least one section (users/{uid}.adminAccess).
     function isAdmin() {
-      return isStaff() && !(me().get('position', '') in ['BHW', 'BHW Head']);
+      return isStaff() && !(me().get('position', '') in ['BHW', 'BHW Head'])
+        && !(me().get('position', '') == 'Kagawad' && me().get('adminAccess', []).size() == 0);
     }
 
     // Botika (medicine inventory): BHW, BHW Head, Kapitan, Secretary and the Super Admin.
@@ -373,7 +375,7 @@ service cloud.firestore {
         // The Super Admin can also create accounts for officials (Kapitan, Secretary, BHW...).
         || (isSuperAdmin()
           && incoming().role in ['resident', 'admin']
-          && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'position', 'createdAt', 'createdBy'])
+          && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'position', 'adminAccess', 'createdAt', 'createdBy'])
           && incoming().uid == uid
           && isNonEmptyString(incoming().fullName, 120)
           && contactOk(uid))
@@ -393,7 +395,7 @@ service cloud.firestore {
       // Only the Super Admin manages roles, and cannot demote themself (avoids lock-out).
       // Profile photo (photoURL) is for staff (admins and BHW) only.
       allow update: if (isSelf(uid)
-          && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'suspended', 'assistedBy', 'assistedByName'])
+          && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'position', 'adminAccess', 'suspended', 'assistedBy', 'assistedByName'])
           && validSex(incoming().get('sex', '')) && validCivilStatus(incoming().get('civilStatus', ''))
           // The Barangay ID number can be set once, and only together with its claim in idNumbers.
           && (!incoming().diff(existing()).affectedKeys().hasAny(['idNo'])
