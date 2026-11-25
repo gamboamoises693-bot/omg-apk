@@ -17,6 +17,7 @@ import { DonationNotifier } from "./DonationNotifier";
 import { RegisterServiceWorker } from "./InstallApp";
 import { XmasMusic } from "./XmasMusic";
 import { OfficerLanding } from "./OfficerLanding";
+import { LookController } from "./LookController";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -38,6 +39,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <RaffleEntryManager />
           <DonationNotifier />
           <XmasMusic />
+          <LookController />
           <OfficerLanding />
           <AdminAlertWatcher />
           <ListingHousekeeping />

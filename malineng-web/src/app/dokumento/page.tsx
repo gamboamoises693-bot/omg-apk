@@ -53,7 +53,7 @@ function DocumentView() {
         <Button full onClick={() => window.print()}><Printer className="h-4 w-4" /> I-print / I-save bilang PDF</Button>
       </div>
 
-      <article className="print-sheet mx-auto max-w-[210mm] bg-white p-8 font-serif text-[13px] leading-relaxed text-black shadow-card print:shadow-none">
+      <article className="look-paper print-sheet mx-auto max-w-[210mm] bg-white p-8 font-serif text-[13px] leading-relaxed text-black shadow-card print:shadow-none">
         <header className="relative text-center">
           {settings.logoURL && (
             // eslint-disable-next-line @next/next/no-img-element

@@ -19,6 +19,7 @@ import type { Job, Listing } from "@/lib/types";
 import { Badge, Button, Card, ErrorText, Input, LinkButton, Modal, PageHeader, SectionTitle, Select, Spinner } from "@/components/ui";
 import { LoginGate } from "@/components/LoginGate";
 import { TextSizeSetting } from "@/components/TextSizeSetting";
+import { LookSetting } from "@/components/LookSetting";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { InstallAppCard } from "@/components/InstallApp";
 import { NotifySettings } from "@/components/NotifySettings";
@@ -588,6 +589,12 @@ export default function AccountPage() {
       <Card className="flex items-center justify-between gap-3">
         <p className="text-sm text-gray-600">Piliin ang wika ng site. Para sa phone na ito lang. Choose the site language (this phone only).</p>
         <LanguageToggle />
+      </Card>
+
+      <SectionTitle>Itsura ng website</SectionTitle>
+      <Card>
+        <LookSetting />
+        <p className="mt-2 text-xs text-gray-500">Para sa phone na ito lang. Piliin ang “Klasiko” kung mas gusto mo ang maliwanag.</p>
       </Card>
 
       <SectionTitle>Laki ng text (Aa)</SectionTitle>

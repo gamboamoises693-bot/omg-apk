@@ -111,7 +111,7 @@ function MyPendingPins() {
 /** Small card at the bottom of the map for the tapped pin (the full details open in a sheet). */
 function PlacePeek({ p, distance, onMore, onClose }: { p: Place; distance: number | null; onMore: () => void; onClose: () => void }) {
   return (
-    <div className="absolute inset-x-3 bottom-3 z-[600] rounded-[1.4rem] bg-white p-3.5 shadow-[0_14px_30px_-10px_rgba(15,23,42,0.45)]">
+    <div className="look-paper absolute inset-x-3 bottom-3 z-[600] rounded-[1.4rem] bg-white p-3.5 shadow-[0_14px_30px_-10px_rgba(15,23,42,0.45)]">
       <button type="button" onClick={onClose} aria-label="Isara" className="absolute right-2.5 top-2.5 rounded-full bg-gray-100 p-1.5 text-gray-600 active:bg-gray-200">
         <X className="h-4 w-4" />
       </button>
@@ -300,7 +300,7 @@ function MapaContent() {
 
   return (
     <div>
-      <div className="relative -mx-4 h-[calc(100dvh-13rem)] min-h-[22rem] overflow-hidden">
+      <div className="look-paper relative -mx-4 h-[calc(100dvh-13rem)] min-h-[22rem] overflow-hidden">
         <LeafletMap
           ref={mapRef}
           center={center}
