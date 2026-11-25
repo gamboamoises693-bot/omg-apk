@@ -45,6 +45,16 @@ service cloud.firestore {
         && !(me().get('position', '') == 'Kagawad' && me().get('adminAccess', []).size() == 0);
     }
 
+    // A Kagawad only gets the admin sections the Developer ticked (users/{uid}.adminAccess, see lib/adminAccess.ts).
+    // Everybody else with admin powers keeps full access. These two are used wherever private data or a section's actions are guarded.
+    function canDo(key) {
+      return isAdmin() && (me().get('position', '') != 'Kagawad' || key in me().get('adminAccess', []));
+    }
+
+    function canDoAny(keys) {
+      return isAdmin() && (me().get('position', '') != 'Kagawad' || me().get('adminAccess', []).hasAny(keys));
+    }
+
     // Botika (medicine inventory): BHW, BHW Head, Kapitan, Secretary and the Super Admin.
     function isBotika() {
       return isSuperAdmin() || (isStaff() && me().get('position', '') in ['BHW', 'BHW Head', 'Kapitan', 'Secretary']);
@@ -257,7 +267,7 @@ service cloud.firestore {
       // Direct chat with the Developer: only the person and the Developer (no verification needed, so a business can ask about an ad).
       return room.matches('^dev-.+$') ? (signedIn() && notSuspended() && (isSuperAdmin() || room == 'dev-' + request.auth.uid))
         // Help with setting up an account: the person and the admins (no verification needed, since that is what they need help with).
-        : room.matches('^help-.+$') ? (signedIn() && notSuspended() && (isAdmin() || room == 'help-' + request.auth.uid))
+        : room.matches('^help-.+$') ? (signedIn() && notSuspended() && (canDo('helpsetup') || room == 'help-' + request.auth.uid))
         : room == 'staff-admin' ? (isStaff() && notSuspended())
         : room == 'staff-officials' ? (isAdmin() && notSuspended())
         : verifiedPoster() && (room == 'all' || room == me().get('purok', '') || isStaff());
@@ -326,7 +336,7 @@ service cloud.firestore {
     // An admin applies a change the resident asked for, exactly as requested, after approving it in the same batch.
     function identityApproved(uid) {
       let c = getAfter(/databases/$(database)/documents/profileChanges/$(uid)).data;
-      return isAdmin()
+      return canDo('profilechange')
         && changedOnly(['fullName', 'purok', 'contact', 'birthday', 'sex', 'civilStatus'])
         && c.status == 'approved'
         && incoming().fullName == c.requested.fullName
@@ -341,19 +351,19 @@ service cloud.firestore {
 
     match /phoneIndex/{phone} {
       // Lets the app tell "this number is taken" (a denied read on someone else's number).
-      allow get: if signedIn() && (resource == null || resource.data.uid == request.auth.uid || isAdmin());
+      allow get: if signedIn() && (resource == null || resource.data.uid == request.auth.uid || canDoAny(['hallregister','verification','profilechange','registrations']));
       allow list: if isSuperAdmin();
       // Claimed only together with the user's contact; never moved to another user.
       allow create: if phone.matches('^09[0-9]{9}$')
         && incoming().keys().hasOnly(['uid', 'createdAt'])
         && (incoming().uid == request.auth.uid || isSuperAdmin()
-          || (isAdmin() && getAfter(/databases/$(database)/documents/profileChanges/$(incoming().uid)).data.status == 'approved')
+          || (canDo('profilechange') && getAfter(/databases/$(database)/documents/profileChanges/$(incoming().uid)).data.status == 'approved')
           || (canRegisterOthers() && getAfter(/databases/$(database)/documents/users/$(incoming().uid)).data.get('assistedBy', '') == request.auth.uid))
         && getAfter(/databases/$(database)/documents/users/$(incoming().uid)).data.contact == phone;
       allow update: if false;
       // An admin releases the old number once an approved change moved the resident to a new one.
       allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isSuperAdmin()
-        || (isAdmin()
+        || (canDo('profilechange')
           && getAfter(/databases/$(database)/documents/profileChanges/$(resource.data.uid)).data.status == 'approved'
           && getAfter(/databases/$(database)/documents/users/$(resource.data.uid)).data.contact != phone));
     }
@@ -365,7 +375,7 @@ service cloud.firestore {
 
     match /users/{uid} {
       // BHW reads users to look up the resident receiving medicine.
-      allow read: if isSelf(uid) || isAdmin() || isBotika();
+      allow read: if isSelf(uid) || canDoAny(['verification','profilechange','hallregister','registrations','households','idprint','appointments','ambulansya','ayuda','report','approve','hiraman','ayudabatch','desisyon','raffleverify','rafflepledge','helpsetup']) || isBotika();
       allow create: if isSelf(uid)
         && incoming().role == 'resident'
         && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'contact', 'birthday', 'email', 'role', 'createdAt', 'sex', 'civilStatus'])
@@ -446,7 +456,7 @@ service cloud.firestore {
     }
 
     match /profileChanges/{uid} {
-      allow read: if isSelf(uid) || isAdmin();
+      allow read: if isSelf(uid) || canDo('profilechange');
       // One request per resident: a new one is only accepted when the last one was already decided.
       allow create, update: if isSelf(uid)
         && notSuspended()
@@ -459,7 +469,7 @@ service cloud.firestore {
         && currentIsProfile(incoming().current, uid)
         && incoming().requested != incoming().current;
       // Admin decision (nobody but the Super Admin decides their own request).
-      allow update: if isAdmin()
+      allow update: if canDo('profilechange')
         && existing().status == 'pending'
         && (existing().uid != request.auth.uid || isSuperAdmin())
         && changedOnly(['status', 'reason', 'reviewedBy', 'reviewedByName', 'reviewedAt'])
@@ -535,7 +545,7 @@ service cloud.firestore {
     }
 
     match /borrowRequests/{id} {
-      allow read: if (signedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow read: if (signedIn() && resource.data.userId == request.auth.uid) || canDo('hiraman');
       // Verified, not suspended residents only.
       allow create: if verifiedPoster() && validBorrowRequest();
       // The borrower can only cancel while still waiting.
@@ -562,7 +572,7 @@ service cloud.firestore {
 
     // ---------- verifications (selfie; private to owner + admins) ----------
     match /verifications/{uid} {
-      allow read: if isSelf(uid) || isAdmin();
+      allow read: if isSelf(uid) || canDo('verification');
       // Owner submits / re-submits (not after being verified). Kept until the account is deleted.
       allow create, update: if isSelf(uid)
         && notSuspended()
@@ -588,12 +598,12 @@ service cloud.firestore {
       allow update: if isSuperAdmin() && changedOnly(['selfie'])
         && incoming().selfie is string && incoming().selfie.size() > 0 && incoming().selfie.size() < 400000;
       // Admin review.
-      allow update: if isAdmin()
+      allow update: if canDo('verification')
         && (existing().uid != request.auth.uid || isSuperAdmin())
         && changedOnly(['status', 'reason', 'reviewedBy', 'reviewedByName', 'reviewedAt'])
         && incoming().status in ['pending', 'verified', 'rejected'];
       // After an approved profile change, the details printed with the selfie follow the profile.
-      allow update: if isAdmin()
+      allow update: if canDo('verification')
         && changedOnly(['fullName', 'purok', 'birthday', 'contact'])
         && getAfter(/databases/$(database)/documents/profileChanges/$(uid)).data.status == 'approved'
         && incoming().fullName == getAfter(/databases/$(database)/documents/profileChanges/$(uid)).data.requested.fullName
@@ -606,7 +616,7 @@ service cloud.firestore {
     // ---------- idNumbers (Barangay ID numbers MG-####-####: each number belongs to one person) ----------
     match /idNumbers/{digits} {
       // Admins look up whose number it is.
-      allow read: if isAdmin();
+      allow read: if canDoAny(['verification','idprint','hallregister']);
       allow create: if digits.matches('^[0-9]{8}$')
         && incoming().keys().hasOnly(['uid', 'createdAt'])
         && incoming().createdAt == request.time
@@ -618,7 +628,7 @@ service cloud.firestore {
 
     // ---------- hallRegistrations (Kapitan or Secretary registers a resident; the Developer gives the final approval) ----------
     match /hallRegistrations/{uid} {
-      allow read: if isSuperAdmin() || isSelf(uid) || (isAdmin() && resource.data.registeredBy == request.auth.uid);
+      allow read: if isSuperAdmin() || isSelf(uid) || (canDo('hallregister') && resource.data.registeredBy == request.auth.uid);
       // Written together with the new account. Only "pending": nothing is verified before the Developer approves.
       allow create: if canRegisterOthers() && !isSuperAdmin()
         && incoming().keys().hasOnly(['uid', 'fullName', 'purok', 'birthday', 'contact', 'email', 'idSeen', 'selfie', 'registeredBy', 'registeredByName', 'status', 'createdAt'])
@@ -642,14 +652,14 @@ service cloud.firestore {
       // One person by id (ID check, own status): public. The whole list is for admins only, so
       // nobody can download the names of every verified resident (badges read stats/verifiedSet).
       allow get: if true;
-      allow list: if isAdmin();
+      allow list: if canDoAny(['verification','idprint','report','hallregister','households','registrations']);
       // An admin verifies other people; only the Super Admin may verify their own account.
       // A resident registered at the Hall by the Kapitan or Secretary waits for the Developer's final approval.
-      allow create, update: if isAdmin() && (request.auth.uid != uid || isSuperAdmin())
+      allow create, update: if canDoAny(['verification','hallregister']) && (request.auth.uid != uid || isSuperAdmin())
         && (isSuperAdmin()
           || !(existsAfter(/databases/$(database)/documents/hallRegistrations/$(uid))
               && getAfter(/databases/$(database)/documents/hallRegistrations/$(uid)).data.status == 'pending'));
-      allow delete: if isAdmin() || isSelf(uid);
+      allow delete: if canDo('verification') || isSelf(uid);
     }
 
     // ---------- activityLogs (append-only; Super Admin reads) ----------
@@ -667,15 +677,15 @@ service cloud.firestore {
     match /issuedDocuments/{docId} {
       // Anyone with the document number can verify it; the full list is for admins only.
       allow get: if true;
-      allow list: if isAdmin();
-      allow create, update: if isAdmin();
+      allow list: if canDo('appointments');
+      allow create, update: if canDo('appointments');
       allow delete: if isSuperAdmin();
     }
 
     // ---------- households (census; owner + admins) ----------
     match /households/{uid} {
       // A household can have a second head (the spouse): `coHeadIds` holds their uid. Both can read and edit it.
-      allow read: if isSelf(uid) || isAdmin() || (signedIn() && request.auth.uid in resource.data.get('coHeadIds', []));
+      allow read: if isSelf(uid) || canDoAny(['households','ayuda','registrations','idprint','report']) || (signedIn() && request.auth.uid in resource.data.get('coHeadIds', []));
       allow create: if isSelf(uid)
         && notSuspended()
         && incoming().members is list && incoming().members.size() <= 20
@@ -706,7 +716,7 @@ service cloud.firestore {
     // ---------- posts (Community Board) ----------
     match /posts/{postId} {
       allow read: if existing().status == 'approved'
-        || isAdmin()
+        || canDo('approve')
         || (signedIn() && existing().authorId == request.auth.uid);
 
       allow create: if notSuspended() && emailOk()
@@ -725,7 +735,7 @@ service cloud.firestore {
 
       // Reactions: a resident may only add/remove/change THEIR OWN uid in "likes" (everyone who reacted)
       // and in "reactions" (uid -> 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'pray').
-      allow update: if (isAdmin() && existing().status != 'pending')
+      allow update: if (canDo('approve') && existing().status != 'pending')
         || approvalMove('post')
         || isSuperAdmin()
         || (signedIn()
@@ -738,7 +748,7 @@ service cloud.firestore {
           && (!(request.auth.uid in incoming().get('reactions', {}))
               || incoming().reactions[request.auth.uid] in ['like', 'love', 'haha', 'wow', 'sad', 'pray']));
 
-      allow delete: if isAdmin() || (signedIn() && existing().authorId == request.auth.uid);
+      allow delete: if canDo('approve') || (signedIn() && existing().authorId == request.auth.uid);
     }
 
     // ---------- comments ----------
@@ -749,14 +759,14 @@ service cloud.firestore {
         && isNonEmptyString(incoming().text, 1000)
         && get(/databases/$(database)/documents/posts/$(incoming().postId)).data.status == 'approved';
       allow update: if false;
-      allow delete: if isAdmin() || (signedIn() && existing().authorId == request.auth.uid);
+      allow delete: if canDo('approve') || (signedIn() && existing().authorId == request.auth.uid);
     }
 
     // ---------- listings (Tindahan) ----------
     match /listings/{listingId} {
       // Contact numbers are inside, so only signed-in people can read listings.
       allow read: if signedIn() && (existing().status == 'approved'
-        || isAdmin()
+        || canDo('approve')
         || existing().sellerId == request.auth.uid);
 
       allow create: if verifiedPoster()
@@ -769,8 +779,8 @@ service cloud.firestore {
         && incoming().expiresAt is timestamp
         && optionalPhoto();
 
-      allow update: if (isAdmin() && existing().status != 'pending') || approvalMove('post') || isSuperAdmin();
-      allow delete: if isAdmin() || (signedIn() && existing().sellerId == request.auth.uid);
+      allow update: if (canDo('approve') && existing().status != 'pending') || approvalMove('post') || isSuperAdmin();
+      allow delete: if canDo('approve') || (signedIn() && existing().sellerId == request.auth.uid);
     }
 
     // ---------- listingPhotos (full-size photo; the listing itself keeps a small thumbnail) ----------
@@ -780,20 +790,20 @@ service cloud.firestore {
         && incoming().sellerId == request.auth.uid
         && incoming().photo is string && incoming().photo.size() < 900000;
       allow update: if false;
-      allow delete: if isAdmin() || (signedIn() && existing().sellerId == request.auth.uid);
+      allow delete: if canDo('approve') || (signedIn() && existing().sellerId == request.auth.uid);
     }
 
     // ---------- jobs (Trabaho) ----------
     match /jobs/{jobId} {
       allow read: if signedIn() && (existing().status == 'approved'
-        || isAdmin()
+        || canDo('approve')
         || existing().posterId == request.auth.uid);
       allow create: if verifiedPoster()
         && incoming().posterId == request.auth.uid
         && incoming().status == 'pending'
         && isNonEmptyString(incoming().title, 120);
-      allow update: if (isAdmin() && existing().status != 'pending') || approvalMove('post') || isSuperAdmin();
-      allow delete: if isAdmin() || (signedIn() && existing().posterId == request.auth.uid);
+      allow update: if (canDo('approve') && existing().status != 'pending') || approvalMove('post') || isSuperAdmin();
+      allow delete: if canDo('approve') || (signedIn() && existing().posterId == request.auth.uid);
     }
 
     // ---------- Hiring: job openings + applications ----------
@@ -821,19 +831,19 @@ service cloud.firestore {
 
     match /openings/{id} {
       allow read: if signedIn() && (resource.data.status == 'approved'
-        || isAdmin()
+        || canDo('approve')
         || resource.data.posterId == request.auth.uid);
       allow create: if validOpening() && incoming().posterId == request.auth.uid && (
         // Verified residents wait for approval; the Barangay officers publish "OPISYAL" openings directly.
         (verifiedPoster() && incoming().status == 'pending' && incoming().official == false)
         || (isOfficer() && incoming().status == 'approved' && incoming().official == true));
       // The poster can only close / reopen and update how many were hired; admins can change anything.
-      allow update: if (isAdmin() && existing().status != 'pending') || approvalMove('post') || isSuperAdmin()
+      allow update: if (canDo('approve') && existing().status != 'pending') || approvalMove('post') || isSuperAdmin()
         || (signedIn() && existing().posterId == request.auth.uid && existing().status == 'approved'
           && changedOnly(['state', 'filled'])
           && incoming().state in ['open', 'full', 'closed']
           && incoming().filled is int && incoming().filled >= 0 && incoming().filled <= existing().slots);
-      allow delete: if isAdmin() || (signedIn() && existing().posterId == request.auth.uid);
+      allow delete: if canDo('approve') || (signedIn() && existing().posterId == request.auth.uid);
     }
 
     // Private: the applicant, the employer who posted the opening, and the officers (Kapitan, Secretary, Super Admin).
@@ -881,8 +891,8 @@ service cloud.firestore {
         && isNonEmptyString(incoming().name, 120)
         && isNonEmptyString(incoming().skill, 40)
         && validPurok(incoming().purok);
-      allow update: if isAdmin();
-      allow delete: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+      allow update: if canDo('approve');
+      allow delete: if canDo('approve') || (signedIn() && existing().userId == request.auth.uid);
     }
 
     // ---------- lostFound ----------
@@ -895,11 +905,11 @@ service cloud.firestore {
         && isNonEmptyString(incoming().item, 120)
         && optionalPhoto();
       // Owner can only mark as "nakabalik".
-      allow update: if isAdmin()
+      allow update: if canDo('approve')
         || (signedIn() && existing().userId == request.auth.uid
             && changedOnly(['status'])
             && incoming().status in ['open', 'nakabalik']);
-      allow delete: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+      allow delete: if canDo('approve') || (signedIn() && existing().userId == request.auth.uid);
     }
 
     // ---------- ayuda (Ayuda Checker) ----------
@@ -907,14 +917,14 @@ service cloud.firestore {
       // Lookup by doc id (control number) is allowed for everyone.
       allow get: if true;
       // Name search allowed but capped so nobody can dump the whole list.
-      allow list: if isAdmin() || request.query.limit <= 5;
-      allow write: if isAdmin();
+      allow list: if canDo('ayuda') || request.query.limit <= 5;
+      allow write: if canDo('ayuda');
     }
 
     // ---------- ayudaBatches: a release of ayuda, approved by the steps the Developer set ('ayuda') ----------
     match /ayudaBatches/{batchId} {
-      allow read: if isAdmin();
-      allow create: if isAdmin()
+      allow read: if canDo('ayudabatch');
+      allow create: if canDo('ayudabatch')
         && incoming().keys().hasOnly(['title', 'program', 'controlNumbers', 'families', 'perFamily', 'date', 'status', 'authorId', 'authorName', 'createdAt'])
         && incoming().authorId == request.auth.uid
         && incoming().authorName == me().fullName
@@ -932,8 +942,8 @@ service cloud.firestore {
 
     // ---------- decisions (private, with the amount) and decisionsPublic (what residents see, no amount) ----------
     match /decisions/{decisionId} {
-      allow read: if isAdmin();
-      allow create: if isAdmin()
+      allow read: if canDo('desisyon');
+      allow create: if canDo('desisyon')
         && incoming().keys().hasOnly(['title', 'kind', 'amount', 'detail', 'status', 'authorId', 'authorName', 'createdAt'])
         && incoming().authorId == request.auth.uid
         && incoming().authorName == me().fullName
@@ -950,7 +960,7 @@ service cloud.firestore {
     match /decisionsPublic/{decisionId} {
       allow read: if true;
       // Published only together with the approval of the same decision, with the same words and no amount.
-      allow create: if isAdmin()
+      allow create: if canDo('desisyon')
         && incoming().keys().hasOnly(['title', 'kind', 'detail', 'decidedAt'])
         && getAfter(/databases/$(database)/documents/decisions/$(decisionId)).data.status == 'approved'
         && getAfter(/databases/$(database)/documents/decisions/$(decisionId)).data.title == incoming().title
@@ -1033,7 +1043,7 @@ service cloud.firestore {
     }
 
     match /raffleRounds/{roundId} {
-      allow read: if isAdmin();
+      allow read: if canDo('raffleverify');
       allow create: if isSuperAdmin()
         && roundId.matches('^[0-9]{1,2}$')
         && int(roundId) >= 1 && int(roundId) <= raffleCfg().rounds.size()
@@ -1074,7 +1084,7 @@ service cloud.firestore {
     // A prize handed over: one record per round and winner code, made by an admin after checking the QR and ID.
     match /raffleClaims/{claimId} {
       allow read: if signedIn();
-      allow create: if isAdmin()
+      allow create: if canDo('raffleverify')
         && incoming().keys().hasOnly(['round', 'code', 'claimedBy', 'claimedByName', 'claimedAt'])
         && incoming().round is int && claimId == string(incoming().round) + '_' + incoming().code
         && incoming().code in get(/databases/$(database)/documents/raffleRounds/$(string(incoming().round))).data.winnerCodes
@@ -1088,7 +1098,7 @@ service cloud.firestore {
     // ---------- Raffle donations and sponsors (amounts are public for transparency) ----------
     // A logged-in person pledges; an admin accepts and marks it received (a receipt number is made for the donor).
     match /raffleDonations/{id} {
-      allow read: if (signedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow read: if (signedIn() && resource.data.userId == request.auth.uid) || canDo('rafflepledge');
       allow create: if signedIn() && notSuspended()
         && incoming().keys().hasOnly(['userId', 'name', 'anon', 'kind', 'what', 'amount', 'contact', 'message', 'logo', 'link', 'handover', 'pickupAddress', 'status', 'createdAt'])
         && incoming().get('handover', 'hall') in ['hall', 'pickup']
@@ -1107,7 +1117,7 @@ service cloud.firestore {
         && incoming().contact is string && incoming().contact.size() <= 30
         && incoming().message is string && incoming().message.size() <= 300
         && incoming().createdAt == request.time;
-      allow update: if isAdmin()
+      allow update: if canDo('rafflepledge')
         && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'receiptNo', 'receivedBy', 'receivedByName', 'receivedAt', 'what', 'amount', 'note'])
         && incoming().status in ['new', 'accepted', 'received', 'declined']
         && (incoming().status != 'received' || (incoming().receiptNo is string && incoming().receiptNo.matches('^RAF-[0-9]{8}-[A-Z0-9]{4}$')
@@ -1119,7 +1129,7 @@ service cloud.firestore {
 
     match /raffleSponsors/{id} {
       allow read: if true;
-      allow create, update: if isAdmin()
+      allow create, update: if canDo('rafflepledge')
         && incoming().keys().hasOnly(['name', 'what', 'amount', 'tier', 'show', 'donationId', 'logo', 'link', 'createdAt'])
         && incoming().get('link', '') is string && incoming().get('link', '').size() <= 300
         && (incoming().get('link', '') == '' || incoming().get('link', '').matches('^https?://[^ ]+[.][^ ]+$'))
@@ -1130,12 +1140,12 @@ service cloud.firestore {
         && incoming().tier in ['main', 'reg']
         && incoming().show is bool
         && incoming().get('donationId', '') is string;
-      allow delete: if isAdmin();
+      allow delete: if canDo('rafflepledge');
     }
 
     // ---------- appointments ----------
     match /appointments/{apptId} {
-      allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+      allow read: if canDo('appointments') || (signedIn() && existing().userId == request.auth.uid);
       // Booking a visit to be registered in the portal is open to anyone logged in, even before they are verified.
       allow create: if (verifiedPoster() || (signedIn() && notSuspended() && incoming()['service'] == 'Rehistro sa Malineng Portal'))
         && incoming().userId == request.auth.uid
@@ -1144,17 +1154,17 @@ service cloud.firestore {
         && isNonEmptyString(incoming()['service'], 60)
         && isNonEmptyString(incoming().fullName, 120);
       // Moving to "ready" needs the approvers set for documents; other changes stay with any admin.
-      allow update: if (isAdmin() && trailUntouched() && !(incoming().status == 'ready' && existing().status != 'ready'))
+      allow update: if (canDo('appointments') && trailUntouched() && !(incoming().status == 'ready' && existing().status != 'ready'))
         || apptMove()
         || isSuperAdmin();
-      allow delete: if isAdmin()
+      allow delete: if canDo('appointments')
         || (signedIn() && existing().userId == request.auth.uid && existing().status == 'natanggap');
     }
 
     // ---------- portalRequests (someone WITHOUT an account asks for a visit to be registered; no login needed) ----------
     // The document id is the mobile number, so one number can send only one request at a time (a repeat is refused).
     match /portalRequests/{phone} {
-      allow read: if isAdmin();
+      allow read: if canDoAny(['verification','helpsetup','hallregister','registrations']);
       allow create: if phone.matches('^09[0-9]{9}$')
         && incoming().keys().hasOnly(['fullName', 'contact', 'purok', 'date', 'notes', 'status', 'createdAt'])
         && incoming().contact == phone
@@ -1164,23 +1174,23 @@ service cloud.firestore {
         && incoming().notes is string && incoming().notes.size() <= 300
         && incoming().status == 'natanggap'
         && incoming().createdAt == request.time;
-      allow update: if isAdmin() && changedOnly(['status']);
-      allow delete: if isAdmin();
+      allow update: if canDoAny(['verification','helpsetup','hallregister','registrations']) && changedOnly(['status']);
+      allow delete: if canDoAny(['verification','helpsetup','hallregister','registrations']);
     }
 
     // ---------- registrations (Magparehistro: Ayuda/Clean-up/Fiesta/Event) ----------
     match /registrations/{regId} {
-      allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+      allow read: if canDo('registrations') || (signedIn() && existing().userId == request.auth.uid);
       allow create: if notSuspended()
         && incoming().userId == request.auth.uid
         && incoming().purpose in ['Ayuda', 'Clean-up', 'Fiesta', 'Event']
         && validPurok(incoming().purok);
-      allow update, delete: if isAdmin();
+      allow update, delete: if canDo('registrations');
     }
 
     // ---------- ambulanceRequests (private: owner + admin) ----------
     match /ambulanceRequests/{reqId} {
-      allow read: if isAdmin() || (signedIn() && existing().userId == request.auth.uid);
+      allow read: if canDo('ambulansya') || (signedIn() && existing().userId == request.auth.uid);
       // Emergency is never blocked (even unverified/suspended). Scheduling needs verification.
       allow create: if signedIn()
         && (incoming().type == 'emergency' || verifiedPoster())
@@ -1209,12 +1219,12 @@ service cloud.firestore {
     match /ambulanceSchedule/{slotId} {
       allow read: if true;
       // Public busy window. Whoever releases a request (as set by the Developer) writes it.
-      allow create: if isAdmin();
+      allow create: if canDo('ambulansya');
       // The driver (by link) moves it to 'enroute' and removes it when the trip is done.
-      allow update: if isAdmin()
+      allow update: if canDo('ambulansya')
         || (driverProofOk(get(/databases/$(database)/documents/ambulanceRequests/$(slotId)).data.get('driverTokenHash', ''), slotId)
           && incoming().status == 'enroute' && changedOnly(['status']));
-      allow delete: if isAdmin()
+      allow delete: if canDo('ambulansya')
         || (driverProofOk(get(/databases/$(database)/documents/ambulanceRequests/$(slotId)).data.get('driverTokenHash', ''), slotId)
           && getAfter(/databases/$(database)/documents/ambulanceRequests/$(slotId)).data.status == 'done');
     }
@@ -1222,8 +1232,8 @@ service cloud.firestore {
     // ---------- ambulanceDriverLinks: the doc id IS the secret (get only, never list) ----------
     match /ambulanceDriverLinks/{secret} {
       allow get: if true;
-      allow create, delete: if isAdmin();
-      allow update: if isAdmin()
+      allow create, delete: if canDo('ambulansya');
+      allow update: if canDo('ambulansya')
         || (driverProofOk(hashing.sha256(secret).toHexString(), existing().requestId)
           && driverStep(existing().status, incoming().status)
           && changedOnly(['status', 'enrouteAt', 'doneAt']));
@@ -1231,7 +1241,7 @@ service cloud.firestore {
 
     // Lets staff copy the link again. Never readable by residents or the public.
     match /ambulanceDriverSecrets/{reqId} {
-      allow read, write: if isAdmin();
+      allow read, write: if canDo('ambulansya');
     }
 
     // Write-only proofs that the writer knew the secret (see driverProofOk).
@@ -1246,9 +1256,9 @@ service cloud.firestore {
     // ---------- polls (Botohan) ----------
     match /polls/{pollId} {
       allow read: if true;
-      allow create, delete: if isAdmin();
+      allow create, delete: if canDo('polls');
       // One vote per resident: uid is appended to "voters" exactly once.
-      allow update: if isAdmin()
+      allow update: if canDo('polls')
         || (verifiedPoster()
           && existing().isActive == true
           && changedOnly(['votes', 'voters'])
@@ -1263,23 +1273,23 @@ service cloud.firestore {
     // ---------- projects (transparency) + full-size before/after photos ----------
     match /projects/{projectId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if canDo('proyekto');
     }
     match /projectPhotos/{projectId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if canDo('proyekto');
     }
 
     // ---------- events ----------
     match /events/{eventId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if canDo('events');
     }
 
     // ---------- purokPoints ----------
     match /purokPoints/{purokId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if canDo('purok');
     }
 
     // ---------- Blotter / Reklamo (private: complainant + officers) ----------
@@ -1449,22 +1459,22 @@ service cloud.firestore {
     match /places/{id} {
       allow read: if resource.data.status == 'approved'
         || (signedIn() && resource.data.ownerId == request.auth.uid)
-        || isAdmin();
+        || canDo('mapa');
       // Verified residents submit for approval; evacuation centers are admin-only.
       allow create: if validPlace() && (
-        isAdmin()
+        canDo('mapa')
         || (verifiedPoster()
           && incoming().ownerId == request.auth.uid
           && incoming().status == 'pending'
           && incoming().category != 'Evacuation Center'));
       // Owners may edit their own pin; it goes back to "pending" for review.
-      allow update: if isAdmin()
+      allow update: if canDo('mapa')
         || (verifiedPoster() && validPlace()
           && existing().ownerId == request.auth.uid
           && incoming().ownerId == existing().ownerId
           && incoming().status == 'pending'
           && incoming().category != 'Evacuation Center');
-      allow delete: if isAdmin() || (signedIn() && existing().ownerId == request.auth.uid);
+      allow delete: if canDo('mapa') || (signedIn() && existing().ownerId == request.auth.uid);
     }
 
     // ---------- who is online (logged-in users; Super Admin only) ----------
@@ -1518,7 +1528,7 @@ service cloud.firestore {
     // ---------- settings (settings/main; settings/webAccess is Super Admin only) ----------
     match /settings/{docId} {
       allow read: if true;
-      allow write: if docId in ['webAccess', 'chat', 'approvals', 'raffle', 'theme', 'signature'] ? isSuperAdmin() : isAdmin();
+      allow write: if docId in ['webAccess', 'chat', 'approvals', 'raffle', 'theme', 'signature'] ? isSuperAdmin() : canDo('settings');
     }
 
     // ---------- Chat ng Barangay (verified residents) ----------
@@ -1612,15 +1622,15 @@ service cloud.firestore {
     // Help inbox: one line per person who asked for help with setting up their account. The person writes their own line
     // with each message ("user"); any admin answers ("staff").
     match /helpChats/{uid} {
-      allow read: if isAdmin() || (signedIn() && isSelf(uid));
+      allow read: if canDo('helpsetup') || (signedIn() && isSelf(uid));
       allow create, update: if incoming().keys().hasOnly(['uid', 'name', 'lastText', 'lastAt', 'lastFrom'])
         && incoming().uid == uid
         && incoming().lastText is string && incoming().lastText.size() <= 80
         && incoming().lastAt == request.time
         && ((isSelf(uid) && notSuspended() && chatOpen() && !chatMuted()
               && incoming().lastFrom == 'user' && incoming().name == me().fullName)
-            || (isAdmin() && incoming().lastFrom == 'staff'));
-      allow delete: if isAdmin();
+            || (canDo('helpsetup') && incoming().lastFrom == 'staff'));
+      allow delete: if canDo('helpsetup');
     }
 
     // Temporary mutes set by officers.
