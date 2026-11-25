@@ -18,9 +18,11 @@ export interface ThemeConfig {
   to: string;
   /** Christmas music (a soft carol that residents can switch off). Only plays while the Christmas look is on. */
   music: boolean;
+  /** Look outside Christmas: "glass" (dark frosted glass, default) or "classic" (the original light look). */
+  look: "glass" | "classic";
 }
 
-export const DEFAULT_THEME: ThemeConfig = { xmas: "auto", from: "2026-11-15", to: "2027-01-06", music: true };
+export const DEFAULT_THEME: ThemeConfig = { xmas: "auto", from: "2026-11-15", to: "2027-01-06", music: true, look: "glass" };
 
 /** Month and day as one number (Nov 15 = 1115) from a YYYY-MM-DD string. NaN when the text is not a date. */
 function monthDay(iso: string): number {
@@ -57,6 +59,7 @@ function subscribe(cb: () => void): () => void {
           from: typeof d.from === "string" && d.from ? d.from : DEFAULT_THEME.from,
           to: typeof d.to === "string" && d.to ? d.to : DEFAULT_THEME.to,
           music: d.music !== false,
+          look: d.look === "classic" ? "classic" : "glass",
         };
         listeners.forEach((l) => l());
       },

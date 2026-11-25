@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getLookPref, setLookPref, type LookPref } from "@/lib/look";
-import { useXmas } from "@/lib/theme";
+import { useTheme, useXmas } from "@/lib/theme";
 
 const OPTIONS: { key: LookPref; label: string; hint: string }[] = [
   { key: "glass", label: "Glass", hint: "Madilim, makinis" },
@@ -13,7 +13,11 @@ const OPTIONS: { key: LookPref; label: string; hint: string }[] = [
 export function LookSetting() {
   const [pref, setPref] = useState<LookPref>("glass");
   const xmas = useXmas();
+  const siteLook = useTheme().look;
   useEffect(() => setPref(getLookPref()), []);
+
+  // The Developer chose the original look for everybody: nothing to pick.
+  if (!xmas && siteLook === "classic") return <p className="text-sm text-gray-600">Klasiko (maliwanag) ang itsura ng website ngayon.</p>;
 
   return (
     <div>

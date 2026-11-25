@@ -418,36 +418,48 @@ export function SignatureCard() {
   );
 }
 
-/* ---------- Tema ng Pasko (Developer lang) ---------- */
+/* ---------- Tema ng website (Developer lang): Original, Pasko o Glass ---------- */
+type SiteChoice = "classic" | "xmas" | "glass" | "auto";
+
 export function XmasThemeCard() {
   const theme = useTheme();
   const toast = useToast();
-  const [mode, setMode] = useState<XmasMode>(theme.xmas);
+  const initial = (t: typeof theme): SiteChoice => (t.xmas === "on" ? "xmas" : t.xmas === "auto" ? "auto" : t.look);
+  const [choice, setChoice] = useState<SiteChoice>(initial(theme));
+  // Look used outside the Christmas dates when "Auto" is chosen.
+  const [offLook, setOffLook] = useState<"glass" | "classic">(theme.look);
   const [from, setFrom] = useState(theme.from);
   const [to, setTo] = useState(theme.to);
   const [music, setMusic] = useState(theme.music);
   const [busy, setBusy] = useState(false);
   // Fill the form from what is saved once it arrives (the first render may still hold the defaults).
   const [synced, setSynced] = useState(false);
-  if (!synced && (theme.xmas !== DEFAULT_THEME.xmas || theme.from !== DEFAULT_THEME.from || theme.to !== DEFAULT_THEME.to || theme.music !== DEFAULT_THEME.music)) {
+  if (!synced && (theme.xmas !== DEFAULT_THEME.xmas || theme.from !== DEFAULT_THEME.from || theme.to !== DEFAULT_THEME.to || theme.music !== DEFAULT_THEME.music || theme.look !== DEFAULT_THEME.look)) {
     setSynced(true);
-    setMode(theme.xmas);
+    setChoice(initial(theme));
+    setOffLook(theme.look);
     setFrom(theme.from);
     setTo(theme.to);
     setMusic(theme.music);
   }
 
-  const draft = { xmas: mode, from, to, music };
-  const onNow = isXmas(draft, Date.now());
-  const MODES: [XmasMode, string][] = [["auto", "Auto (ayon sa petsa)"], ["on", "Laging naka-on"], ["off", "Naka-off"]];
+  const CHOICES: { key: SiteChoice; label: string; hint: string }[] = [
+    { key: "glass", label: "Glass (bago)", hint: "Madilim, frosted glass sa buong site" },
+    { key: "classic", label: "Original", hint: "Ang dating maliwanag na itsura" },
+    { key: "xmas", label: "Pasko", hint: "Laging naka-on ang Pasko" },
+    { key: "auto", label: "Auto", hint: "Pasko sa season, tapos Glass o Original" },
+  ];
+  const xmasMode: XmasMode = choice === "xmas" ? "on" : choice === "auto" ? "auto" : "off";
+  const look: "glass" | "classic" = choice === "auto" ? offLook : choice === "xmas" ? theme.look : choice;
+  const onNow = isXmas({ xmas: xmasMode, from, to, music, look }, Date.now());
 
   const save = async () => {
-    if (mode === "auto" && (!from || !to)) return toast("Ilagay ang simula at wakas ng Pasko.", "error");
+    if (choice === "auto" && (!from || !to)) return toast("Ilagay ang simula at wakas ng Pasko.", "error");
     setBusy(true);
     try {
-      await setDoc(doc(db, "settings", "theme"), { xmas: mode, from, to, music }, { merge: true });
-      logActivity("Settings", `Tema ng Pasko: ${MODES.find((m) => m[0] === mode)?.[1]}${mode === "auto" ? ` (${from} hanggang ${to})` : ""} · tugtog ${music ? "naka-on" : "naka-off"}`);
-      toast("Na-save ang tema ng Pasko.");
+      await setDoc(doc(db, "settings", "theme"), { xmas: xmasMode, from, to, music, look }, { merge: true });
+      logActivity("Settings", `Tema ng website: ${CHOICES.find((c) => c.key === choice)?.label}${choice === "auto" ? ` (${from} hanggang ${to}, pagkatapos: ${offLook === "glass" ? "Glass" : "Original"})` : ""} · tugtog ${music ? "naka-on" : "naka-off"}`);
+      toast("Na-save ang tema ng website.");
     } catch (err) {
       toast(friendlyError(err), "error");
     } finally {
@@ -459,37 +471,43 @@ export function XmasThemeCard() {
     <Card className="space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-extrabold">Tema ng Pasko</p>
-          <p className="text-xs text-gray-600">Para sa login, Home, mga menu, raffle at sponsor.</p>
+          <p className="font-extrabold">Tema ng website</p>
+          <p className="text-xs text-gray-600">Para sa buong site: login, Home, mga menu, raffle at sponsor. Ikaw lang ang makakapagbago nito.</p>
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.68rem] font-black ${onNow ? "bg-[#B3202B] text-white" : "bg-gray-100 text-gray-500"}`}>{onNow ? "NAKA-ON NGAYON" : "NAKA-OFF NGAYON"}</span>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.68rem] font-black ${onNow ? "bg-[#B3202B] text-white" : "bg-gray-100 text-gray-500"}`}>{onNow ? "PASKO NGAYON" : look === "glass" ? "GLASS NGAYON" : "ORIGINAL NGAYON"}</span>
       </div>
-      <div className="grid gap-2" role="group" aria-label="Tema ng Pasko">
-        {MODES.map(([v, label]) => (
+      <div className="grid gap-2" role="group" aria-label="Tema ng website">
+        {CHOICES.map((c) => (
           <button
-            key={v}
+            key={c.key}
             type="button"
-            aria-pressed={mode === v}
-            onClick={() => setMode(v)}
-            className={`rounded-xl px-3 py-2.5 text-left text-sm font-bold ${mode === v ? "bg-[#B3202B] text-white" : "bg-surface text-gray-700"}`}
+            aria-pressed={choice === c.key}
+            onClick={() => setChoice(c.key)}
+            className={`rounded-xl px-3 py-2.5 text-left ${choice === c.key ? (c.key === "xmas" ? "bg-[#B3202B] text-white" : "bg-brand text-white") : "bg-surface text-gray-700"}`}
           >
-            {label}
+            <span className="block text-sm font-bold">{c.label}</span>
+            <span className={`block text-xs ${choice === c.key ? "text-white/85" : "text-gray-500"}`}>{c.hint}</span>
           </button>
         ))}
       </div>
-      {mode === "auto" && (
+      {choice === "auto" && (
         <div className="space-y-2 rounded-xl bg-surface p-3">
           <div className="grid grid-cols-2 gap-2">
             <Input label="Mag-on sa" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             <Input label="Mag-off pagkatapos ng" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
           <p className="text-xs text-gray-600">Inuulit ito taon-taon (buwan at araw lang ang binabasa, hindi ang taon). Default: Nobyembre 15 hanggang Enero 6.</p>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Itsura pagkatapos ng Pasko">
+            {([["glass", "Pagkatapos: Glass"], ["classic", "Pagkatapos: Original"]] as const).map(([v, label]) => (
+              <button key={v} type="button" aria-pressed={offLook === v} onClick={() => setOffLook(v)} className={`rounded-xl px-3 py-2.5 text-sm font-bold ${offLook === v ? "bg-brand text-white" : "bg-white text-gray-700"}`}>{label}</button>
+            ))}
+          </div>
         </div>
       )}
       <label className="flex items-center justify-between gap-3 rounded-xl bg-surface p-3">
         <span>
           <span className="block font-bold">Tugtog ng Pasko</span>
-          <span className="block text-xs text-gray-600">Mahinang kanta (Jingle Bells, Silent Night, atbp.) habang naka-on ang tema. May button ang bawat residente para patayin ito sa phone nila. Hindi ito tumutugtog sa Emergency, Ambulansya at Admin.</span>
+          <span className="block text-xs text-gray-600">Mahinang kanta (Jingle Bells, Silent Night, atbp.) habang naka-on ang Pasko. May button ang bawat residente para patayin ito sa phone nila. Hindi ito tumutugtog sa Emergency, Ambulansya at Admin.</span>
         </span>
         <button type="button" role="switch" aria-checked={music} aria-label="Tugtog ng Pasko" onClick={() => setMusic(!music)} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${music ? "bg-[#B3202B]" : "bg-gray-300"}`}>
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${music ? "left-[1.4rem]" : "left-0.5"}`} />
