@@ -50,7 +50,7 @@ function Qr({ text }: { text: string }) {
 export function DonorCertificate({ c, theme = "ivory" }: { c: CertificateData; theme?: CertificateTheme }) {
   return (
     // data-no-i18n: the certificate always reads in Filipino, even when the page is switched to English.
-    <div className={`cert-sheet ${theme === "navy" ? "cert-navy" : ""}`} data-no-i18n translate="no">
+    <div className={`look-paper cert-sheet ${theme === "navy" ? "cert-navy" : ""}`} data-no-i18n translate="no">
       <div className="cert-r1" />
       <div className="cert-r2" />
       {["left-[7px] top-[7px]", "right-[7px] top-[7px]", "left-[7px] bottom-[7px]", "right-[7px] bottom-[7px]"].map((p) => (

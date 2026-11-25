@@ -337,3 +337,232 @@ textarea {
 .selfie-scanline { animation: selfie-scan 3.2s ease-in-out infinite; }
 .selfie-spin { animation: selfie-spin 6s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .selfie-scanline, .selfie-spin { animation: none; } }
+
+/* ============================================================
+ * GLASS LOOK (default while the Christmas look is off; see lib/look.ts)
+ * Dark starry night, frosted cards, one cyan accent. <html data-look="glass">.
+ * Re-maps the light Tailwind colors so every page changes at once.
+ * Anything that must stay like paper (ID card, certificate, documents) has class .look-paper.
+ * ============================================================ */
+@media screen {
+html[data-look="glass"] .text-gray-900 { color: #eaf2ff; }
+html[data-look="glass"] .text-gray-800 { color: #dbe7f7; }
+html[data-look="glass"] .text-gray-700 { color: #c4d4e8; }
+html[data-look="glass"] .text-gray-600 { color: #b6c8de; }
+html[data-look="glass"] .text-gray-500 { color: #a3b8d2; }
+html[data-look="glass"] .text-gray-400 { color: #8aa0bb; }
+html[data-look="glass"] .text-gray-300 { color: #6f86a3; }
+html[data-look="glass"] .text-slate-900 { color: #eaf2ff; }
+html[data-look="glass"] .text-brand { color: #7cc4ff; }
+html[data-look="glass"] .text-brand-dark { color: #cfe0f5; }
+html[data-look="glass"] .text-brand-deep { color: #eaf2ff; }
+html[data-look="glass"] .text-red-600 { color: #ff9b9b; }
+html[data-look="glass"] .text-red-700 { color: #ff9b9b; }
+html[data-look="glass"] .text-red-800 { color: #ffb0b0; }
+html[data-look="glass"] .text-red-900 { color: #ffc2c2; }
+html[data-look="glass"] .text-emerald-600 { color: #7fe3b8; }
+html[data-look="glass"] .text-emerald-700 { color: #7fe3b8; }
+html[data-look="glass"] .text-emerald-800 { color: #8deac3; }
+html[data-look="glass"] .text-emerald-900 { color: #9ff0d0; }
+html[data-look="glass"] .text-green-700 { color: #7fe3b8; }
+html[data-look="glass"] .text-green-800 { color: #8deac3; }
+html[data-look="glass"] .text-green-900 { color: #9ff0d0; }
+html[data-look="glass"] .text-yellow-700 { color: #f3c76b; }
+html[data-look="glass"] .text-yellow-800 { color: #f3c76b; }
+html[data-look="glass"] .text-yellow-900 { color: #f6d587; }
+html[data-look="glass"] .text-amber-700 { color: #f3c76b; }
+html[data-look="glass"] .text-amber-800 { color: #f3c76b; }
+html[data-look="glass"] .text-amber-900 { color: #f6d587; }
+html[data-look="glass"] .text-blue-600 { color: #8fc1ff; }
+html[data-look="glass"] .text-blue-700 { color: #8fc1ff; }
+html[data-look="glass"] .text-purple-700 { color: #c4b5fd; }
+html[data-look="glass"] .text-pink-600 { color: #f9a8d4; }
+html[data-look="glass"] .text-gold-dark { color: #e8c766; }
+html[data-look="glass"] .text-\[\#5F6A7E\] { color: #a3b8d2; }
+html[data-look="glass"] .text-\[\#6B5409\] { color: #f6d587; }
+html[data-look="glass"] .text-\[\#3B2E05\] { color: #f6d587; }
+html[data-look="glass"] .bg-surface { background-color: transparent; }
+html[data-look="glass"] .bg-gray-50 { background-color: rgba(255,255,255,.05); }
+html[data-look="glass"] .bg-gray-100 { background-color: rgba(255,255,255,.08); }
+html[data-look="glass"] .bg-gray-200 { background-color: rgba(255,255,255,.14); }
+html[data-look="glass"] .bg-gray-300 { background-color: rgba(255,255,255,.22); }
+html[data-look="glass"] .bg-brand-light { background-color: rgba(124,196,255,.14); }
+html[data-look="glass"] .bg-brand-light\/60 { background-color: rgba(124,196,255,.10); }
+html[data-look="glass"] .bg-gold-light { background-color: rgba(243,199,107,.16); }
+html[data-look="glass"] .bg-red-50 { background-color: rgba(255,130,130,.14); }
+html[data-look="glass"] .bg-red-100 { background-color: rgba(255,130,130,.2); }
+html[data-look="glass"] .bg-emerald-50 { background-color: rgba(127,227,184,.14); }
+html[data-look="glass"] .bg-emerald-100 { background-color: rgba(127,227,184,.2); }
+html[data-look="glass"] .bg-green-50 { background-color: rgba(127,227,184,.14); }
+html[data-look="glass"] .bg-yellow-50 { background-color: rgba(243,199,107,.14); }
+html[data-look="glass"] .bg-amber-50 { background-color: rgba(243,199,107,.14); }
+html[data-look="glass"] .bg-amber-100 { background-color: rgba(243,199,107,.2); }
+html[data-look="glass"] .bg-blue-50 { background-color: rgba(143,193,255,.14); }
+html[data-look="glass"] .bg-blue-100 { background-color: rgba(143,193,255,.2); }
+html[data-look="glass"] .bg-\[\#EDF0F5\] { background-color: rgba(255,255,255,.08); }
+html[data-look="glass"] .bg-\[\#E4EAF3\] { background-color: rgba(255,255,255,.08); }
+html[data-look="glass"] .bg-\[\#F8FAFD\] { background-color: rgba(0,0,0,.22); }
+html[data-look="glass"] .bg-\[\#FDECEE\] { background-color: rgba(255,130,130,.14); }
+html[data-look="glass"] .bg-\[\#FFF8EA\] { background-color: rgba(243,199,107,.12); }
+html[data-look="glass"] .bg-\[\#FBF6E6\] { background-color: rgba(243,199,107,.12); }
+html[data-look="glass"] .border-line { border-color: rgba(255,255,255,.12); }
+html[data-look="glass"] .border-gray-100 { border-color: rgba(255,255,255,.10); }
+html[data-look="glass"] .border-gray-200 { border-color: rgba(255,255,255,.14); }
+html[data-look="glass"] .border-gray-300 { border-color: rgba(255,255,255,.2); }
+html[data-look="glass"] .border-\[\#C9D4E5\] { border-color: rgba(255,255,255,.2); }
+html[data-look="glass"] .border-\[\#EEDFB0\] { border-color: rgba(243,199,107,.3); }
+html[data-look="glass"] .ring-gray-100 { --tw-ring-color: rgba(255,255,255,.1); }
+html[data-look="glass"] .ring-gray-200 { --tw-ring-color: rgba(255,255,255,.14); }
+html[data-look="glass"] .divide-gray-100 > :not([hidden]) ~ :not([hidden]), html[data-look="glass"] .divide-line > :not([hidden]) ~ :not([hidden]) { border-color: rgba(255,255,255,.1); }
+
+html[data-look="glass"] { color-scheme: dark; }
+html[data-look="glass"] body {
+  color: #eaf2ff;
+  background-color: #070b16;
+  background-attachment: fixed;
+  background-image:
+    radial-gradient(1px 1px at 12% 8%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 78% 14%, #cfe 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 90% 40%, #9ef 50%, transparent 51%),
+    radial-gradient(1px 1px at 30% 52%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 62% 70%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 8% 88%, #bdf 50%, transparent 51%),
+    radial-gradient(120% 45% at 50% 0%, #0f2350 0%, rgba(7, 11, 22, 0) 70%);
+  background-size: 360px 520px, 360px 520px, 360px 520px, 360px 520px, 360px 520px, 360px 520px, 100% 100%;
+}
+html[data-look="glass"] body::before, html[data-look="glass"] body::after {
+  content: ""; position: fixed; z-index: -1; border-radius: 9999px; filter: blur(80px); pointer-events: none;
+}
+html[data-look="glass"] body::before { left: -90px; top: 22%; width: 260px; height: 260px; background: rgba(99, 102, 241, .30); }
+html[data-look="glass"] body::after { right: -90px; top: 58%; width: 260px; height: 260px; background: rgba(34, 211, 238, .20); }
+
+/* Cards and panels: frosted glass */
+html[data-look="glass"] .bg-white, html[data-look="glass"] .bg-gradient-to-b.from-white {
+  background-color: rgba(255,255,255,.07); background-image: none;
+  border-color: rgba(255,255,255,.13);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 14px 30px -18px rgba(0,0,0,.8);
+}
+html[data-look="glass"] .shadow-card { border-color: rgba(255,255,255,.13); }
+html[data-look="glass"] .bg-white .bg-white { background-color: rgba(255,255,255,.04); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+html[data-look="glass"] .bg-white\/95 { background-color: rgba(10,16,32,.72); }
+html[data-look="glass"] .bg-white\/90, html[data-look="glass"] .bg-white\/80 { background-color: rgba(10,16,32,.6); }
+
+/* Modals and drawers: more solid so the text stays readable */
+html[data-look="glass"] [role="dialog"] > .bg-white, html[data-look="glass"] [role="dialog"] > div > .bg-white { background-color: rgba(14,22,42,.9); }
+html[data-look="glass"] [role="dialog"] { background-color: rgba(3,6,14,.62); }
+
+/* Blue cards (headers, hero) become tinted glass with a soft cyan edge */
+html[data-look="glass"] .bg-gradient-to-br.from-brand-dark, html[data-look="glass"] .bg-gradient-to-b.from-brand-dark, html[data-look="glass"] .bg-gradient-to-br.from-brand {
+  background-image: linear-gradient(145deg, rgba(60,120,255,.30), rgba(124,77,255,.16));
+}
+html[data-look="glass"] .bg-gradient-to-br.from-brand-dark, html[data-look="glass"] .bg-gradient-to-b.from-brand-dark {
+  border: 1px solid rgba(150,200,255,.26);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 28px -10px rgba(61,225,255,.4);
+}
+/* Primary button: keeps white text on blue, with a soft glow */
+html[data-look="glass"] .bg-gradient-to-b.from-brand.to-brand-dark { border: 1px solid rgba(150,200,255,.35); box-shadow: 0 8px 24px -10px rgba(56,150,255,.7); }
+
+/* Top bar and bottom bar: glass */
+html[data-look="glass"] header.bg-brand-deep { background-color: rgba(11,43,87,.72); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,.1); }
+html[data-look="glass"] nav[aria-label="Main"] { border-color: rgba(255,255,255,.12); }
+html[data-look="glass"] nav[aria-label="Main"] .border-white { border-color: rgba(255,255,255,.2); }
+
+/* Form fields */
+html[data-look="glass"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+html[data-look="glass"] select, html[data-look="glass"] textarea {
+  background-color: rgba(0,0,0,.25); border-color: rgba(255,255,255,.18); color: #eaf2ff;
+}
+html[data-look="glass"] input::placeholder, html[data-look="glass"] textarea::placeholder { color: #8aa0bb; }
+html[data-look="glass"] select option { background-color: #111a2e; color: #eaf2ff; }
+html[data-look="glass"] input:focus:not([type="checkbox"]):not([type="radio"]), html[data-look="glass"] select:focus, html[data-look="glass"] textarea:focus {
+  border-color: rgba(103,232,249,.85); background-color: rgba(0,0,0,.3);
+  box-shadow: 0 0 0 1px rgba(139,120,255,.6), 0 0 18px rgba(61,225,255,.3);
+}
+html[data-look="glass"] .accent-brand { accent-color: #67e8f9; }
+
+/* Dark text that sits on a gold (light) background must stay dark */
+html[data-look="glass"] .bg-gold, html[data-look="glass"] .bg-gradient-to-b.from-\[\#E3C25A\] { color: #0b2b57; }
+html[data-look="glass"] .bg-gold.text-brand-deep, html[data-look="glass"] .bg-gold .text-brand-deep, html[data-look="glass"] .bg-gold .text-brand-dark, html[data-look="glass"] .bg-gold .text-brand,
+html[data-look="glass"] .from-\[\#E3C25A\].text-brand-deep, html[data-look="glass"] .from-\[\#E3C25A\] .text-brand-deep { color: #0b2b57; }
+html[data-look="glass"] .bg-gold-light.text-yellow-900 { color: #f6d587; }
+
+@media (prefers-reduced-transparency: reduce) {
+  html[data-look="glass"] .bg-white { -webkit-backdrop-filter: none; backdrop-filter: none; background-color: #151d33; }
+}
+
+/* ---- Paper: stays light like a printed sheet (ID card, certificate, documents) ---- */
+html[data-look="glass"] .look-paper.text-gray-900, html[data-look="glass"] .look-paper .text-gray-900 { color: #111827; }
+html[data-look="glass"] .look-paper.text-gray-800, html[data-look="glass"] .look-paper .text-gray-800 { color: #1f2937; }
+html[data-look="glass"] .look-paper.text-gray-700, html[data-look="glass"] .look-paper .text-gray-700 { color: #374151; }
+html[data-look="glass"] .look-paper.text-gray-600, html[data-look="glass"] .look-paper .text-gray-600 { color: #4b5563; }
+html[data-look="glass"] .look-paper.text-gray-500, html[data-look="glass"] .look-paper .text-gray-500 { color: #6b7280; }
+html[data-look="glass"] .look-paper.text-gray-400, html[data-look="glass"] .look-paper .text-gray-400 { color: #9ca3af; }
+html[data-look="glass"] .look-paper.text-gray-300, html[data-look="glass"] .look-paper .text-gray-300 { color: #d1d5db; }
+html[data-look="glass"] .look-paper.text-slate-900, html[data-look="glass"] .look-paper .text-slate-900 { color: #0f172a; }
+html[data-look="glass"] .look-paper.text-brand, html[data-look="glass"] .look-paper .text-brand { color: #1f5fae; }
+html[data-look="glass"] .look-paper.text-brand-dark, html[data-look="glass"] .look-paper .text-brand-dark { color: #123f7a; }
+html[data-look="glass"] .look-paper.text-brand-deep, html[data-look="glass"] .look-paper .text-brand-deep { color: #0b2b57; }
+html[data-look="glass"] .look-paper.text-red-600, html[data-look="glass"] .look-paper .text-red-600 { color: #dc2626; }
+html[data-look="glass"] .look-paper.text-red-700, html[data-look="glass"] .look-paper .text-red-700 { color: #b91c1c; }
+html[data-look="glass"] .look-paper.text-red-800, html[data-look="glass"] .look-paper .text-red-800 { color: #991b1b; }
+html[data-look="glass"] .look-paper.text-red-900, html[data-look="glass"] .look-paper .text-red-900 { color: #7f1d1d; }
+html[data-look="glass"] .look-paper.text-emerald-600, html[data-look="glass"] .look-paper .text-emerald-600 { color: #059669; }
+html[data-look="glass"] .look-paper.text-emerald-700, html[data-look="glass"] .look-paper .text-emerald-700 { color: #047857; }
+html[data-look="glass"] .look-paper.text-emerald-800, html[data-look="glass"] .look-paper .text-emerald-800 { color: #065f46; }
+html[data-look="glass"] .look-paper.text-emerald-900, html[data-look="glass"] .look-paper .text-emerald-900 { color: #064e3b; }
+html[data-look="glass"] .look-paper.text-green-700, html[data-look="glass"] .look-paper .text-green-700 { color: #15803d; }
+html[data-look="glass"] .look-paper.text-green-800, html[data-look="glass"] .look-paper .text-green-800 { color: #166534; }
+html[data-look="glass"] .look-paper.text-green-900, html[data-look="glass"] .look-paper .text-green-900 { color: #14532d; }
+html[data-look="glass"] .look-paper.text-yellow-700, html[data-look="glass"] .look-paper .text-yellow-700 { color: #a16207; }
+html[data-look="glass"] .look-paper.text-yellow-800, html[data-look="glass"] .look-paper .text-yellow-800 { color: #854d0e; }
+html[data-look="glass"] .look-paper.text-yellow-900, html[data-look="glass"] .look-paper .text-yellow-900 { color: #713f12; }
+html[data-look="glass"] .look-paper.text-amber-700, html[data-look="glass"] .look-paper .text-amber-700 { color: #b45309; }
+html[data-look="glass"] .look-paper.text-amber-800, html[data-look="glass"] .look-paper .text-amber-800 { color: #92400e; }
+html[data-look="glass"] .look-paper.text-amber-900, html[data-look="glass"] .look-paper .text-amber-900 { color: #78350f; }
+html[data-look="glass"] .look-paper.text-blue-600, html[data-look="glass"] .look-paper .text-blue-600 { color: #2563eb; }
+html[data-look="glass"] .look-paper.text-blue-700, html[data-look="glass"] .look-paper .text-blue-700 { color: #1d4ed8; }
+html[data-look="glass"] .look-paper.text-purple-700, html[data-look="glass"] .look-paper .text-purple-700 { color: #7e22ce; }
+html[data-look="glass"] .look-paper.text-pink-600, html[data-look="glass"] .look-paper .text-pink-600 { color: #db2777; }
+html[data-look="glass"] .look-paper.text-gold-dark, html[data-look="glass"] .look-paper .text-gold-dark { color: #9a7b12; }
+html[data-look="glass"] .look-paper.text-\[\#5F6A7E\], html[data-look="glass"] .look-paper .text-\[\#5F6A7E\] { color: #5f6a7e; }
+html[data-look="glass"] .look-paper.text-\[\#6B5409\], html[data-look="glass"] .look-paper .text-\[\#6B5409\] { color: #6b5409; }
+html[data-look="glass"] .look-paper.text-\[\#3B2E05\], html[data-look="glass"] .look-paper .text-\[\#3B2E05\] { color: #3b2e05; }
+html[data-look="glass"] .look-paper.bg-surface, html[data-look="glass"] .look-paper .bg-surface { background-color: #f4f6fa; }
+html[data-look="glass"] .look-paper.bg-gray-50, html[data-look="glass"] .look-paper .bg-gray-50 { background-color: #f9fafb; }
+html[data-look="glass"] .look-paper.bg-gray-100, html[data-look="glass"] .look-paper .bg-gray-100 { background-color: #f3f4f6; }
+html[data-look="glass"] .look-paper.bg-gray-200, html[data-look="glass"] .look-paper .bg-gray-200 { background-color: #e5e7eb; }
+html[data-look="glass"] .look-paper.bg-gray-300, html[data-look="glass"] .look-paper .bg-gray-300 { background-color: #d1d5db; }
+html[data-look="glass"] .look-paper.bg-brand-light, html[data-look="glass"] .look-paper .bg-brand-light { background-color: #e8f0fb; }
+html[data-look="glass"] .look-paper.bg-brand-light\/60, html[data-look="glass"] .look-paper .bg-brand-light\/60 { background-color: rgba(232,240,251,.6); }
+html[data-look="glass"] .look-paper.bg-gold-light, html[data-look="glass"] .look-paper .bg-gold-light { background-color: #f7ebc3; }
+html[data-look="glass"] .look-paper.bg-red-50, html[data-look="glass"] .look-paper .bg-red-50 { background-color: #fef2f2; }
+html[data-look="glass"] .look-paper.bg-red-100, html[data-look="glass"] .look-paper .bg-red-100 { background-color: #fee2e2; }
+html[data-look="glass"] .look-paper.bg-emerald-50, html[data-look="glass"] .look-paper .bg-emerald-50 { background-color: #ecfdf5; }
+html[data-look="glass"] .look-paper.bg-emerald-100, html[data-look="glass"] .look-paper .bg-emerald-100 { background-color: #d1fae5; }
+html[data-look="glass"] .look-paper.bg-green-50, html[data-look="glass"] .look-paper .bg-green-50 { background-color: #f0fdf4; }
+html[data-look="glass"] .look-paper.bg-yellow-50, html[data-look="glass"] .look-paper .bg-yellow-50 { background-color: #fefce8; }
+html[data-look="glass"] .look-paper.bg-amber-50, html[data-look="glass"] .look-paper .bg-amber-50 { background-color: #fffbeb; }
+html[data-look="glass"] .look-paper.bg-amber-100, html[data-look="glass"] .look-paper .bg-amber-100 { background-color: #fef3c7; }
+html[data-look="glass"] .look-paper.bg-blue-50, html[data-look="glass"] .look-paper .bg-blue-50 { background-color: #eff6ff; }
+html[data-look="glass"] .look-paper.bg-blue-100, html[data-look="glass"] .look-paper .bg-blue-100 { background-color: #dbeafe; }
+html[data-look="glass"] .look-paper.bg-\[\#EDF0F5\], html[data-look="glass"] .look-paper .bg-\[\#EDF0F5\] { background-color: #edf0f5; }
+html[data-look="glass"] .look-paper.bg-\[\#E4EAF3\], html[data-look="glass"] .look-paper .bg-\[\#E4EAF3\] { background-color: #e4eaf3; }
+html[data-look="glass"] .look-paper.bg-\[\#F8FAFD\], html[data-look="glass"] .look-paper .bg-\[\#F8FAFD\] { background-color: #f8fafd; }
+html[data-look="glass"] .look-paper.bg-\[\#FDECEE\], html[data-look="glass"] .look-paper .bg-\[\#FDECEE\] { background-color: #fdecee; }
+html[data-look="glass"] .look-paper.bg-\[\#FFF8EA\], html[data-look="glass"] .look-paper .bg-\[\#FFF8EA\] { background-color: #fff8ea; }
+html[data-look="glass"] .look-paper.bg-\[\#FBF6E6\], html[data-look="glass"] .look-paper .bg-\[\#FBF6E6\] { background-color: #fbf6e6; }
+html[data-look="glass"] .look-paper.border-line, html[data-look="glass"] .look-paper .border-line { border-color: #e3e8f0; }
+html[data-look="glass"] .look-paper.border-gray-100, html[data-look="glass"] .look-paper .border-gray-100 { border-color: #f3f4f6; }
+html[data-look="glass"] .look-paper.border-gray-200, html[data-look="glass"] .look-paper .border-gray-200 { border-color: #e5e7eb; }
+html[data-look="glass"] .look-paper.border-gray-300, html[data-look="glass"] .look-paper .border-gray-300 { border-color: #d1d5db; }
+html[data-look="glass"] .look-paper.border-\[\#C9D4E5\], html[data-look="glass"] .look-paper .border-\[\#C9D4E5\] { border-color: #c9d4e5; }
+html[data-look="glass"] .look-paper.border-\[\#EEDFB0\], html[data-look="glass"] .look-paper .border-\[\#EEDFB0\] { border-color: #eedfb0; }
+html[data-look="glass"] .look-paper.ring-gray-100, html[data-look="glass"] .look-paper .ring-gray-100 { --tw-ring-color: #f3f4f6; }
+html[data-look="glass"] .look-paper.ring-gray-200, html[data-look="glass"] .look-paper .ring-gray-200 { --tw-ring-color: #e5e7eb; }
+html[data-look="glass"] .look-paper:not([class*="text-"]) { color: #111827; }
+html[data-look="glass"] .look-paper.bg-white, html[data-look="glass"] .look-paper .bg-white { background-color: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+html[data-look="glass"] .look-paper input, html[data-look="glass"] .look-paper select, html[data-look="glass"] .look-paper textarea { background-color: #fff !important; color: #0f172a !important; border-color: #d1d5db !important; box-shadow: none !important; }
+html[data-look="glass"] .look-paper input::placeholder, html[data-look="glass"] .look-paper textarea::placeholder { color: #6b7280; }
+}

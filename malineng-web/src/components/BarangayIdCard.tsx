@@ -46,7 +46,7 @@ export function BarangayIdCard({
   );
   return (
     <section
-      className="relative mx-auto max-w-sm overflow-hidden rounded-3xl bg-[#FBF6E6] text-[#0B2B57] shadow-float ring-1 ring-[#B8921E]/60 print:shadow-none"
+      className="look-paper relative mx-auto max-w-sm overflow-hidden rounded-3xl bg-[#FBF6E6] text-[#0B2B57] shadow-float ring-1 ring-[#B8921E]/60 print:shadow-none"
       style={{
         WebkitPrintColorAdjust: "exact",
         printColorAdjust: "exact",

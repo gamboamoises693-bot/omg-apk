@@ -23,7 +23,9 @@ export function DashThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      if (localStorage.getItem(KEY) === "dark") setDark(true);
+      const saved = localStorage.getItem(KEY);
+      // No choice yet: follow the site look (glass is dark).
+      if (saved === "dark" || (saved === null && document.documentElement.getAttribute("data-look") === "glass")) setDark(true);
     } catch {
       /* storage blocked: stays light */
     }

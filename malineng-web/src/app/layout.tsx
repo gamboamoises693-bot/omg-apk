@@ -8,6 +8,7 @@ import { EmailVerifyGate } from "@/components/EmailVerifyGate";
 import { AlertBanner } from "@/components/AlertBanner";
 import { HeatIndexBanner } from "@/components/HeatIndexBanner";
 import { TEXT_SIZE_BOOT_SCRIPT } from "@/lib/textSize";
+import { LOOK_BOOT_SCRIPT } from "@/lib/look";
 
 export const metadata: Metadata = {
   title: "Barangay Malineng | Cuyapo, Nueva Ecija",
@@ -30,6 +31,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Apply the saved "Aa" text size before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: TEXT_SIZE_BOOT_SCRIPT }} />
+        {/* Pick the glass or classic look before first paint (see lib/look.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: LOOK_BOOT_SCRIPT }} />
       </head>
       <body>
         <Providers>

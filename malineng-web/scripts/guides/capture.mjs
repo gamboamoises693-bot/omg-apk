@@ -87,6 +87,8 @@ const pages = new Map();
 async function pageFor(who) {
   if (pages.has(who)) return pages.get(who);
   const ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 1.5, locale: "fil-PH", permissions: ["camera"] });
+  // The guides always show the classic (light) look, whatever the season, so the pictures stay the same.
+  await ctx.addInitScript(() => { try { localStorage.setItem("malineng.look", "klasiko"); } catch {} });
   // Only the local app and the emulators: nothing from the internet gets into the pictures.
   await ctx.route("**/*", (r) => (/localhost|127\.0\.0\.1/.test(r.request().url()) ? r.continue() : r.abort()));
   const page = await ctx.newPage();
