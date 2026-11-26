@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { DEFAULT_GLASS, isGlassKey, type GlassKey } from "@/lib/glassThemes";
 
 /**
  * Seasonal look (Christmas) for the whole app. The Developer sets it in Admin → Settings → "Tema ng Pasko":
@@ -20,9 +21,11 @@ export interface ThemeConfig {
   music: boolean;
   /** Look outside Christmas: "glass" (dark frosted glass, default) or "classic" (the original light look). */
   look: "glass" | "classic";
+  /** Which glass color theme is used (see lib/glassThemes.ts). */
+  glass: GlassKey;
 }
 
-export const DEFAULT_THEME: ThemeConfig = { xmas: "auto", from: "2026-11-15", to: "2027-01-06", music: true, look: "glass" };
+export const DEFAULT_THEME: ThemeConfig = { xmas: "auto", from: "2026-11-15", to: "2027-01-06", music: true, look: "glass", glass: DEFAULT_GLASS };
 
 /** Month and day as one number (Nov 15 = 1115) from a YYYY-MM-DD string. NaN when the text is not a date. */
 function monthDay(iso: string): number {
@@ -60,6 +63,7 @@ function subscribe(cb: () => void): () => void {
           to: typeof d.to === "string" && d.to ? d.to : DEFAULT_THEME.to,
           music: d.music !== false,
           look: d.look === "classic" ? "classic" : "glass",
+          glass: isGlassKey(d.glass) ? d.glass : DEFAULT_GLASS,
         };
         listeners.forEach((l) => l());
       },

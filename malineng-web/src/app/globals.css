@@ -345,6 +345,25 @@ textarea {
  * Anything that must stay like paper (ID card, certificate, documents) has class .look-paper.
  * ============================================================ */
 @media screen {
+
+/* Glass themes: colors only. The theme is chosen by the Developer (Settings) and set as <html data-glass="...">. */
+html[data-look="glass"] {
+  --g-base: #070b16; --g-top: #0f2350; --g-glow1: rgba(99,102,241,.30); --g-glow2: rgba(34,211,238,.20);
+  --g-accent: #7cc4ff; --g-soft: rgba(124,196,255,.14); --g-tint1: rgba(60,120,255,.30); --g-tint2: rgba(124,77,255,.16);
+  --g-edge: rgba(150,200,255,.28); --g-edgeglow: rgba(61,225,255,.38); --g-focus2: rgba(139,120,255,.6);
+  --g-btn1: #1f5fae; --g-btn2: #123f7a; --g-bar: rgba(11,43,87,.72);
+}
+html[data-look="glass"][data-glass="violet"] { --g-base:#0b0620; --g-top:#3b1670; --g-glow1:rgba(168,85,247,.38); --g-glow2:rgba(99,102,241,.28); --g-accent:#c4b5fd; --g-soft:rgba(196,181,253,.14); --g-tint1:rgba(147,51,234,.34); --g-tint2:rgba(79,70,229,.18); --g-edge:rgba(196,181,253,.3); --g-edgeglow:rgba(167,139,250,.45); --g-focus2:rgba(244,114,182,.5); --g-btn1:#7c3aed; --g-btn2:#5b21b6; --g-bar:rgba(46,16,101,.74); }
+html[data-look="glass"][data-glass="crimson"] { --g-base:#12060a; --g-top:#5a121a; --g-glow1:rgba(220,38,38,.34); --g-glow2:rgba(244,114,182,.2); --g-accent:#ffa8a8; --g-soft:rgba(255,168,168,.14); --g-tint1:rgba(220,38,38,.32); --g-tint2:rgba(190,24,93,.16); --g-edge:rgba(255,168,168,.3); --g-edgeglow:rgba(255,107,107,.4); --g-focus2:rgba(253,186,116,.5); --g-btn1:#c62828; --g-btn2:#8f1d24; --g-bar:rgba(74,15,22,.76); }
+html[data-look="glass"][data-glass="teal"] { --g-base:#031a1f; --g-top:#0b5d57; --g-glow1:rgba(20,184,166,.34); --g-glow2:rgba(34,197,94,.24); --g-accent:#5eead4; --g-soft:rgba(94,234,212,.14); --g-tint1:rgba(20,184,166,.30); --g-tint2:rgba(34,197,94,.16); --g-edge:rgba(94,234,212,.3); --g-edgeglow:rgba(45,212,191,.4); --g-focus2:rgba(134,239,172,.5); --g-btn1:#0d9488; --g-btn2:#0f766e; --g-bar:rgba(6,60,60,.76); }
+html[data-look="glass"][data-glass="ocean"] { --g-base:#04122a; --g-top:#0c4a8a; --g-glow1:rgba(14,165,233,.34); --g-glow2:rgba(59,130,246,.26); --g-accent:#7dd3fc; --g-soft:rgba(125,211,252,.14); --g-tint1:rgba(14,165,233,.30); --g-tint2:rgba(37,99,235,.18); --g-edge:rgba(125,211,252,.3); --g-edgeglow:rgba(56,189,248,.4); --g-focus2:rgba(165,180,252,.55); --g-btn1:#0284c7; --g-btn2:#075985; --g-bar:rgba(7,47,95,.76); }
+html[data-look="glass"][data-glass="forest"] { --g-base:#04140b; --g-top:#14532d; --g-glow1:rgba(34,197,94,.30); --g-glow2:rgba(132,204,22,.2); --g-accent:#86efac; --g-soft:rgba(134,239,172,.14); --g-tint1:rgba(34,197,94,.28); --g-tint2:rgba(101,163,13,.16); --g-edge:rgba(134,239,172,.3); --g-edgeglow:rgba(74,222,128,.38); --g-focus2:rgba(190,242,100,.5); --g-btn1:#16a34a; --g-btn2:#166534; --g-bar:rgba(10,60,32,.76); }
+html[data-look="glass"][data-glass="sunset"] { --g-base:#170904; --g-top:#7c2d12; --g-glow1:rgba(249,115,22,.34); --g-glow2:rgba(236,72,153,.24); --g-accent:#fdba74; --g-soft:rgba(253,186,116,.14); --g-tint1:rgba(249,115,22,.30); --g-tint2:rgba(219,39,119,.18); --g-edge:rgba(253,186,116,.3); --g-edgeglow:rgba(251,146,60,.4); --g-focus2:rgba(244,114,182,.5); --g-btn1:#ea580c; --g-btn2:#9a3412; --g-bar:rgba(80,28,10,.76); }
+html[data-look="glass"][data-glass="graphite"] { --g-base:#0b0d12; --g-top:#2a2f3a; --g-glow1:rgba(148,163,184,.22); --g-glow2:rgba(100,116,139,.2); --g-accent:#cbd5e1; --g-soft:rgba(203,213,225,.12); --g-tint1:rgba(148,163,184,.24); --g-tint2:rgba(100,116,139,.14); --g-edge:rgba(203,213,225,.26); --g-edgeglow:rgba(148,163,184,.32); --g-focus2:rgba(226,232,240,.4); --g-btn1:#475569; --g-btn2:#334155; --g-bar:rgba(30,35,45,.8); }
+html[data-look="glass"][data-glass="pasko"] { --g-base:#0a0a10; --g-top:#6b1420; --g-glow1:rgba(220,38,38,.36); --g-glow2:rgba(22,163,74,.3); --g-accent:#f6d587; --g-soft:rgba(246,213,135,.14); --g-tint1:rgba(179,32,43,.34); --g-tint2:rgba(22,120,74,.22); --g-edge:rgba(246,213,135,.34); --g-edgeglow:rgba(246,213,135,.34); --g-focus2:rgba(74,222,128,.5); --g-btn1:#c62828; --g-btn2:#8f1d24; --g-bar:rgba(70,14,22,.78); }
+html[data-look="glass"] .xmas-card { background-image: linear-gradient(145deg, var(--g-tint1), var(--g-tint2)); border: 1px solid var(--g-edge); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+html[data-look="glass"] .bg-brand { background-color: var(--g-btn2); }
+html[data-look="glass"] .border-brand, html[data-look="glass"] .ring-brand { border-color: var(--g-accent); --tw-ring-color: var(--g-accent); }
 html[data-look="glass"] .text-gray-900 { color: #eaf2ff; }
 html[data-look="glass"] .text-gray-800 { color: #dbe7f7; }
 html[data-look="glass"] .text-gray-700 { color: #c4d4e8; }
@@ -353,7 +372,7 @@ html[data-look="glass"] .text-gray-500 { color: #a3b8d2; }
 html[data-look="glass"] .text-gray-400 { color: #8aa0bb; }
 html[data-look="glass"] .text-gray-300 { color: #6f86a3; }
 html[data-look="glass"] .text-slate-900 { color: #eaf2ff; }
-html[data-look="glass"] .text-brand { color: #7cc4ff; }
+html[data-look="glass"] .text-brand { color: var(--g-accent); }
 html[data-look="glass"] .text-brand-dark { color: #cfe0f5; }
 html[data-look="glass"] .text-brand-deep { color: #eaf2ff; }
 html[data-look="glass"] .text-red-600 { color: #ff9b9b; }
@@ -386,7 +405,7 @@ html[data-look="glass"] .bg-gray-50 { background-color: rgba(255,255,255,.05); }
 html[data-look="glass"] .bg-gray-100 { background-color: rgba(255,255,255,.08); }
 html[data-look="glass"] .bg-gray-200 { background-color: rgba(255,255,255,.14); }
 html[data-look="glass"] .bg-gray-300 { background-color: rgba(255,255,255,.22); }
-html[data-look="glass"] .bg-brand-light { background-color: rgba(124,196,255,.14); }
+html[data-look="glass"] .bg-brand-light { background-color: var(--g-soft); }
 html[data-look="glass"] .bg-brand-light\/60 { background-color: rgba(124,196,255,.10); }
 html[data-look="glass"] .bg-gold-light { background-color: rgba(243,199,107,.16); }
 html[data-look="glass"] .bg-red-50 { background-color: rgba(255,130,130,.14); }
@@ -418,7 +437,7 @@ html[data-look="glass"] .divide-gray-100 > :not([hidden]) ~ :not([hidden]), html
 html[data-look="glass"] { color-scheme: dark; }
 html[data-look="glass"] body {
   color: #eaf2ff;
-  background-color: #070b16;
+  background-color: var(--g-base);
   background-attachment: fixed;
   background-image:
     radial-gradient(1px 1px at 12% 8%, #fff 50%, transparent 51%),
@@ -427,14 +446,14 @@ html[data-look="glass"] body {
     radial-gradient(1px 1px at 30% 52%, #fff 50%, transparent 51%),
     radial-gradient(1px 1px at 62% 70%, #fff 50%, transparent 51%),
     radial-gradient(1.5px 1.5px at 8% 88%, #bdf 50%, transparent 51%),
-    radial-gradient(120% 45% at 50% 0%, #0f2350 0%, rgba(7, 11, 22, 0) 70%);
+    radial-gradient(120% 45% at 50% 0%, var(--g-top) 0%, transparent 70%);
   background-size: 360px 520px, 360px 520px, 360px 520px, 360px 520px, 360px 520px, 360px 520px, 100% 100%;
 }
 html[data-look="glass"] body::before, html[data-look="glass"] body::after {
   content: ""; position: fixed; z-index: -1; border-radius: 9999px; filter: blur(80px); pointer-events: none;
 }
-html[data-look="glass"] body::before { left: -90px; top: 22%; width: 260px; height: 260px; background: rgba(99, 102, 241, .30); }
-html[data-look="glass"] body::after { right: -90px; top: 58%; width: 260px; height: 260px; background: rgba(34, 211, 238, .20); }
+html[data-look="glass"] body::before { left: -90px; top: 22%; width: 260px; height: 260px; background: var(--g-glow1); }
+html[data-look="glass"] body::after { right: -90px; top: 58%; width: 260px; height: 260px; background: var(--g-glow2); }
 
 /* Cards and panels: frosted glass */
 html[data-look="glass"] .bg-white, html[data-look="glass"] .bg-gradient-to-b.from-white {
@@ -454,18 +473,18 @@ html[data-look="glass"] [role="dialog"] { background-color: rgba(3,6,14,.62); }
 
 /* Blue cards (headers, hero) become tinted glass with a soft cyan edge */
 html[data-look="glass"] .bg-gradient-to-br.from-brand-dark, html[data-look="glass"] .bg-gradient-to-b.from-brand-dark, html[data-look="glass"] .bg-gradient-to-br.from-brand {
-  background-image: linear-gradient(145deg, rgba(60,120,255,.30), rgba(124,77,255,.16));
+  background-image: linear-gradient(145deg, var(--g-tint1), var(--g-tint2));
 }
 html[data-look="glass"] .bg-gradient-to-br.from-brand-dark, html[data-look="glass"] .bg-gradient-to-b.from-brand-dark {
-  border: 1px solid rgba(150,200,255,.26);
+  border: 1px solid var(--g-edge);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 28px -10px rgba(61,225,255,.4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 28px -10px var(--g-edgeglow);
 }
 /* Primary button: keeps white text on blue, with a soft glow */
-html[data-look="glass"] .bg-gradient-to-b.from-brand.to-brand-dark { border: 1px solid rgba(150,200,255,.35); box-shadow: 0 8px 24px -10px rgba(56,150,255,.7); }
+html[data-look="glass"] .bg-gradient-to-b.from-brand.to-brand-dark { background-image: linear-gradient(180deg, var(--g-btn1), var(--g-btn2)); border: 1px solid var(--g-edge); box-shadow: 0 8px 24px -10px var(--g-edgeglow); }
 
 /* Top bar and bottom bar: glass */
-html[data-look="glass"] header.bg-brand-deep { background-color: rgba(11,43,87,.72); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,.1); }
+html[data-look="glass"] header.bg-brand-deep { background-color: var(--g-bar); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255,255,255,.1); }
 html[data-look="glass"] nav[aria-label="Main"] { border-color: rgba(255,255,255,.12); }
 html[data-look="glass"] nav[aria-label="Main"] .border-white { border-color: rgba(255,255,255,.2); }
 
@@ -477,10 +496,10 @@ html[data-look="glass"] select, html[data-look="glass"] textarea {
 html[data-look="glass"] input::placeholder, html[data-look="glass"] textarea::placeholder { color: #8aa0bb; }
 html[data-look="glass"] select option { background-color: #111a2e; color: #eaf2ff; }
 html[data-look="glass"] input:focus:not([type="checkbox"]):not([type="radio"]), html[data-look="glass"] select:focus, html[data-look="glass"] textarea:focus {
-  border-color: rgba(103,232,249,.85); background-color: rgba(0,0,0,.3);
-  box-shadow: 0 0 0 1px rgba(139,120,255,.6), 0 0 18px rgba(61,225,255,.3);
+  border-color: var(--g-accent); background-color: rgba(0,0,0,.3);
+  box-shadow: 0 0 0 1px var(--g-focus2), 0 0 18px var(--g-edgeglow);
 }
-html[data-look="glass"] .accent-brand { accent-color: #67e8f9; }
+html[data-look="glass"] .accent-brand { accent-color: var(--g-accent); }
 
 /* Dark text that sits on a gold (light) background must stay dark */
 html[data-look="glass"] .bg-gold, html[data-look="glass"] .bg-gradient-to-b.from-\[\#E3C25A\] { color: #0b2b57; }
