@@ -1,6 +1,7 @@
 "use client";
 
 import { postPhotos } from "@/lib/postPhotos";
+import { Portal } from "@/components/Portal";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { addDoc, collection, deleteDoc, doc, getCountFromServer, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
@@ -184,35 +185,37 @@ function PhotoViewer({ photos, start, onClose }: { photos: string[]; start: numb
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-2"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Mga larawan"
-      onClick={onClose}
-      onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
-      onTouchEnd={(e) => {
-        const dx = e.changedTouches[0].clientX - touch.current;
-        if (photos.length > 1 && Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={photos[i]} alt={`Larawan ${i + 1} ng post`} className="max-h-full max-w-full object-contain" />
-      <button type="button" aria-label="Isara" className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] rounded-full bg-white/20 p-2 text-white" onClick={onClose}>
-        <X className="h-6 w-6" />
-      </button>
-      {photos.length > 1 && (
-        <>
-          <button type="button" aria-label="Nakaraang larawan" className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2 text-white" onClick={(e) => { e.stopPropagation(); go(-1); }}>
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          <button type="button" aria-label="Susunod na larawan" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2 text-white" onClick={(e) => { e.stopPropagation(); go(1); }}>
-            <ChevronRight className="h-6 w-6" />
-          </button>
-          <span className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-sm font-bold text-white">{i + 1} / {photos.length}</span>
-        </>
-      )}
-    </div>
+    <Portal>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-2"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mga larawan"
+        onClick={onClose}
+        onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          const dx = e.changedTouches[0].clientX - touch.current;
+          if (photos.length > 1 && Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={photos[i]} alt={`Larawan ${i + 1} ng post`} className="max-h-full max-w-full object-contain" />
+        <button type="button" aria-label="Isara" className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] rounded-full bg-white/20 p-2 text-white" onClick={onClose}>
+          <X className="h-6 w-6" />
+        </button>
+        {photos.length > 1 && (
+          <>
+            <button type="button" aria-label="Nakaraang larawan" className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2 text-white" onClick={(e) => { e.stopPropagation(); go(-1); }}>
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <button type="button" aria-label="Susunod na larawan" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2 text-white" onClick={(e) => { e.stopPropagation(); go(1); }}>
+              <ChevronRight className="h-6 w-6" />
+            </button>
+            <span className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-sm font-bold text-white">{i + 1} / {photos.length}</span>
+          </>
+        )}
+      </div>
+    </Portal>
   );
 }
 

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { forwardRef, useEffect, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { ChevronLeft, Loader2, X } from "lucide-react";
 import { HowToButton } from "@/components/HowTo";
+import { Portal } from "@/components/Portal";
 
 /* ---------------- Button ---------------- */
 type Variant = "primary" | "gold" | "outline" | "danger" | "ghost" | "soft";
@@ -284,18 +285,20 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[1.75rem] bg-white p-5 pb-8 sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200 sm:hidden" aria-hidden />
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-extrabold text-brand-deep">{title}</h2>
-          <button onClick={onClose} className="rounded-full bg-gray-100 p-1.5 active:bg-gray-200" aria-label="Isara">
-            <X className="h-5 w-5" />
-          </button>
+    <Portal>
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
+        <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[1.75rem] bg-white p-5 pb-8 sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200 sm:hidden" aria-hidden />
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-extrabold text-brand-deep">{title}</h2>
+            <button onClick={onClose} className="rounded-full bg-gray-100 p-1.5 active:bg-gray-200" aria-label="Isara">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          {children}
         </div>
-        {children}
       </div>
-    </div>
+    </Portal>
   );
 }
 
