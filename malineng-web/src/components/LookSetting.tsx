@@ -41,7 +41,7 @@ export function LookSetting() {
           );
         })}
       </div>
-      {xmas && <p className="mt-2 text-xs text-gray-500">Ngayong Pasko, ang Pasko na itsura ang gamit. Babalik ang napili mo pagkatapos ng season.</p>}
+      {xmas && <p className="mt-2 text-xs text-gray-500">Ngayong Pasko, Pasko na glass ang itsura. Ang Klasiko ay ang dating maliwanag na Pasko.</p>}
     </div>
   );
 }

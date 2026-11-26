@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { deleteDoc, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import {
   Ambulance,
@@ -33,6 +33,8 @@ import { LogoButton, LogoMark } from "@/components/BarangayLogo";
 import { useToast } from "@/components/Toast";
 import { useAuth } from "@/context/AuthContext";
 import { DEFAULT_THEME, isXmas, useTheme, type XmasMode } from "@/lib/theme";
+import { GLASS_THEMES, type GlassKey } from "@/lib/glassThemes";
+import { resolveGlass } from "@/lib/look";
 
 type SectionKey = "officials" | "announcements" | "alert" | "emergency" | "ambulance" | "puroks";
 
@@ -428,16 +430,32 @@ export function XmasThemeCard() {
   const [choice, setChoice] = useState<SiteChoice>(initial(theme));
   // Look used outside the Christmas dates when "Auto" is chosen.
   const [offLook, setOffLook] = useState<"glass" | "classic">(theme.look);
+  // Glass color theme (see lib/glassThemes.ts). Picking one previews it on this phone right away; leaving without saving restores the saved one.
+  const [glassKey, setGlassKey] = useState<GlassKey>(theme.glass);
+  const savedGlass = useRef({ glass: theme.glass, xmasNow: isXmas(theme, Date.now()) });
+  savedGlass.current = { glass: theme.glass, xmasNow: isXmas(theme, Date.now()) };
+  useEffect(
+    () => () => {
+      const { glass, xmasNow } = savedGlass.current;
+      document.documentElement.setAttribute("data-glass", resolveGlass(xmasNow, glass));
+    },
+    [],
+  );
+  const previewGlass = (k: GlassKey) => {
+    setGlassKey(k);
+    document.documentElement.setAttribute("data-glass", k);
+  };
   const [from, setFrom] = useState(theme.from);
   const [to, setTo] = useState(theme.to);
   const [music, setMusic] = useState(theme.music);
   const [busy, setBusy] = useState(false);
   // Fill the form from what is saved once it arrives (the first render may still hold the defaults).
   const [synced, setSynced] = useState(false);
-  if (!synced && (theme.xmas !== DEFAULT_THEME.xmas || theme.from !== DEFAULT_THEME.from || theme.to !== DEFAULT_THEME.to || theme.music !== DEFAULT_THEME.music || theme.look !== DEFAULT_THEME.look)) {
+  if (!synced && (theme.xmas !== DEFAULT_THEME.xmas || theme.from !== DEFAULT_THEME.from || theme.to !== DEFAULT_THEME.to || theme.music !== DEFAULT_THEME.music || theme.look !== DEFAULT_THEME.look || theme.glass !== DEFAULT_THEME.glass)) {
     setSynced(true);
     setChoice(initial(theme));
     setOffLook(theme.look);
+    setGlassKey(theme.glass);
     setFrom(theme.from);
     setTo(theme.to);
     setMusic(theme.music);
@@ -446,19 +464,19 @@ export function XmasThemeCard() {
   const CHOICES: { key: SiteChoice; label: string; hint: string }[] = [
     { key: "glass", label: "Glass (bago)", hint: "Madilim, frosted glass sa buong site" },
     { key: "classic", label: "Original", hint: "Ang dating maliwanag na itsura" },
-    { key: "xmas", label: "Pasko", hint: "Laging naka-on ang Pasko" },
+    { key: "xmas", label: "Pasko (glass)", hint: "Laging naka-on ang Pasko, pula at berdeng glass" },
     { key: "auto", label: "Auto", hint: "Pasko sa season, tapos Glass o Original" },
   ];
   const xmasMode: XmasMode = choice === "xmas" ? "on" : choice === "auto" ? "auto" : "off";
   const look: "glass" | "classic" = choice === "auto" ? offLook : choice === "xmas" ? theme.look : choice;
-  const onNow = isXmas({ xmas: xmasMode, from, to, music, look }, Date.now());
+  const onNow = isXmas({ xmas: xmasMode, from, to, music, look, glass: glassKey }, Date.now());
 
   const save = async () => {
     if (choice === "auto" && (!from || !to)) return toast("Ilagay ang simula at wakas ng Pasko.", "error");
     setBusy(true);
     try {
-      await setDoc(doc(db, "settings", "theme"), { xmas: xmasMode, from, to, music, look }, { merge: true });
-      logActivity("Settings", `Tema ng website: ${CHOICES.find((c) => c.key === choice)?.label}${choice === "auto" ? ` (${from} hanggang ${to}, pagkatapos: ${offLook === "glass" ? "Glass" : "Original"})` : ""} · tugtog ${music ? "naka-on" : "naka-off"}`);
+      await setDoc(doc(db, "settings", "theme"), { xmas: xmasMode, from, to, music, look, glass: glassKey }, { merge: true });
+      logActivity("Settings", `Tema ng website: ${CHOICES.find((c) => c.key === choice)?.label}${choice === "auto" ? ` (${from} hanggang ${to}, pagkatapos: ${offLook === "glass" ? "Glass" : "Original"})` : ""}${look === "glass" && choice !== "xmas" ? ` · kulay: ${GLASS_THEMES.find((t) => t.key === glassKey)?.name}` : ""} · tugtog ${music ? "naka-on" : "naka-off"}`);
       toast("Na-save ang tema ng website.");
     } catch (err) {
       toast(friendlyError(err), "error");
@@ -490,6 +508,29 @@ export function XmasThemeCard() {
           </button>
         ))}
       </div>
+      {(choice === "glass" || (choice === "auto" && offLook === "glass")) && (
+        <div className="space-y-2 rounded-xl bg-surface p-3">
+          <p className="text-sm font-bold">Kulay ng Glass</p>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Kulay ng Glass">
+            {GLASS_THEMES.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="radio"
+                aria-checked={glassKey === t.key}
+                onClick={() => previewGlass(t.key)}
+                className={`flex items-center gap-2 rounded-xl border-2 bg-white p-2 text-left ${glassKey === t.key ? "border-brand" : "border-transparent"}`}
+              >
+                <span className="h-9 w-9 shrink-0 rounded-lg ring-1 ring-black/10" style={{ background: t.gradient }}>
+                  <span className="block h-full w-full rounded-lg" style={{ boxShadow: `inset 0 0 0 2px ${t.accent}55` }} />
+                </span>
+                <span className="text-xs font-bold leading-tight">{t.name}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-600">Makikita agad ang kulay sa phone mo. Pindutin ang I-save para lumabas sa lahat.</p>
+        </div>
+      )}
       {choice === "auto" && (
         <div className="space-y-2 rounded-xl bg-surface p-3">
           <div className="grid grid-cols-2 gap-2">
