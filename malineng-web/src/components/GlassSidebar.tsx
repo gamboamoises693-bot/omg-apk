@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDown, LogIn, Lock, Search, X, type LucideIcon } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { LogoMark } from "@/components/BarangayLogo";
+import { Portal } from "@/components/Portal";
 
 /** One link or action inside a group. Give it `href` for a page, or handle it in `onSelect`. */
 export interface SideItem {
@@ -139,136 +140,138 @@ export function GlassSidebar({ open, onClose, ariaLabel, user, groups, current, 
   };
 
   return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={ariaLabel}>
-      <button type="button" className="gside-backdrop absolute inset-0 h-full w-full cursor-default" onClick={onClose} aria-label="Isara ang menu" tabIndex={-1} />
-      <div className="gside-wrap absolute bottom-3 left-3 top-3 w-[88%] max-w-[22rem] motion-safe:animate-drawer-in">
-        <nav className="gside">
-          {/* Top: logo and close */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <LogoMark size="h-9 w-9" textClass="text-xs" />
-              <b className="text-[0.78rem] tracking-[0.22em]">MALINENG</b>
-            </div>
-            <button type="button" onClick={onClose} className="gside-iconbtn" aria-label="Isara">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Profile */}
-          {user ? (
-            <Link href={user.href} onClick={onClose} className="gside-profile">
-              <span className="relative shrink-0">
-                <Avatar name={user.name} photo={user.photo} size="h-12 w-12" textClass="text-base" ring="ring-2 ring-[#e8c766]/80" />
-                {user.online && <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0f2350] bg-emerald-400" aria-label="Online" />}
-              </span>
-              <span className="min-w-0 leading-tight">
-                <b className="block truncate text-[1.05rem]">{user.name}</b>
-                <span className="block truncate text-[0.74rem] opacity-70">{user.role}</span>
-              </span>
-            </Link>
-          ) : (
-            <Link href="/login" onClick={onClose} className="gside-profile">
-              <span className="gside-ico"><LogIn className="h-5 w-5" aria-hidden /></span>
-              <span className="min-w-0 leading-tight">
-                <b className="block text-[1.05rem]">Mag-login</b>
-                <span className="block text-[0.74rem] opacity-70">Bisita ka ngayon</span>
-              </span>
-            </Link>
-          )}
-
-          {/* Search */}
-          <label className="gside-search">
-            <Search className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
-            <span className="sr-only">Maghanap sa menu</span>
-            <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Maghanap sa lahat…" />
-          </label>
-
-          <div className="gside-scroll">
-            {searching ? (
-              <div className="space-y-0.5 pt-2">
-                <p className="gside-label">{results.length} nakita</p>
-                {results.length === 0 ? <p className="px-2 py-4 text-center text-sm opacity-70">Walang nakita. Subukan ang ibang salita.</p> : results.map((i) => row(i, false))}
+    <Portal>
+      <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={ariaLabel}>
+        <button type="button" className="gside-backdrop absolute inset-0 h-full w-full cursor-default" onClick={onClose} aria-label="Isara ang menu" tabIndex={-1} />
+        <div className="gside-wrap absolute bottom-3 left-3 top-3 w-[88%] max-w-[22rem] motion-safe:animate-drawer-in">
+          <nav className="gside">
+            {/* Top: logo and close */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <LogoMark size="h-9 w-9" textClass="text-xs" />
+                <b className="text-[0.78rem] tracking-[0.22em]">MALINENG</b>
               </div>
-            ) : (
-              <>
-                {quick && quick.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pb-1 pt-2">
-                    {quick.map((i) => (
-                      <Link key={i.key} href={i.href ?? "#"} onClick={onClose} className="gside-chip">{i.label}</Link>
-                    ))}
-                  </div>
-                )}
-                <p className="gside-label">Menu</p>
-                <div className="space-y-1">
-                  {groups.map((g) => {
-                    const isOpen = openId === g.id;
-                    const Icon = g.icon;
-                    const waiting = g.items.reduce((n, i) => n + (i.badge ?? 0), 0);
-                    return (
-                      <div key={g.id}>
-                        <button
-                          type="button"
-                          onClick={() => setOpenId(isOpen ? "" : g.id)}
-                          aria-expanded={isOpen}
-                          className={`gside-group ${isOpen ? "gside-group-open" : ""} ${g.emergency ? "gside-emergency" : ""}`}
-                        >
-                          <span className="gside-ico"><Icon className="h-4 w-4" aria-hidden /></span>
-                          <span className="min-w-0 flex-1 truncate text-left">{g.label}</span>
-                          {!isOpen && <Badge n={waiting} />}
-                          <ChevronDown className={`h-4 w-4 shrink-0 opacity-60 transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden />
-                        </button>
-                        {isOpen && (
-                          <div className="gside-tree">
-                            {g.items.map((i) => (
-                              <div key={i.key}>
-                                {i.heading && <p className="gside-label !mt-2 !pl-1">{i.heading}</p>}
-                                {row(i, true)}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {notice && (
-                  <Link href={notice.href ?? "/"} onClick={onClose} className="gside-notice">
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[0.55rem] font-extrabold tracking-[0.14em] opacity-55">{notice.kicker}</span>
-                      <span className="block font-serif text-[1.15rem] font-extrabold leading-tight">{notice.title}</span>
-                      {notice.text && <span className="mt-0.5 block text-[0.72rem] opacity-70 line-clamp-2">{notice.text}</span>}
-                    </span>
-                    <span className="gside-gem" aria-hidden />
-                  </Link>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Bottom: Settings, Logout... */}
-          {actions && actions.length > 0 && (
-            <div className="gside-actions">
-              {actions.map((a) => {
-                const Icon = a.icon;
-                const inner = (
-                  <>
-                    <span className="gside-ico"><Icon className="h-4 w-4" aria-hidden /></span>
-                    <span className="min-w-0 flex-1 truncate text-left">{a.label}</span>
-                    {a.note && <span className="gside-note">{a.note}</span>}
-                  </>
-                );
-                return a.href ? (
-                  <Link key={a.key} href={a.href} onClick={onClose} className="gside-group">{inner}</Link>
-                ) : (
-                  <button key={a.key} type="button" onClick={a.onClick} className="gside-group">{inner}</button>
-                );
-              })}
+              <button type="button" onClick={onClose} className="gside-iconbtn" aria-label="Isara">
+                <X className="h-4 w-4" />
+              </button>
             </div>
-          )}
-          {footer}
-        </nav>
+
+            {/* Profile */}
+            {user ? (
+              <Link href={user.href} onClick={onClose} className="gside-profile">
+                <span className="relative shrink-0">
+                  <Avatar name={user.name} photo={user.photo} size="h-12 w-12" textClass="text-base" ring="ring-2 ring-[#e8c766]/80" />
+                  {user.online && <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0f2350] bg-emerald-400" aria-label="Online" />}
+                </span>
+                <span className="min-w-0 leading-tight">
+                  <b className="block truncate text-[1.05rem]">{user.name}</b>
+                  <span className="block truncate text-[0.74rem] opacity-70">{user.role}</span>
+                </span>
+              </Link>
+            ) : (
+              <Link href="/login" onClick={onClose} className="gside-profile">
+                <span className="gside-ico"><LogIn className="h-5 w-5" aria-hidden /></span>
+                <span className="min-w-0 leading-tight">
+                  <b className="block text-[1.05rem]">Mag-login</b>
+                  <span className="block text-[0.74rem] opacity-70">Bisita ka ngayon</span>
+                </span>
+              </Link>
+            )}
+
+            {/* Search */}
+            <label className="gside-search">
+              <Search className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+              <span className="sr-only">Maghanap sa menu</span>
+              <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Maghanap sa lahat…" />
+            </label>
+
+            <div className="gside-scroll">
+              {searching ? (
+                <div className="space-y-0.5 pt-2">
+                  <p className="gside-label">{results.length} nakita</p>
+                  {results.length === 0 ? <p className="px-2 py-4 text-center text-sm opacity-70">Walang nakita. Subukan ang ibang salita.</p> : results.map((i) => row(i, false))}
+                </div>
+              ) : (
+                <>
+                  {quick && quick.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pb-1 pt-2">
+                      {quick.map((i) => (
+                        <Link key={i.key} href={i.href ?? "#"} onClick={onClose} className="gside-chip">{i.label}</Link>
+                      ))}
+                    </div>
+                  )}
+                  <p className="gside-label">Menu</p>
+                  <div className="space-y-1">
+                    {groups.map((g) => {
+                      const isOpen = openId === g.id;
+                      const Icon = g.icon;
+                      const waiting = g.items.reduce((n, i) => n + (i.badge ?? 0), 0);
+                      return (
+                        <div key={g.id}>
+                          <button
+                            type="button"
+                            onClick={() => setOpenId(isOpen ? "" : g.id)}
+                            aria-expanded={isOpen}
+                            className={`gside-group ${isOpen ? "gside-group-open" : ""} ${g.emergency ? "gside-emergency" : ""}`}
+                          >
+                            <span className="gside-ico"><Icon className="h-4 w-4" aria-hidden /></span>
+                            <span className="min-w-0 flex-1 truncate text-left">{g.label}</span>
+                            {!isOpen && <Badge n={waiting} />}
+                            <ChevronDown className={`h-4 w-4 shrink-0 opacity-60 transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden />
+                          </button>
+                          {isOpen && (
+                            <div className="gside-tree">
+                              {g.items.map((i) => (
+                                <div key={i.key}>
+                                  {i.heading && <p className="gside-label !mt-2 !pl-1">{i.heading}</p>}
+                                  {row(i, true)}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {notice && (
+                    <Link href={notice.href ?? "/"} onClick={onClose} className="gside-notice">
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[0.55rem] font-extrabold tracking-[0.14em] opacity-55">{notice.kicker}</span>
+                        <span className="block font-serif text-[1.15rem] font-extrabold leading-tight">{notice.title}</span>
+                        {notice.text && <span className="mt-0.5 block text-[0.72rem] opacity-70 line-clamp-2">{notice.text}</span>}
+                      </span>
+                      <span className="gside-gem" aria-hidden />
+                    </Link>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Bottom: Settings, Logout... */}
+            {actions && actions.length > 0 && (
+              <div className="gside-actions">
+                {actions.map((a) => {
+                  const Icon = a.icon;
+                  const inner = (
+                    <>
+                      <span className="gside-ico"><Icon className="h-4 w-4" aria-hidden /></span>
+                      <span className="min-w-0 flex-1 truncate text-left">{a.label}</span>
+                      {a.note && <span className="gside-note">{a.note}</span>}
+                    </>
+                  );
+                  return a.href ? (
+                    <Link key={a.key} href={a.href} onClick={onClose} className="gside-group">{inner}</Link>
+                  ) : (
+                    <button key={a.key} type="button" onClick={a.onClick} className="gside-group">{inner}</button>
+                  );
+                })}
+              </div>
+            )}
+            {footer}
+          </nav>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }
